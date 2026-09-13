@@ -1,0 +1,73 @@
+name: Feature
+description: 新機能または業務仕様変更を提案する
+title: "[Feature]: "
+labels:
+  - feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        個人情報、Secret、token、本番データを記載しないでください。
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: 誰のどの問題を解決しますか。
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Expected outcome
+      description: ユーザーから観測できる成功状態を記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope / Out of Scope
+    validations:
+      required: true
+  - type: dropdown
+    id: classification
+    attributes:
+      label: Change classification
+      options:
+        - Standard
+        - Lightweight
+        - Unsure
+    validations:
+      required: true
+  - type: input
+    id: spec
+    attributes:
+      label: Spec path
+      description: Standard変更ではSpecへの相対パスを記載します。
+  - type: input
+    id: plan
+    attributes:
+      label: Plan path
+      description: Standard変更ではPlanへの相対パスを記載します。
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Given/When/Thenまたは検証可能な箇条書きで記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Security, data, and operational impact
+      description: 認可、PII、DB、AI、外部API、運用への影響またはN/A理由。
+    validations:
+      required: true
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness
+      options:
+        - label: 既存要件・Specへの影響を確認した
+          required: true
+        - label: Standard変更は実装前ゲートを通過してから着手する
+          required: true

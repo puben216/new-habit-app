@@ -1,0 +1,67 @@
+name: Bug
+description: 再現可能な不具合を報告する
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        個人情報、Secret、token、本番データを記載しないでください。脆弱性は公開Issueへ投稿しないでください。
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behavior
+      description: 現在起きていることを記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: 最小の再現手順。実データは使わないでください。
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: 対象ユーザー、頻度、回避策、データ影響。
+    validations:
+      required: true
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency
+      options:
+        - Normal
+        - Production degraded
+        - Critical incident
+    validations:
+      required: true
+  - type: input
+    id: related_spec
+    attributes:
+      label: Related Spec or requirement ID
+  - type: textarea
+    id: test
+    attributes:
+      label: Regression test plan
+      description: 修正前に失敗し、修正後に成功するテストを記載してください。
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: Secret・個人情報を含んでいない
+          required: true
+        - label: API・DB・認証仕様を変える場合はStandard変更へ再分類する
+          required: true
