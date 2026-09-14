@@ -19,7 +19,27 @@
       "Bash(pnpm format:check)",
       "Bash(pnpm prettier *)",
       "Bash(pnpm lint:boundaries)",
-      "Bash(pnpm eslint *)"
+      "Bash(pnpm eslint *)",
+      "Bash(docker --version)",
+      "Bash(docker info *)",
+      "Bash(pnpm --filter @habit-app/config add zod@4.6.5)",
+      "Bash(pnpm --filter @habit-app/test-support add @testcontainers/postgresql@12.1.0 pg@8.23.0)",
+      "Bash(pnpm --filter @habit-app/test-support add -D @types/pg@8.23.1)",
+      "Bash(cd packages/infrastructure && npx tsc --noEmit -p tsconfig.json 2>&1 | tail -20; cd ../test-support && npx tsc --noEmit -p tsconfig.json 2>&1 | tail -20)",
+      "Read(//Users/tanakatana/code/**)",
+      "Bash(pnpm --filter @habit-app/config add -D @types/node@22.20.2)",
+      "Bash(pnpm --filter @habit-app/test-support add -D @types/node@22.20.2)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(pnpm -r --reporter=append-only run typecheck)",
+      "Bash(pnpm --filter @habit-app/config run typecheck)",
+      "Bash(pnpm --filter @habit-app/test-support run typecheck)",
+      "Bash(pnpm --filter @habit-app/infrastructure run typecheck)",
+      "Bash(pnpm test:unit)",
+      "Bash(pnpm test:integration)",
+      "Bash(pnpm db:up)",
+      "Bash(docker compose *)",
+      "Bash(pnpm db:down)",
+      "Bash(set -e)"
     ]
   }
 }

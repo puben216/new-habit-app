@@ -2,4 +2,9 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
+  cpu-features: true
+  protobufjs: true
+  ssh2: true
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - zod@4.6.5

@@ -10,10 +10,16 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
+    "@habit-app/application": "workspace:*",
     "@habit-app/domain": "workspace:*",
-    "@habit-app/application": "workspace:*"
+    "@testcontainers/postgresql": "12.1.0",
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2",
+    "@types/pg": "8.23.1"
   }
 }
