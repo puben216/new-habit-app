@@ -118,14 +118,14 @@ Scenario: ブランドを販促へ使用する提案
 
 ## Test Coverage Matrix
 
-| Requirement | Unit | Integration | E2E |
-|---|---|---|---|
-| IPG-001 | rights rule/expiry | registry deny | N/A（内部境界） |
-| IPG-002 | adversarial fixtures | provider fake | 再現要求→fallback |
-| IPG-003 | status transition | 未検証結果の保存/表示拒否 | passのみ表示 |
-| IPG-004 | timeout/exception | fail-closed pipeline | 障害時fallback |
-| IPG-005 | review routing | 自動公開拒否 | N/A（MVP管理フロー未確定） |
-| IPG-006 | redacted audit | log sink検証 | N/A（本文を観測しない） |
+| Requirement | Unit                 | Integration               | E2E                        |
+| ----------- | -------------------- | ------------------------- | -------------------------- |
+| IPG-001     | rights rule/expiry   | registry deny             | N/A（内部境界）            |
+| IPG-002     | adversarial fixtures | provider fake             | 再現要求→fallback          |
+| IPG-003     | status transition    | 未検証結果の保存/表示拒否 | passのみ表示               |
+| IPG-004     | timeout/exception    | fail-closed pipeline      | 障害時fallback             |
+| IPG-005     | review routing       | 自動公開拒否              | N/A（MVP管理フロー未確定） |
+| IPG-006     | redacted audit       | log sink検証              | N/A（本文を観測しない）    |
 
 ## Open Questions
 
@@ -138,17 +138,17 @@ Status: Not Ready
 Reviewed at: —
 Reviewed by: —
 
-| Gate | Result | Evidence |
-|---|---|---|
-| Product | Pass | Goal、Scope、IPG-001〜006 |
-| Specification | Fail | Open Questionsとreviewer承認が未完了 |
-| Domain and Time | N/A | 日付・時刻・状態変更を扱わない |
-| API and Data | Fail | T-302でschemaと永続化範囲を確定する |
-| Security and Privacy | Pass | Security and Privacy節 |
-| AI | Pass | AI Requirements、Acceptance Criteria |
-| Testing | Pass | Test Coverage Matrix |
-| Operations | Fail | human review運用が未確定 |
-| Planning | Pass | 対応Implementation Plan |
+| Gate                 | Result | Evidence                             |
+| -------------------- | ------ | ------------------------------------ |
+| Product              | Pass   | Goal、Scope、IPG-001〜006            |
+| Specification        | Fail   | Open Questionsとreviewer承認が未完了 |
+| Domain and Time      | N/A    | 日付・時刻・状態変更を扱わない       |
+| API and Data         | Fail   | T-302でschemaと永続化範囲を確定する  |
+| Security and Privacy | Pass   | Security and Privacy節               |
+| AI                   | Pass   | AI Requirements、Acceptance Criteria |
+| Testing              | Pass   | Test Coverage Matrix                 |
+| Operations           | Fail   | human review運用が未確定             |
+| Planning             | Pass   | 対応Implementation Plan              |
 
 ### Accepted Risks
 

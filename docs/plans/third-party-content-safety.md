@@ -12,16 +12,16 @@ T-302のAI contract基盤に、rights registry port、versioned output validator
 
 ## Impact Analysis
 
-| Area | Change | Risk |
-|---|---|---|
-| Domain | content safety status/reasonの型 | reason追加時の取りこぼし |
-| Application | rights確認、validator、公開gate、fallback | false negative/positive |
-| Infrastructure | provider adapter、rights registry adapter | provider差、設定不備 |
-| Presentation | fallbackとreview-required表示 | 誤認・内部理由の露出 |
-| Database | version/status/reason metadata候補 | schemaはT-302で確定 |
-| API/Event | contentSafety contract追加 | version互換性 |
-| AWS/Terraform | 原則なし | registry保存方式次第 |
-| Observability | 本文なしのmetrics/alarm | 機微本文のlog混入 |
+| Area           | Change                                    | Risk                     |
+| -------------- | ----------------------------------------- | ------------------------ |
+| Domain         | content safety status/reasonの型          | reason追加時の取りこぼし |
+| Application    | rights確認、validator、公開gate、fallback | false negative/positive  |
+| Infrastructure | provider adapter、rights registry adapter | provider差、設定不備     |
+| Presentation   | fallbackとreview-required表示             | 誤認・内部理由の露出     |
+| Database       | version/status/reason metadata候補        | schemaはT-302で確定      |
+| API/Event      | contentSafety contract追加                | version互換性            |
+| AWS/Terraform  | 原則なし                                  | registry保存方式次第     |
+| Observability  | 本文なしのmetrics/alarm                   | 機微本文のlog混入        |
 
 ## Interfaces and Contracts
 
@@ -42,14 +42,14 @@ T-302の初期schemaと同時に設計するため既存データmigrationはN/A
 
 ## Test Plan
 
-| Requirement | Test level | Planned test |
-|---|---|---|
-| IPG-001 | Unit/Integration | 未承認・期限切れ・用途外資料をdeny |
-| IPG-002 | Unit/Eval | 転載、翻訳、文体模倣、構成再現、誤認fixture |
-| IPG-003 | Unit/Integration | pass以外を保存・表示しない |
-| IPG-004 | Integration/E2E | validator例外でも未検証本文を公開しない |
-| IPG-005 | Unit/Integration | 公開用途をhuman reviewへroute |
-| IPG-006 | Integration | log sinkに本文がない |
+| Requirement | Test level       | Planned test                                |
+| ----------- | ---------------- | ------------------------------------------- |
+| IPG-001     | Unit/Integration | 未承認・期限切れ・用途外資料をdeny          |
+| IPG-002     | Unit/Eval        | 転載、翻訳、文体模倣、構成再現、誤認fixture |
+| IPG-003     | Unit/Integration | pass以外を保存・表示しない                  |
+| IPG-004     | Integration/E2E  | validator例外でも未検証本文を公開しない     |
+| IPG-005     | Unit/Integration | 公開用途をhuman reviewへroute               |
+| IPG-006     | Integration      | log sinkに本文がない                        |
 
 ## Rollout and Operations
 
@@ -74,12 +74,12 @@ T-302の初期schemaと同時に設計するため既存データmigrationはN/A
 
 ## Risks
 
-| Risk | Mitigation | Owner |
-|---|---|---|
-| 検知漏れ | prompt、deterministic validator、human reviewの多層化 | TBD |
-| 過剰拒否 | 一般助言fixtureとfalse positive計測 | TBD |
-| 本文のlog漏洩 | typed logging API、禁止field test、sink検証 | TBD |
-| registry誤設定 | deny by default、review、期限、監査 | TBD |
+| Risk           | Mitigation                                            | Owner |
+| -------------- | ----------------------------------------------------- | ----- |
+| 検知漏れ       | prompt、deterministic validator、human reviewの多層化 | TBD   |
+| 過剰拒否       | 一般助言fixtureとfalse positive計測                   | TBD   |
+| 本文のlog漏洩  | typed logging API、禁止field test、sink検証           | TBD   |
+| registry誤設定 | deny by default、review、期限、監査                   | TBD   |
 
 ## Start Conditions
 

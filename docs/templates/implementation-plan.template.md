@@ -12,16 +12,16 @@ Change classification: Standard
 
 ## Impact Analysis
 
-| Area | Change | Risk |
-|---|---|---|
-| Domain | | |
-| Application | | |
-| Infrastructure | | |
-| Presentation | | |
-| Database | | |
-| API/Event | | |
-| AWS/Terraform | | |
-| Observability | | |
+| Area           | Change | Risk |
+| -------------- | ------ | ---- |
+| Domain         |        |      |
+| Application    |        |      |
+| Infrastructure |        |      |
+| Presentation   |        |      |
+| Database       |        |      |
+| API/Event      |        |      |
+| AWS/Terraform  |        |      |
+| Observability  |        |      |
 
 ## Interfaces and Contracts
 
@@ -45,9 +45,9 @@ N/Aの場合は理由を記載する。
 
 ## Test Plan
 
-| Requirement | Test level | Planned test |
-|---|---|---|
-| <ID> | Unit/Integration/E2E | <case> |
+| Requirement | Test level           | Planned test |
+| ----------- | -------------------- | ------------ |
+| <ID>        | Unit/Integration/E2E | <case>       |
 
 ## Rollout and Operations
 
@@ -70,8 +70,8 @@ N/Aの場合は理由を記載する。
 ## Risks
 
 | Risk | Mitigation | Owner |
-|---|---|---|
-| | | |
+| ---- | ---------- | ----- |
+|      |            |       |
 
 ## Start Conditions
 

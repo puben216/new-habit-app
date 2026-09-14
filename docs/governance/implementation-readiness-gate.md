@@ -108,17 +108,17 @@ Status: Ready
 Reviewed at: YYYY-MM-DD
 Reviewed by: <role or name>
 
-| Gate | Result | Evidence |
-|---|---|---|
-| Product | Pass | 本SpecのGoal、Scope、Success Metrics |
-| Specification | Pass | FR-001〜FR-006、Acceptance Criteria |
-| Domain and Time | N/A | 日付・業務状態を扱わないため |
-| API and Data | Pass | OpenAPI、Migration Plan |
-| Security and Privacy | Pass | Security節、認可matrix |
-| AI | N/A | AIを利用しないため |
-| Testing | Pass | Test Coverage Matrix |
-| Operations | Pass | Observability節 |
-| Planning | Pass | 対応する実装Plan |
+| Gate                 | Result | Evidence                             |
+| -------------------- | ------ | ------------------------------------ |
+| Product              | Pass   | 本SpecのGoal、Scope、Success Metrics |
+| Specification        | Pass   | FR-001〜FR-006、Acceptance Criteria  |
+| Domain and Time      | N/A    | 日付・業務状態を扱わないため         |
+| API and Data         | Pass   | OpenAPI、Migration Plan              |
+| Security and Privacy | Pass   | Security節、認可matrix               |
+| AI                   | N/A    | AIを利用しないため                   |
+| Testing              | Pass   | Test Coverage Matrix                 |
+| Operations           | Pass   | Observability節                      |
+| Planning             | Pass   | 対応する実装Plan                     |
 
 ### Accepted Risks
 

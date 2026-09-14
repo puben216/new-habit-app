@@ -2,32 +2,32 @@
 
 ## 現時点の提案（承認後 ADR 化）
 
-| ID | 論点 | 推奨 | 理由 |
-|---|---|---|---|
-| D-01 | 初期アーキテクチャ | モジュラーモノリス | 小規模で運用負荷を抑えつつ境界を保てる |
-| D-02 | Web hosting | ECS Fargate + ALB | Next.js server と connection pool の挙動が明確 |
-| D-03 | DB | RDS PostgreSQL | 要件と AWS 統合に適合 |
-| D-04 | API | REST `/api/v1` + OpenAPI | MVP に十分で contract test が容易 |
-| D-05 | Async | SQS + Lambda + DLQ | AI/通知を Web request から分離 |
-| D-06 | 時刻 | UTC + IANA timezone + local `date` | 日次習慣の意味を DST 下でも保持 |
-| D-07 | AI 変更 | 提案のみ、明示承認で適用 | 誤更新と過剰な自律性を防ぐ |
-| D-08 | AI 実行 | provider-neutral port + schema version | Claude/OpenAI の交換・評価を可能にする |
-| D-09 | 通知 | MVP は email のみ | delivery と opt-out の運用を小さく始める |
-| D-10 | 管理画面 | read-only 中心 | 個人データ露出と権限リスクを抑える |
-| D-11 | 1 日複数回の対応 | `build` は target_count/quantity で複数回に対応、`reduce` は 1 日 1 回固定 | 記録・集計モデルを日単位のまま単純に保ちつつ、build の実用ニーズ（水を3回飲む等）に対応するため |
+| ID   | 論点               | 推奨                                                                       | 理由                                                                                            |
+| ---- | ------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| D-01 | 初期アーキテクチャ | モジュラーモノリス                                                         | 小規模で運用負荷を抑えつつ境界を保てる                                                          |
+| D-02 | Web hosting        | ECS Fargate + ALB                                                          | Next.js server と connection pool の挙動が明確                                                  |
+| D-03 | DB                 | RDS PostgreSQL                                                             | 要件と AWS 統合に適合                                                                           |
+| D-04 | API                | REST `/api/v1` + OpenAPI                                                   | MVP に十分で contract test が容易                                                               |
+| D-05 | Async              | SQS + Lambda + DLQ                                                         | AI/通知を Web request から分離                                                                  |
+| D-06 | 時刻               | UTC + IANA timezone + local `date`                                         | 日次習慣の意味を DST 下でも保持                                                                 |
+| D-07 | AI 変更            | 提案のみ、明示承認で適用                                                   | 誤更新と過剰な自律性を防ぐ                                                                      |
+| D-08 | AI 実行            | provider-neutral port + schema version                                     | Claude/OpenAI の交換・評価を可能にする                                                          |
+| D-09 | 通知               | MVP は email のみ                                                          | delivery と opt-out の運用を小さく始める                                                        |
+| D-10 | 管理画面           | read-only 中心                                                             | 個人データ露出と権限リスクを抑える                                                              |
+| D-11 | 1 日複数回の対応   | `build` は target_count/quantity で複数回に対応、`reduce` は 1 日 1 回固定 | 記録・集計モデルを日単位のまま単純に保ちつつ、build の実用ニーズ（水を3回飲む等）に対応するため |
 
 ## P0 決定（ADR 化済み）
 
-| ID | 論点 | 決定 | ADR |
-|---|---|---|---|
-| P0-01 | 認証 | Auth.js（NextAuth）。Credentials（email+password）を主手段、Google/GitHub OAuth を補助手段、admin は別途 TOTP 2FA | [ADR-001](adr/ADR-001-authentication.md) |
-| P0-02 | ORM/migration | Prisma | [ADR-002](adr/ADR-002-orm.md) |
-| P0-03 | AI provider | 未確定。Claude/OpenAI 両 adapter を pilot 導入し、T-305 完了時〜T-505 開始前に一次 provider を確定（Status: proposed） | [ADR-003](adr/ADR-003-ai-provider.md) |
-| P0-04 | Next.js hosting | ECS Fargate。ただし初期は単一 AZ・固定 task 数の最小構成 | [ADR-004](adr/ADR-004-hosting.md) |
-| P0-05 | メール | Amazon SES。region は ap-northeast-1 候補、送信ドメイン取得は T-401 着手前までの follow-up | [ADR-005](adr/ADR-005-email.md) |
-| P0-06 | 法務 | 日本語ユーザー中心・日本法準拠、最低年齢18歳、削除後30日間の猶予期間 | [ADR-006](adr/ADR-006-legal-baseline.md) |
-| P0-07 | 第三者コンテンツ | 一般的アイデアのみ独自表現で利用し、第三者素材・ブランドはallowlist、決定論的検証、fallback、human reviewで保護 | [ADR-007](adr/ADR-007-third-party-content.md) |
-| P0-08 | Terraform配置 | `infra/` はアプリと同じモノレポに同居。チーム分業やT-502着手時に別リポジトリ分離を再評価 | [ADR-008](adr/ADR-008-infra-repo-layout.md) |
+| ID    | 論点             | 決定                                                                                                                   | ADR                                           |
+| ----- | ---------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| P0-01 | 認証             | Auth.js（NextAuth）。Credentials（email+password）を主手段、Google/GitHub OAuth を補助手段、admin は別途 TOTP 2FA      | [ADR-001](adr/ADR-001-authentication.md)      |
+| P0-02 | ORM/migration    | Prisma                                                                                                                 | [ADR-002](adr/ADR-002-orm.md)                 |
+| P0-03 | AI provider      | 未確定。Claude/OpenAI 両 adapter を pilot 導入し、T-305 完了時〜T-505 開始前に一次 provider を確定（Status: proposed） | [ADR-003](adr/ADR-003-ai-provider.md)         |
+| P0-04 | Next.js hosting  | ECS Fargate。ただし初期は単一 AZ・固定 task 数の最小構成                                                               | [ADR-004](adr/ADR-004-hosting.md)             |
+| P0-05 | メール           | Amazon SES。region は ap-northeast-1 候補、送信ドメイン取得は T-401 着手前までの follow-up                             | [ADR-005](adr/ADR-005-email.md)               |
+| P0-06 | 法務             | 日本語ユーザー中心・日本法準拠、最低年齢18歳、削除後30日間の猶予期間                                                   | [ADR-006](adr/ADR-006-legal-baseline.md)      |
+| P0-07 | 第三者コンテンツ | 一般的アイデアのみ独自表現で利用し、第三者素材・ブランドはallowlist、決定論的検証、fallback、human reviewで保護        | [ADR-007](adr/ADR-007-third-party-content.md) |
+| P0-08 | Terraform配置    | `infra/` はアプリと同じモノレポに同居。チーム分業やT-502着手時に別リポジトリ分離を再評価                               | [ADR-008](adr/ADR-008-infra-repo-layout.md)   |
 
 P0-03（AI provider）と P0-05（メールの region/ドメイン確定）は ADR 自体は accepted だが、内部に明記した期限までに follow-up の意思決定が必要。それ以外は着手可能。
 

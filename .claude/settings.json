@@ -1,7 +1,25 @@
 {
   "permissions": {
     "allow": [
-      "Bash(gh auth *)"
+      "Bash(gh auth *)",
+      "Bash(corepack enable *)",
+      "Bash(corepack prepare *)",
+      "Bash(pnpm -v)",
+      "Bash(python3 -c \"import json,sys; vs=json.load\\(sys.stdin\\); print\\([v for v in vs if v.startswith\\('22.'\\)][-1]\\)\")",
+      "Bash(pnpm add *)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm --filter web add next@16.3.5 react@19.3.0 react-dom@19.3.0)",
+      "Bash(pnpm --filter web add -D eslint-config-next@16.3.5 @types/react@19.3.0 @types/react-dom@19.3.0)",
+      "Bash(pnpm peers *)",
+      "Bash(python3 -c ' *)",
+      "Bash(pnpm lint *)",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm build *)",
+      "Bash(pnpm format:check)",
+      "Bash(pnpm prettier *)",
+      "Bash(pnpm lint:boundaries)",
+      "Bash(pnpm eslint *)"
     ]
   }
 }

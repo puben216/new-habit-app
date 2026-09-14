@@ -27,15 +27,15 @@ admins/users 1--N audit_logs
 
 ### `users`
 
-| 列 | 型 | 制約・用途 |
-|---|---|---|
-| id | bigint identity | PK |
-| public_id | uuid | UNIQUE、外部 ID |
-| auth_subject | text | UNIQUE、IdP の不変 subject |
-| email_normalized | text | UNIQUE、暗号化/保持方針は認証方式決定後に確定 |
-| status | text | CHECK: active, suspended, deletion_pending |
-| deleted_at | timestamptz | nullable |
-| created_at/updated_at | timestamptz | NOT NULL |
+| 列                    | 型              | 制約・用途                                    |
+| --------------------- | --------------- | --------------------------------------------- |
+| id                    | bigint identity | PK                                            |
+| public_id             | uuid            | UNIQUE、外部 ID                               |
+| auth_subject          | text            | UNIQUE、IdP の不変 subject                    |
+| email_normalized      | text            | UNIQUE、暗号化/保持方針は認証方式決定後に確定 |
+| status                | text            | CHECK: active, suspended, deletion_pending    |
+| deleted_at            | timestamptz     | nullable                                      |
+| created_at/updated_at | timestamptz     | NOT NULL                                      |
 
 ### `user_profiles`
 

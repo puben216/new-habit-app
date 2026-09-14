@@ -24,9 +24,9 @@ Roadmap Task: <T-XXX、または該当なしの理由>
 
 ## Actors and Preconditions
 
-| Actor | Preconditions |
-|---|---|
-| <actor> | <condition> |
+| Actor   | Preconditions |
+| ------- | ------------- |
+| <actor> | <condition>   |
 
 ## Functional Requirements
 
@@ -40,9 +40,9 @@ Roadmap Task: <T-XXX、または該当なしの理由>
 
 ## State Transitions
 
-| Current | Action | Next | Rejected when |
-|---|---|---|---|
-| <state> | <action> | <state> | <condition> |
+| Current | Action   | Next    | Rejected when |
+| ------- | -------- | ------- | ------------- |
+| <state> | <action> | <state> | <condition>   |
 
 ## Acceptance Criteria
 
@@ -55,9 +55,9 @@ Scenario: <name>
 
 ## Authorization Matrix
 
-| Operation | Guest | Member | Admin | Ownership rule |
-|---|---:|---:|---:|---|
-| <operation> | No | Yes | No | Own resource only |
+| Operation   | Guest | Member | Admin | Ownership rule    |
+| ----------- | ----: | -----: | ----: | ----------------- |
+| <operation> |    No |    Yes |    No | Own resource only |
 
 ## API and Events
 
@@ -92,9 +92,9 @@ Scenario: <name>
 
 ## Test Coverage Matrix
 
-| Requirement | Unit | Integration | E2E |
-|---|---|---|---|
-| <PREFIX>-001 | <case/N/A> | <case/N/A> | <case/N/A> |
+| Requirement  | Unit       | Integration | E2E        |
+| ------------ | ---------- | ----------- | ---------- |
+| <PREFIX>-001 | <case/N/A> | <case/N/A>  | <case/N/A> |
 
 ## Open Questions
 
@@ -106,17 +106,17 @@ Status: Not Ready
 Reviewed at: —
 Reviewed by: —
 
-| Gate | Result | Evidence |
-|---|---|---|
-| Product | Fail | |
-| Specification | Fail | |
-| Domain and Time | Fail | |
-| API and Data | Fail | |
-| Security and Privacy | Fail | |
-| AI | N/A | |
-| Testing | Fail | |
-| Operations | Fail | |
-| Planning | Fail | |
+| Gate                 | Result | Evidence |
+| -------------------- | ------ | -------- |
+| Product              | Fail   |          |
+| Specification        | Fail   |          |
+| Domain and Time      | Fail   |          |
+| API and Data         | Fail   |          |
+| Security and Privacy | Fail   |          |
+| AI                   | N/A    |          |
+| Testing              | Fail   |          |
+| Operations           | Fail   |          |
+| Planning             | Fail   |          |
 
 ### Accepted Risks
 

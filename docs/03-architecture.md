@@ -24,12 +24,12 @@ SQS -> worker Lambda -> AI provider / SES -> RDS
 
 ## レイヤー責務と依存方向
 
-| レイヤー | 責務 | 依存してよい先 |
-|---|---|---|
-| Domain | Entity、Value Object、業務ルール、純粋な集計 | 原則なし |
-| Application | ユースケース、Port、認可判断、トランザクション境界 | Domain |
-| Infrastructure | DB、AI、Email、Queue、Clock の Adapter | Application/Domain の interface |
-| Presentation | Route Handler、Server Action、UI、DTO 変換 | Application、共有 schema |
+| レイヤー       | 責務                                               | 依存してよい先                  |
+| -------------- | -------------------------------------------------- | ------------------------------- |
+| Domain         | Entity、Value Object、業務ルール、純粋な集計       | 原則なし                        |
+| Application    | ユースケース、Port、認可判断、トランザクション境界 | Domain                          |
+| Infrastructure | DB、AI、Email、Queue、Clock の Adapter             | Application/Domain の interface |
+| Presentation   | Route Handler、Server Action、UI、DTO 変換         | Application、共有 schema        |
 
 Domain は React、Next.js、ORM、AWS SDK、AI SDK を import しない。Application は HTTP や具体 DB エラーを知らない。Infrastructure の例外は Application のエラー型へ変換する。
 

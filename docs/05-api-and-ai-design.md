@@ -15,45 +15,45 @@
 
 ### Session/Profile
 
-| Method | Path | 用途 |
-|---|---|---|
-| POST | `/auth/*` | IdP Adapter 経由の登録・ログイン等（方式確定後に詳細化） |
-| GET/PATCH | `/me` | 自分のプロフィール取得・更新 |
-| DELETE | `/me` | 再認証を伴う削除要求 |
-| GET | `/me/export` | 非同期 export ジョブ作成または取得 |
+| Method    | Path         | 用途                                                     |
+| --------- | ------------ | -------------------------------------------------------- |
+| POST      | `/auth/*`    | IdP Adapter 経由の登録・ログイン等（方式確定後に詳細化） |
+| GET/PATCH | `/me`        | 自分のプロフィール取得・更新                             |
+| DELETE    | `/me`        | 再認証を伴う削除要求                                     |
+| GET       | `/me/export` | 非同期 export ジョブ作成または取得                       |
 
 ### Habits/Tracking
 
-| Method | Path | 用途 |
-|---|---|---|
-| GET/POST | `/habits` | 一覧・作成 |
-| GET/PATCH | `/habits/{habitId}` | 詳細・更新 |
-| POST | `/habits/{habitId}/archive` | アーカイブ |
-| GET | `/schedule/today` | 当日の予定機会 |
-| PUT | `/habits/{habitId}/entries/{date}` | 記録の冪等作成・訂正 |
-| GET | `/habit-entries` | 期間・habit 指定の履歴 |
-| PUT | `/daily-check-ins/{date}` | 日次チェックイン upsert |
-| GET | `/dashboard?from=&to=` | ストリーク・継続率 |
+| Method    | Path                               | 用途                    |
+| --------- | ---------------------------------- | ----------------------- |
+| GET/POST  | `/habits`                          | 一覧・作成              |
+| GET/PATCH | `/habits/{habitId}`                | 詳細・更新              |
+| POST      | `/habits/{habitId}/archive`        | アーカイブ              |
+| GET       | `/schedule/today`                  | 当日の予定機会          |
+| PUT       | `/habits/{habitId}/entries/{date}` | 記録の冪等作成・訂正    |
+| GET       | `/habit-entries`                   | 期間・habit 指定の履歴  |
+| PUT       | `/daily-check-ins/{date}`          | 日次チェックイン upsert |
+| GET       | `/dashboard?from=&to=`             | ストリーク・継続率      |
 
 ### Reviews/Coaching
 
-| Method | Path | 用途 |
-|---|---|---|
-| GET/POST | `/weekly-reviews` | 一覧・対象週の作成 |
-| GET/PATCH | `/weekly-reviews/{reviewId}` | 詳細・確定 |
-| POST | `/coaching/habit-designs` | AI 設計ジョブを作成（202） |
-| POST | `/weekly-reviews/{reviewId}/analysis` | AI 分析ジョブを作成（202） |
-| GET | `/ai-jobs/{jobId}` | status/result/failure を取得 |
-| POST | `/coaching-suggestions/{id}/apply` | 選択内容を検証して反映 |
+| Method    | Path                                  | 用途                         |
+| --------- | ------------------------------------- | ---------------------------- |
+| GET/POST  | `/weekly-reviews`                     | 一覧・対象週の作成           |
+| GET/PATCH | `/weekly-reviews/{reviewId}`          | 詳細・確定                   |
+| POST      | `/coaching/habit-designs`             | AI 設計ジョブを作成（202）   |
+| POST      | `/weekly-reviews/{reviewId}/analysis` | AI 分析ジョブを作成（202）   |
+| GET       | `/ai-jobs/{jobId}`                    | status/result/failure を取得 |
+| POST      | `/coaching-suggestions/{id}/apply`    | 選択内容を検証して反映       |
 
 ### Notifications/Admin
 
-| Method | Path | 用途 |
-|---|---|---|
-| GET/PUT | `/notification-settings` | 本人の通知設定 |
-| GET | `/admin/operations/ai-jobs` | 管理者の失敗状況確認 |
-| GET | `/admin/operations/notifications` | 配送失敗確認 |
-| GET | `/admin/users/{publicId}` | 必要最小限の状態確認 |
+| Method  | Path                              | 用途                 |
+| ------- | --------------------------------- | -------------------- |
+| GET/PUT | `/notification-settings`          | 本人の通知設定       |
+| GET     | `/admin/operations/ai-jobs`       | 管理者の失敗状況確認 |
+| GET     | `/admin/operations/notifications` | 配送失敗確認         |
+| GET     | `/admin/users/{publicId}`         | 必要最小限の状態確認 |
 
 ## HTTP 契約例
 
@@ -105,9 +105,7 @@
 ```json
 {
   "summary": "string",
-  "observations": [
-    { "evidence": "string", "interpretation": "string" }
-  ],
+  "observations": [{ "evidence": "string", "interpretation": "string" }],
   "suggestions": [
     {
       "title": "string",

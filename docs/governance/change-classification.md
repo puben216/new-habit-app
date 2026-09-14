@@ -60,13 +60,13 @@
 
 ## 判定表
 
-| 質問 | Yesの場合 |
-|---|---|
-| 新しいユーザー価値や業務ルールか | Standard |
-| API/DB/auth/PII/AI tool/infra securityを変えるか | Standard |
-| 複数moduleやdeploy順序へ影響するか | Standard |
-| 既存Specどおりに戻す局所bug fixか | Lightweight候補 |
-| 文言・文書・内部整理だけか | Lightweight候補 |
-| 重大な本番影響を今すぐ止める必要があるか | Emergency |
+| 質問                                             | Yesの場合       |
+| ------------------------------------------------ | --------------- |
+| 新しいユーザー価値や業務ルールか                 | Standard        |
+| API/DB/auth/PII/AI tool/infra securityを変えるか | Standard        |
+| 複数moduleやdeploy順序へ影響するか               | Standard        |
+| 既存Specどおりに戻す局所bug fixか                | Lightweight候補 |
+| 文言・文書・内部整理だけか                       | Lightweight候補 |
+| 重大な本番影響を今すぐ止める必要があるか         | Emergency       |
 
 迷う場合はStandardとして扱う。分類と理由はIssueまたはPlan冒頭へ記録する。
