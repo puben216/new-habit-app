@@ -153,32 +153,30 @@ Infrastructure -> Application/Domain ports
 
 変更内容に応じて正本を更新する。
 
-| Change | Required documentation |
-|---|---|
-| ユーザー向け仕様・業務ルール | Product requirement / Feature Spec |
-| API・event契約 | OpenAPI / event schema / Feature Spec |
-| DB schema | Migration / DB design |
-| 重要な技術判断 | 新しいADR。過去ADRを書き換えない |
-| 運用・障害対応 | Runbook / observability design |
-| 実装手順・rollout | Implementation Plan |
+| Change                       | Required documentation                |
+| ---------------------------- | ------------------------------------- |
+| ユーザー向け仕様・業務ルール | Product requirement / Feature Spec    |
+| API・event契約               | OpenAPI / event schema / Feature Spec |
+| DB schema                    | Migration / DB design                 |
+| 重要な技術判断               | 新しいADR。過去ADRを書き換えない      |
+| 運用・障害対応               | Runbook / observability design        |
+| 実装手順・rollout            | Implementation Plan                   |
 
 文書を更新しない場合も、PRに変更不要の理由を記載する。
 
 ## Repository Commands
 
-アプリケーションのscaffold後、この節を実際のpackage scriptsに合わせて更新する。それまでは存在しないコマンドや成功結果を推測して報告しない。
-
-最終的に次の標準commandを提供する。
+T-002（Monorepo scaffold）完了時点で実行可能なcommand。
 
 ```text
 pnpm format:check
 pnpm lint
+pnpm lint:boundaries   # dependency-cruiserによるlayer境界・循環依存チェック
 pnpm typecheck
-pnpm test:unit
-pnpm test:integration
 pnpm build
-pnpm test:e2e
 ```
+
+`pnpm test:unit`、`pnpm test:integration`、`pnpm test:e2e`はテスト基盤導入後（T-101以降）に追加する。それまでは存在しないコマンドや成功結果を推測して報告しない。
 
 ## Communication
 

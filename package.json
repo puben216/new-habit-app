@@ -1,0 +1,26 @@
+{
+  "name": "ai-habit-coach",
+  "private": true,
+  "version": "0.0.0",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "packageManager": "pnpm@12.4.1",
+  "scripts": {
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write .",
+    "lint": "eslint .",
+    "lint:boundaries": "depcruise --config .dependency-cruiser.cjs apps packages",
+    "typecheck": "pnpm -r run typecheck",
+    "build": "pnpm -r run build"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2",
+    "dependency-cruiser": "18.2.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.5",
+    "prettier": "3.9.6",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.0"
+  }
+}
