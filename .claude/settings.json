@@ -55,7 +55,9 @@
       "Bash(python3 -c \"import json; d=json.load\\(open\\('src/generated/prisma/package.json'\\)\\); print\\(json.dumps\\(d.get\\('exports', d.get\\('main'\\)\\), indent=2\\)\\)\")",
       "Bash(pnpm --filter @habit-app/infrastructure add @prisma/adapter-pg@7.10.0 pg@8.23.0)",
       "Bash(pnpm --filter @habit-app/infrastructure add -D @types/pg@8.23.1)",
-      "Bash(gh pr create --title 'T-004: DB baseline/migration\\(Prisma\\)' --body ' *)"
+      "Bash(gh pr create --title 'T-004: DB baseline/migration\\(Prisma\\)' --body ' *)",
+      "Bash(gh pr *)",
+      "Bash(git pull *)"
     ],
     "additionalDirectories": [
       "/Users/tanakatana/code/new_habit_app/packages/infrastructure/database/.claude"
