@@ -2,6 +2,9 @@ name: Security Scan
 
 # T-005 (docs/09-roadmap.md): 現時点で現実的に導入できるsecurity/supply-chain check。
 # Terraform/IaC scan、SBOM生成、staging deployはインフラ未着手のため対象外(T-501以降)。
+# SAST(Semgrep/CodeQL等)は、Auth/API(T-101〜)未実装で攻撃面が薄いため今回は対象外
+# (T-101 Auth adapter着手時に導入を再検討)。依存方向チェックはlint:boundaries
+# (dependency-cruiser)としてpr-quality.ymlに既に導入済み。
 on:
   pull_request:
     branches:
