@@ -1,0 +1,62 @@
+name: PR Quality Gate
+
+# T-005 (docs/09-roadmap.md): PRのquality gate。
+# Standard/staging deploy、Terraform、Playwright E2Eはまだ存在しないため対象外(T-501以降で追加)。
+on:
+  pull_request:
+    branches:
+      - main
+
+# 同一PRへの連続pushで古い実行を止め、runnerとキャッシュ帯域を節約する。
+concurrency:
+  group: pr-quality-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# fork PRを含め、既定は読み取り専用。書き込みが必要なjob/stepでのみ個別に昇格する。
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: format / lint / typecheck / build / test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # versionは指定しない: package.jsonのpackageManagerフィールド(pnpm@12.4.1)から自動検出する。
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: format:check
+        run: pnpm format:check
+
+      - name: lint
+        run: pnpm lint
+
+      - name: lint:boundaries
+        run: pnpm lint:boundaries
+
+      - name: typecheck
+        run: pnpm typecheck
+
+      - name: build
+        run: pnpm build
+
+      - name: test:unit
+        run: pnpm test:unit
+
+      # GitHub-hosted ubuntu runnerはDockerを標準搭載しており、Testcontainers
+      # (@habit-app/test-support)がpostgres:16-alpineコンテナを自前で起動するため、
+      # 追加の `services:` Postgresブロックは不要(ローカルで動作確認済み)。
+      - name: test:integration
+        run: pnpm test:integration

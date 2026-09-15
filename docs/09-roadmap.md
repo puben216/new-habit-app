@@ -47,10 +47,13 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 
 ### T-005 CI baseline
 
-- 設計: required checks、cache、artifact、OIDC の境界
-- 実装: PR quality workflow と security scan
-- テスト: 意図的な lint/test failure が merge を止める
-- レビュー: fork PR に secret を渡していないか
+- 設計: `main` 向け PR (`pull_request`) を対象に、`.github/workflows/pr-quality.yml`（品質ゲート）と`.github/workflows/security-scan.yml`（secret scan/依存脆弱性）に分離。GitHub-hosted ubuntu runner は Docker を標準搭載するため Testcontainers 経由の`test:integration`に追加の`services:` Postgres は不要（実測で確認）。artifact upload は未導入（現状ログのみで十分と判断、必要になれば追加）。OIDC/AWS role 引き受けは infra 未着手のため対象外（T-503 で追加）。`06-quality-and-operations.md`が挙げる SAST は、現時点では Auth/API（T-101〜）が未実装でアプリケーションコードの攻撃面がほぼ無く検出価値が薄いため今回は対象外とし、T-101 Auth adapter 着手時に導入を再検討する。依存方向チェック（`pnpm lint:boundaries`、dependency-cruiser）は T-002/T-003 で既に導入済みのため本タスクでの追加対応は無し
+- 実装:
+  - `pr-quality.yml`: `format:check`/`lint`/`lint:boundaries`/`typecheck`/`build`/`test:unit`/`test:integration`を単一 job で順に実行。`actions/checkout`/`pnpm/action-setup`/`actions/setup-node`は commit SHA pin。pnpm version は`package.json`の`packageManager`から自動検出。`actions/setup-node`の`cache: pnpm`で pnpm store をキャッシュ
+  - `security-scan.yml`: `gitleaks/gitleaks-action`（secret scan、PR コメント機能は無効化し write 権限を要求しない）と`pnpm audit --audit-level=moderate`（依存脆弱性、moderate 以上を必須ゲート）の 2 job。Prisma CLI 自身が同梱する開発時専用依存（`prisma>mysql2`, `prisma>@prisma/config>deepmerge-ts`）由来の既知 3 件（GHSA-ggr8-5vv4-36mx、GHSA-3f6p-5ww8-9rcr、GHSA-rgwj-5xj2-c3m3）は`pnpm-workspace.yaml`の`auditConfig.ignoreGhsas`にレビュー済みとして記録し ignore。Terraform/IaC scan、SBOM 生成、staging deploy は未実装（T-501 以降で追加）
+  - 両 workflow とも`permissions: contents: read`を既定にし、fork PR を含め書き込み権限を渡さない
+- テスト: ローカルで`format:check`/`lint`/`lint:boundaries`/`typecheck`/`build`/`test:unit`/`test:integration`を全て成功させたうえで、`env.test.ts`のアサーションを意図的に不一致にして`test:unit`が失敗すること、`env.ts`に未使用変数を仕込んで`lint`が失敗することをそれぞれ確認してから revert（詳細は本タスクの PR 説明を参照）
+- レビュー: fork PR に渡す secret は無し。`gitleaks-action`が使う`GITHUB_TOKEN`は実行ごとの短命 token であり長期 secret ではない。両 workflow とも`permissions: contents: read`で write 権限を要求しないため fork PR でも安全
 
 ## Phase 1: Identity と習慣 CRUD
 
