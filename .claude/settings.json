@@ -39,7 +39,26 @@
       "Bash(pnpm db:up)",
       "Bash(docker compose *)",
       "Bash(pnpm db:down)",
-      "Bash(set -e)"
+      "Bash(set -e)",
+      "Bash(pnpm --filter @habit-app/infrastructure add @prisma/client@7.10.0)",
+      "Bash(pnpm --filter @habit-app/infrastructure add -D prisma@7.10.0)",
+      "Bash(npx prisma *)",
+      "Bash(cd /Users/tanakatana/code/new_habit_app *)",
+      "Bash(pnpm --filter @habit-app/infrastructure add -D dotenv@17.4.2)",
+      "Bash(DATABASE_URL=\"postgresql://habit_app:habit_app@localhost:5432/habit_app_dev\" npx prisma migrate dev --name init --create-only)",
+      "Bash(DATABASE_URL=\"postgresql://habit_app:habit_app@localhost:5432/habit_app_dev\" npx prisma migrate dev)",
+      "Bash(DATABASE_URL=\"postgresql://habit_app:habit_app@localhost:5432/habit_app_dev\" npx prisma migrate status)",
+      "Bash(sed -i '' 's/@updatedAt @map\\(\"updated_at\"\\)/@default\\(now\\(\\)\\) @updatedAt @map\\(\"updated_at\"\\)/' schema.prisma)",
+      "Bash(DATABASE_URL=\"postgresql://habit_app:habit_app@localhost:5432/habit_app_dev\" npx prisma migrate reset --force)",
+      "Bash(DATABASE_URL=\"postgresql://habit_app:habit_app@localhost:5432/habit_app_dev\" PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"Yes\" npx prisma migrate reset --force)",
+      "Bash(docker compose exec -T postgres psql -U habit_app -d habit_app_dev -c ' *)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('src/generated/prisma/package.json'\\)\\); print\\(json.dumps\\(d.get\\('exports', d.get\\('main'\\)\\), indent=2\\)\\)\")",
+      "Bash(pnpm --filter @habit-app/infrastructure add @prisma/adapter-pg@7.10.0 pg@8.23.0)",
+      "Bash(pnpm --filter @habit-app/infrastructure add -D @types/pg@8.23.1)",
+      "Bash(gh pr create --title 'T-004: DB baseline/migration\\(Prisma\\)' --body ' *)"
+    ],
+    "additionalDirectories": [
+      "/Users/tanakatana/code/new_habit_app/packages/infrastructure/database/.claude"
     ]
   }
 }

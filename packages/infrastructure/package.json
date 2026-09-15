@@ -10,10 +10,25 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "generate": "prisma generate",
+    "postinstall": "prisma generate",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:reset": "prisma migrate reset"
   },
   "dependencies": {
+    "@habit-app/application": "workspace:*",
     "@habit-app/domain": "workspace:*",
-    "@habit-app/application": "workspace:*"
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@habit-app/test-support": "workspace:*",
+    "@testcontainers/postgresql": "12.1.0",
+    "@types/pg": "8.23.1",
+    "dotenv": "17.4.2",
+    "prisma": "7.10.0"
   }
 }

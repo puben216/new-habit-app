@@ -166,19 +166,23 @@ Infrastructure -> Application/Domain ports
 
 ## Repository Commands
 
-T-003（ローカル開発基盤）完了時点で実行可能なcommand。
+T-004（DB baseline/migration）完了時点で実行可能なcommand。
 
 ```text
 pnpm format:check
 pnpm lint
-pnpm lint:boundaries   # dependency-cruiserによるlayer境界・循環依存チェック
+pnpm lint:boundaries    # dependency-cruiserによるlayer境界・循環依存チェック
 pnpm typecheck
 pnpm build
-pnpm test:unit         # `*.integration.test.ts`を除く *.test.ts
-pnpm test:integration  # `*.integration.test.ts`のみ。Dockerが必要
-pnpm db:up             # docker composeでローカルPostgresを起動
-pnpm db:down           # ローカルPostgresを停止
+pnpm test:unit          # `*.integration.test.ts`を除く *.test.ts
+pnpm test:integration   # `*.integration.test.ts`のみ。Dockerが必要
+pnpm db:up              # docker composeでローカルPostgresを起動
+pnpm db:down            # ローカルPostgresを停止
+pnpm db:migrate:dev     # ローカルDBへPrisma migrationを対話的に適用(packages/infrastructure)
+pnpm db:migrate:deploy  # 保留中のmigrationを適用(CI/本番相当)
 ```
+
+`prisma migrate reset`等、DBを破壊的にリセットするコマンドはAIエージェントからの実行を明示的にブロックされる（Prisma 7の安全機構）。実行する場合は必ずユーザーに対象環境と影響を説明し、明示的な同意を得てから`PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`を設定する。
 
 `pnpm test:e2e`はPlaywright導入後（T-101のE2Eシナリオ着手時）に追加する。それまでは存在しないコマンドや成功結果を推測して報告しない。
 

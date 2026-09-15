@@ -17,7 +17,9 @@
     "test:unit": "vitest run --exclude \"**/*.integration.test.ts\"",
     "test:integration": "vitest run integration.test",
     "db:up": "docker compose up -d postgres",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "db:migrate:dev": "pnpm --filter @habit-app/infrastructure run migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @habit-app/infrastructure run migrate:deploy"
   },
   "devDependencies": {
     "@types/node": "22.20.2",

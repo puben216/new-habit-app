@@ -41,8 +41,8 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 ### T-004 DB baseline/migration
 
 - 設計: ERD、index、delete、role
-- 実装: 初期 migration と migration runner
-- テスト: fresh/upgrade/constraint/integration
+- 実装: Prisma（[ADR-002](adr/ADR-002-orm.md)）で `04-database-design.md` の 13 テーブルを 1 つの初期 migration として実装。schema/migration は `packages/infrastructure/database/`。差分・追加決定は[04-database-design.mdの「実装時の補足」](04-database-design.md#実装時の補足t-004)を参照
+- テスト: Testcontainers で起動した実 PostgreSQL に対し fresh migration 適用、CHECK/exclusion constraint 違反、正常系 CRUD を Integration Test で検証（`pnpm test:integration`）。upgrade は後続 migration 追加時に対象
 - レビュー: FK index、lock、rollback/forward fix
 
 ### T-005 CI baseline

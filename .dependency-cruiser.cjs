@@ -37,6 +37,9 @@ module.exports = {
     },
   ],
   options: {
+    exclude: {
+      path: "packages/infrastructure/src/generated",
+    },
     doNotFollow: {
       path: "node_modules",
     },

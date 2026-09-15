@@ -10,6 +10,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# Generated (Prisma Client等、install/build時に再生成する)
+packages/infrastructure/src/generated/
+
 # Environment
 .env
 .env.*

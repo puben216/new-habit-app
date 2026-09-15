@@ -1,0 +1,276 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// status: active | suspended | deletion_pending (CHECK制約はmigrationで追加)
+model User {
+  id              BigInt    @id @default(autoincrement())
+  publicId        String    @unique @default(dbgenerated("gen_random_uuid()")) @map("public_id") @db.Uuid
+  authSubject     String    @unique @map("auth_subject")
+  emailNormalized String    @unique @map("email_normalized")
+  status          String    @default("active")
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  profile              UserProfile?
+  habits               Habit[]
+  habitEntries         HabitEntry[]
+  dailyCheckIns        DailyCheckIn[]
+  weeklyReviews        WeeklyReview[]
+  aiJobs               AiJob[]
+  notificationSettings NotificationSetting[]
+  idempotencyKeys      IdempotencyKey[]
+
+  @@map("users")
+}
+
+// weekStartsOn: 0=日曜〜6=土曜。既定値は10-decisions-and-open-questions.mdのP1で未決のため
+// DB defaultを設けず、作成時に必ずApplication層が値を指定する。
+model UserProfile {
+  userId       BigInt   @id @map("user_id")
+  displayName  String   @map("display_name")
+  timezone     String
+  locale       String
+  weekStartsOn Int      @map("week_starts_on") @db.SmallInt
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+// kind: build | reduce、status: active | archived (CHECK制約はmigrationで追加)
+model Habit {
+  id                BigInt   @id @default(autoincrement())
+  publicId          String   @unique @default(dbgenerated("gen_random_uuid()")) @map("public_id") @db.Uuid
+  userId            BigInt   @map("user_id")
+  kind              String
+  name              String
+  purpose           String
+  cue               String
+  minimumAction     String   @map("minimum_action")
+  replacementAction String?  @map("replacement_action")
+  status            String   @default("active")
+  version           Int      @default(1)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user                 User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scheduleVersions     HabitScheduleVersion[]
+  entries              HabitEntry[]
+  notificationSettings NotificationSetting[]
+
+  @@index([userId, status, createdAt(sort: Desc), id(sort: Desc)])
+  @@map("habits")
+}
+
+// daysOfWeek: 本来smallint[]だがPrisma DSLの制約でinteger[]として定義する(値域0-6はCHECK制約で担保)。
+// reduce習慣はtargetCount=1に固定するが、habit.kindを跨ぐ検証はDB triggerではなくApplication層で行う。
+model HabitScheduleVersion {
+  id            BigInt    @id @default(autoincrement())
+  habitId       BigInt    @map("habit_id")
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  daysOfWeek    Int[]     @map("days_of_week")
+  localTime     DateTime? @map("local_time") @db.Time
+  targetCount   Int       @default(1) @map("target_count") @db.SmallInt
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, effectiveFrom])
+  @@map("habit_schedule_versions")
+}
+
+// status: success | missed | skipped、source: web | system (CHECK制約はmigrationで追加)
+// quantityはbuildの当日実施回数(target_count以上でsuccess)。noteの文字数上限は未決(10-decisions P2参照)。
+model HabitEntry {
+  id           BigInt    @id @default(autoincrement())
+  publicId     String    @unique @default(dbgenerated("gen_random_uuid()")) @map("public_id") @db.Uuid
+  userId       BigInt    @map("user_id")
+  habitId      BigInt    @map("habit_id")
+  habitDate    DateTime  @map("habit_date") @db.Date
+  scheduledFor DateTime? @map("scheduled_for") @db.Timestamptz(6)
+  status       String
+  quantity     Decimal?
+  note         String?
+  source       String    @default("web")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, habitDate])
+  @@index([userId, habitDate(sort: Desc), id(sort: Desc)])
+  @@map("habit_entries")
+}
+
+// mood/difficultyは1-5(CHECK制約はmigrationで追加)
+model DailyCheckIn {
+  id          BigInt   @id @default(autoincrement())
+  userId      BigInt   @map("user_id")
+  checkInDate DateTime @map("check_in_date") @db.Date
+  mood        Int?     @db.SmallInt
+  difficulty  Int?     @db.SmallInt
+  note        String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, checkInDate])
+  @@map("daily_check_ins")
+}
+
+// status: draft | completed (CHECK制約はmigrationで追加)
+// summaryJsonは再現可能な入力値とschema versionを持つスナップショット。
+model WeeklyReview {
+  id               BigInt    @id @default(autoincrement())
+  publicId         String    @unique @default(dbgenerated("gen_random_uuid()")) @map("public_id") @db.Uuid
+  userId           BigInt    @map("user_id")
+  weekStart        DateTime  @map("week_start") @db.Date
+  timezoneSnapshot String    @map("timezone_snapshot")
+  summaryJson      Json      @map("summary_json") @db.JsonB
+  reflection       String?
+  status           String    @default("draft")
+  completedAt      DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
+  @@map("weekly_reviews")
+}
+
+// status: queued | running | succeeded | failed | fallback (CHECK制約はmigrationで追加)
+// 生のprompt/自由記述/モデル応答は保存しない(resultJsonは構造化出力のみ)。
+model AiJob {
+  id                  BigInt   @id @default(autoincrement())
+  publicId            String   @unique @default(dbgenerated("gen_random_uuid()")) @map("public_id") @db.Uuid
+  userId              BigInt   @map("user_id")
+  kind                String
+  subjectType         String   @map("subject_type")
+  subjectPublicId     String   @map("subject_public_id") @db.Uuid
+  status              String   @default("queued")
+  promptVersion       String   @map("prompt_version")
+  outputSchemaVersion String   @map("output_schema_version")
+  provider            String
+  model               String
+  inputFingerprint    String   @map("input_fingerprint")
+  resultJson          Json?    @map("result_json") @db.JsonB
+  failureCode         String?  @map("failure_code")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempts AiJobAttempt[]
+
+  @@index([userId])
+  @@map("ai_jobs")
+}
+
+// 生のprompt/自由記述/モデル応答は保存しない。
+model AiJobAttempt {
+  id                BigInt    @id @default(autoincrement())
+  aiJobId           BigInt    @map("ai_job_id")
+  attemptNo         Int       @map("attempt_no")
+  providerRequestId String?   @map("provider_request_id")
+  startedAt         DateTime  @map("started_at") @db.Timestamptz(6)
+  finishedAt        DateTime? @map("finished_at") @db.Timestamptz(6)
+  outcome           String
+  latencyMs         Int?      @map("latency_ms")
+  inputTokens       Int?      @map("input_tokens")
+  outputTokens      Int?      @map("output_tokens")
+  estimatedCost     Decimal?  @map("estimated_cost")
+  errorCategory     String?   @map("error_category")
+
+  aiJob AiJob @relation(fields: [aiJobId], references: [id], onDelete: Cascade)
+
+  @@unique([aiJobId, attemptNo])
+  @@map("ai_job_attempts")
+}
+
+// MVPはchannel=emailのみ(D-09)。habitIdはhabit単位の設定を許容するためnullable。
+model NotificationSetting {
+  id              BigInt    @id @default(autoincrement())
+  userId          BigInt    @map("user_id")
+  habitId         BigInt?   @map("habit_id")
+  channel         String    @default("email")
+  localTime       DateTime  @map("local_time") @db.Time
+  timezone        String
+  enabled         Boolean   @default(true)
+  quietHoursStart DateTime? @map("quiet_hours_start") @db.Time
+  quietHoursEnd   DateTime? @map("quiet_hours_end") @db.Time
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habit      Habit?                 @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+
+  @@index([userId])
+  @@index([habitId])
+  @@map("notification_settings")
+}
+
+model NotificationDelivery {
+  id                    BigInt    @id @default(autoincrement())
+  notificationSettingId BigInt    @map("notification_setting_id")
+  deduplicationKey      String    @unique @map("deduplication_key")
+  scheduledAt           DateTime  @map("scheduled_at") @db.Timestamptz(6)
+  status                String
+  providerMessageId     String?   @map("provider_message_id")
+  attemptCount          Int       @default(0) @map("attempt_count")
+  sentAt                DateTime? @map("sent_at") @db.Timestamptz(6)
+  failureCode           String?   @map("failure_code")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  notificationSetting NotificationSetting @relation(fields: [notificationSettingId], references: [id], onDelete: Cascade)
+
+  @@index([notificationSettingId])
+  @@map("notification_deliveries")
+}
+
+model IdempotencyKey {
+  id           BigInt   @id @default(autoincrement())
+  userId       BigInt   @map("user_id")
+  scope        String
+  key          String
+  requestHash  String   @map("request_hash")
+  responseCode Int?     @map("response_code")
+  responseBody Json?    @map("response_body") @db.JsonB
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scope, key])
+  @@map("idempotency_keys")
+}
+
+// 追記専用。actorはuser/admin/systemのいずれかを表す文字列とし、FKは張らない
+// (adminモデルは未設計のため)。ipHashはIPアドレスの不可逆化表現。
+model AuditLog {
+  id             BigInt   @id @default(autoincrement())
+  actor          String
+  action         String
+  targetType     String   @map("target_type")
+  targetPublicId String?  @map("target_public_id") @db.Uuid
+  requestId      String   @map("request_id")
+  ipHash         String   @map("ip_hash")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("audit_logs")
+}
