@@ -68,8 +68,10 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 
 ### T-103 Habit Domain
 
-- `Habit`, `HabitKind`, `ScheduleVersion` と invariant
-- Unit: build/reduce、schedule、編集有効日
+- 設計: Feature Spec([habit-domain.md](specs/habit-domain.md))と Implementation Plan([habit-domain.md](plans/habit-domain.md))を作成
+- 実装: `packages/domain/src/habits/`に`HabitKind`、`ScheduleVersion`(値オブジェクト)、`Habit`(集約エンティティ)を、DB/HTTP/frameworkに一切依存しない純粋なTypeScriptとして実装。kindの作成後不変、reduceのtargetCount=1固定、daysOfWeekの値域(0〜6)・非空・重複禁止、ScheduleVersion有効期間の重複禁止(DBのexclusion constraintと同趣旨をDomainで先に検知)、スケジュール編集時に既存版のeffectiveFromを保持したまま新版を追加する`changeSchedule`を実装。repository/use case/永続化はT-104のスコープとして含めていない
+- テスト: `pnpm test:unit`でUnit Testを追加(build/reduceの成功判定`isTargetMet`、kind不変性、ScheduleVersionのバリデーション、有効期間重複の拒否/受理、スケジュール編集時の有効開始日保持を含む56件、5ファイル)
+- レビュー: `pnpm format:check`/`lint`/`lint:boundaries`/`typecheck`/`build`/`test:unit`をすべて実行し成功を確認。reduceのquantity意味論等はSpecのOpen Questionとして明記し、T-104着手前に確認する
 
 ### T-104 Habit repository/use cases/API
 
