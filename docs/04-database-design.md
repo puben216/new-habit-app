@@ -121,3 +121,16 @@ Index:
 - 最長ストリーク: 対象期間内の連続 success 最大値
 
 これらは Domain の純粋関数を唯一の定義とし、SQL 集計を追加する場合も同じ契約テストを通す。
+
+## 実装時の補足（T-004）
+
+Prisma（[ADR-002](adr/ADR-002-orm.md)）で初期 migration を実装した際の、本設計からの実務上の差分・追加決定。schema/migration の正本は `packages/infrastructure/database/`。
+
+- 内部 PK は Prisma の `autoincrement()`（`BIGSERIAL`）を採用した。`GENERATED ALWAYS AS IDENTITY` は Prisma の DSL で直接表現できず、hand-edit した migration の保守性を優先して見送った。アプリケーションからの見え方は同一。
+- `habit_schedule_versions.days_of_week` は Prisma の型システムの制約により `smallint[]` ではなく `integer[]` とした。値域 0〜6 は CHECK 制約（`array_length > 0` かつ `<@ ARRAY[0..6]`）で担保する。
+- 同一 `habit_id` のスケジュール有効期間重複は、`btree_gist` 拡張を用いた PostgreSQL の exclusion constraint（GiST）で DB レベルに強制した（本文の「exclusion constraint、またはトランザクション内検査」の前者を採用）。
+- `reduce` 習慣の `target_count = 1` 固定は `habits.kind` を跨ぐ検証が必要なため、DB constraint/trigger ではなく Application 層（T-104）で検証する。
+- `updated_at` は Prisma Client の `@updatedAt` に加え、DB 側にも `DEFAULT CURRENT_TIMESTAMP` と `BEFORE UPDATE` trigger を追加した。生 SQL や管理ツール経由の書き込みでも一貫させるため。
+- `notification_settings` / `notification_deliveries` は本文の記述が簡潔なため、T-004 では実装者判断で最小限の列（`habit_id` は nullable、`channel` は `email` 既定など）とした。詳細は T-401 着手時に見直す。
+- ER 概要にある `coaching_suggestions` はテーブル定義が未記載のため、本 baseline には含めていない。T-304/T-305 で設計する。
+- `habit_entries.note` 等の自由記述の文字数上限は未決（[10-decisions-and-open-questions.md](10-decisions-and-open-questions.md) の P2 参照）のため、DB 側の CHECK は追加していない。

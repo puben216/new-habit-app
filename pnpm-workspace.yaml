@@ -2,7 +2,9 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
+  "@prisma/engines": true
   cpu-features: true
+  prisma: true
   protobufjs: true
   ssh2: true
   unrs-resolver: true

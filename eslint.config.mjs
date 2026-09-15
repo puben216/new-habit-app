@@ -81,7 +81,12 @@ const presentationBoundary = {
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/.next/**", "**/node_modules/**"],
+    ignores: [
+      "**/dist/**",
+      "**/.next/**",
+      "**/node_modules/**",
+      "packages/infrastructure/src/generated/**",
+    ],
   },
   ...tseslint.configs.recommended,
   ...scopedNextConfig,

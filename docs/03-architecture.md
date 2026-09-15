@@ -62,13 +62,11 @@ Domain は React、Next.js、ORM、AWS SDK、AI SDK を import しない。Appli
 │   ├── application/
 │   │   └── src/{module}/{use-cases,ports,dto}/
 │   ├── infrastructure/
-│   │   └── src/{database,auth,ai,queue,email,observability}/
+│   │   ├── src/{database,auth,ai,queue,email,observability}/
+│   │   └── database/                 # Prisma schema/migrations/seed（ADR-002）
 │   ├── contracts/                    # API/event schemas, generated OpenAPI types
 │   ├── config/                       # 型付き環境設定
 │   └── test-support/                 # factories, builders, containers
-├── database/
-│   ├── migrations/
-│   └── seeds/                        # 非本番、架空データのみ
 ├── infra/
 │   ├── modules/
 │   └── environments/{dev,staging,prod}/

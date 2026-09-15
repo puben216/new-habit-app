@@ -43,6 +43,7 @@ P0-03（AI provider）と P0-05（メールの region/ドメイン確定）は A
 
 - Rate limit の具体的な閾値（endpoint / actor / IP 別のリクエスト数と時間窓）
 - 通知の quiet hours のデフォルト値（開始・終了時刻、タイムゾーン基準）
+- `habit_entries.note` 等、自由記述系フィールドの文字数上限
 
 ## 検証すべき仮説
 
