@@ -59,7 +59,7 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 
 ### T-101 Auth adapter と session
 
-- Auth.js（NextAuth）integration、Credentials（email+password）+ Google/GitHub OAuth、callback/session/logout、admin TOTP 2FA
+- Auth.js（NextAuth）integration、Credentials（email+password）、callback/session/logout（Google/GitHub OAuth は MVP スコープ外、admin TOTP 2FA は T-403。[ADR-001](adr/ADR-001-authentication.md) 2026-09-16 改訂）
 - Unit: session mapping。Integration: unauthorized/expired/rotation
 - E2E: signup/login/logout/password reset
 
