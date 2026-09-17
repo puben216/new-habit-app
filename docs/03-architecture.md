@@ -80,8 +80,8 @@ Domain は React、Next.js、ORM、AWS SDK、AI SDK を import しない。Appli
 
 - Package manager: pnpm workspace。高速で依存境界を明示しやすい。
 - ORM/Query: Prisma または Drizzle は未決。どちらでも repository port の外に漏らさない。
-- 認証: Auth.js（NextAuth）を採用（[ADR-001](adr/ADR-001-authentication.md)）。email+password（Credentials provider）を主手段、Google/GitHub OAuth を補助手段とし、独自パスワード実装（hash/reset）は自前で行う。
-- API: 同一 Web クライアント向けは REST Route Handler。外部公開を見越して `/api/v1` と OpenAPI を用意。
+- 認証: Auth.js（NextAuth）を採用（[ADR-001](adr/ADR-001-authentication.md)）。MVP は email+password（Credentials provider）のみとし、独自パスワード実装（hash/reset）は自前で行う。Google/GitHub OAuth は将来の拡張候補（2026-09-16 改訂）。
+- API: REST Route Handler を採用し、`/api/v1` と OpenAPI を公開契約とする（[ADR-009](adr/ADR-009-api-style.md)）。runtime schema から型と OpenAPI を導出し、Web は型付き client を使用する。
 - 時刻: Application へ `Clock` を注入。DB は `timestamptz`、習慣日付は `date`、タイムゾーンは IANA ID。
 - 集計: MVP は問い合わせ時またはレビュー作成時に計算。負荷計測前に集計テーブルを増やさない。
 
