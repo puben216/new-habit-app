@@ -39,6 +39,7 @@ describe("baseline schema (T-004)", () => {
       data: {
         authSubject: "sub-crud",
         emailNormalized: "crud@example.com",
+        passwordHash: "argon2id$dummy-hash-crud",
         profile: {
           create: {
             displayName: "テスト太郎",
@@ -85,7 +86,11 @@ describe("baseline schema (T-004)", () => {
 
   it("不正なstatusはCHECK制約で拒否される", async () => {
     const user = await prisma.user.create({
-      data: { authSubject: "sub-check", emailNormalized: "check@example.com" },
+      data: {
+        authSubject: "sub-check",
+        emailNormalized: "check@example.com",
+        passwordHash: "argon2id$dummy-hash-check",
+      },
     });
 
     await expect(
@@ -95,7 +100,11 @@ describe("baseline schema (T-004)", () => {
 
   it("同一habitのスケジュール期間重複はexclusion制約で拒否される", async () => {
     const user = await prisma.user.create({
-      data: { authSubject: "sub-overlap", emailNormalized: "overlap@example.com" },
+      data: {
+        authSubject: "sub-overlap",
+        emailNormalized: "overlap@example.com",
+        passwordHash: "argon2id$dummy-hash-overlap",
+      },
     });
     const habit = await prisma.habit.create({
       data: {
@@ -124,7 +133,11 @@ describe("baseline schema (T-004)", () => {
 
   it("重複しない期間のスケジュール追加は成功する", async () => {
     const user = await prisma.user.create({
-      data: { authSubject: "sub-sequential", emailNormalized: "sequential@example.com" },
+      data: {
+        authSubject: "sub-sequential",
+        emailNormalized: "sequential@example.com",
+        passwordHash: "argon2id$dummy-hash-sequential",
+      },
     });
     const habit = await prisma.habit.create({
       data: {
