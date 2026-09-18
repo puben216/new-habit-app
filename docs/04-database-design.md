@@ -27,19 +27,37 @@ admins/users 1--N audit_logs
 
 ### `users`
 
-| 列                    | 型              | 制約・用途                                    |
-| --------------------- | --------------- | --------------------------------------------- |
-| id                    | bigint identity | PK                                            |
-| public_id             | uuid            | UNIQUE、外部 ID                               |
-| auth_subject          | text            | UNIQUE、IdP の不変 subject                    |
-| email_normalized      | text            | UNIQUE、暗号化/保持方針は認証方式決定後に確定 |
-| status                | text            | CHECK: active, suspended, deletion_pending    |
-| deleted_at            | timestamptz     | nullable                                      |
-| created_at/updated_at | timestamptz     | NOT NULL                                      |
+| 列                    | 型              | 制約・用途                                                          |
+| --------------------- | --------------- | ------------------------------------------------------------------- |
+| id                    | bigint identity | PK                                                                  |
+| public_id             | uuid            | UNIQUE、外部 ID                                                     |
+| auth_subject          | text            | UNIQUE、IdP の不変 subject                                          |
+| email_normalized      | text            | UNIQUE、暗号化/保持方針は認証方式決定後に確定                       |
+| password_hash         | text            | NOT NULL（T-101。argon2id hash。MVP は Credentials のみのため必須） |
+| email_verified_at     | timestamptz     | nullable（T-101。email verification 完了時刻。未確認は null）       |
+| status                | text            | CHECK: active, suspended, deletion_pending                          |
+| deleted_at            | timestamptz     | nullable                                                            |
+| created_at/updated_at | timestamptz     | NOT NULL                                                            |
 
 ### `user_profiles`
 
 `user_id` PK/FK、`display_name`、`timezone`、`locale`、`week_starts_on`、timestamps。タイムゾーンは IANA ID としてアプリ側 allowlist でも検証する。
+
+### `sessions`（T-101）
+
+Auth.js の DB session 戦略（[ADR-001](adr/ADR-001-authentication.md)）で使う session 永続化テーブル。`id`, `session_token`（UNIQUE）, `user_id`, `expires`, timestamps。`user_id` FK は `ON DELETE CASCADE`。内部 PK は本設計の方針（bigint identity）に合わせる。Index: `user_id`。
+
+### `verification_tokens`（T-101）
+
+Auth.js 標準の汎用 token テーブル（email verification に使用）。`identifier`（email）, `token`（UNIQUE、sha256 hash を保存し平文は保持しない）, `expires`。`UNIQUE(identifier, token)`。
+
+### `password_reset_tokens`（T-101）
+
+password reset の単回使用 token。`id`, `user_id`, `token_hash`（UNIQUE、sha256 hash）, `expires_at`, `used_at nullable`, `created_at`。`user_id` FK は `ON DELETE CASCADE`。Index: `user_id`。
+
+### `login_attempts`（T-101）
+
+signup/login/verification 再送/password reset request の rate limit/lockout（AUTH-010）判定用の試行履歴。`id`, `purpose`（`signup|login|verify_resend|password_reset`, CHECK）, `email_normalized`, `attempted_at`, `succeeded boolean`。email 単位のみで判定するため IP 列は持たない。Index: `(purpose, email_normalized, attempted_at desc)`。判定ウィンドウ（15 分）を超えた行は `LoginAttemptPort.pruneExpired` による opportunistic cleanup で削除する（[../plans/auth-adapter.md](plans/auth-adapter.md) Task 6）。
 
 ### `habits`
 
@@ -134,3 +152,13 @@ Prisma（[ADR-002](adr/ADR-002-orm.md)）で初期 migration を実装した際�
 - `notification_settings` / `notification_deliveries` は本文の記述が簡潔なため、T-004 では実装者判断で最小限の列（`habit_id` は nullable、`channel` は `email` 既定など）とした。詳細は T-401 着手時に見直す。
 - ER 概要にある `coaching_suggestions` はテーブル定義が未記載のため、本 baseline には含めていない。T-304/T-305 で設計する。
 - `habit_entries.note` 等の自由記述の文字数上限は未決（[10-decisions-and-open-questions.md](10-decisions-and-open-questions.md) の P2 参照）のため、DB 側の CHECK は追加していない。
+
+## 実装時の補足（T-101）
+
+Auth adapter（[../specs/auth-adapter.md](specs/auth-adapter.md)、[../plans/auth-adapter.md](plans/auth-adapter.md)）の Task 2 で `users` への列追加と `sessions`/`verification_tokens`/`password_reset_tokens`/`login_attempts` を追加した際の差分・追加決定。
+
+- `password_hash` は MVP が Credentials のみのため `NOT NULL` とした。将来 OAuth を追加する際は `nullable` へ変更する migration が別途必要になる（Plan Risks 参照）。
+- `sessions`/`password_reset_tokens`/`login_attempts` の内部 PK は本設計の既存方針（bigint identity、Prisma の `autoincrement()`）に合わせた。Auth.js 標準の Prisma adapter スキーマは `id` に `cuid()` の `String` を用いるが、本プロジェクトは `users.id` が既に `bigint` であるため、標準 `@auth/prisma-adapter` をそのまま使わずカスタム adapter 実装で吸収する前提とする（Plan の Risks・Task 4/5 で対応）。
+- `verification_tokens` のみ Auth.js 標準スキーマ（`identifier`/`token`/`expires`、`id` 列なし）にそのまま準拠した。`token` 列には平文ではなく sha256 hash を保存する（Business Rules 準拠）。
+- OAuth 用の `accounts` テーブルは Spec の Out of Scope（Google/GitHub OAuth 除外）のため作成していない。
+- `login_attempts.purpose` の CHECK 制約値、rate limit 閾値（直近 15 分 5 回失敗 → 15 分 lockout）は `packages/config` の設定値として外出しする予定（Task 6 で実装、コード変更なしで調整可能にする）。
