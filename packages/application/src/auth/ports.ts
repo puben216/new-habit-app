@@ -85,6 +85,26 @@ export interface AuthRepositoryPort {
     readonly newPasswordHash: string;
     readonly now: Date;
   }): Promise<TokenConsumeResult>;
+
+  /**
+   * login 成功時に session を作成する(2026-09-22 改訂: docs/plans/auth-adapter.md Approach 節参照)。
+   * Auth.js は Credentials provider に `session.strategy: "database"` を許可しないため、
+   * `jwt` strategy 配下で Infrastructure の authOptions がこの port を使い session を自前管理する。
+   */
+  createSession(input: {
+    readonly sessionToken: string;
+    readonly userId: string;
+    readonly expiresAt: Date;
+  }): Promise<void>;
+
+  /** sessionToken が有効(存在し、期限内)なら対応する userId を返す。無効なら null。 */
+  findSessionUser(input: {
+    readonly sessionToken: string;
+    readonly now: Date;
+  }): Promise<{ readonly userId: string } | null>;
+
+  /** logout(AUTH-006)時に session を失効させる。存在しない sessionToken を渡しても成功扱いとする。 */
+  deleteSession(sessionToken: string): Promise<void>;
 }
 
 export type LoginAttemptPurpose = "signup" | "login" | "verify_resend" | "password_reset";

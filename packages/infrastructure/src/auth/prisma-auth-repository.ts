@@ -157,5 +157,30 @@ export function createPrismaAuthRepository(prisma: PrismaClient): AuthRepository
         return "consumed";
       });
     },
+
+    async createSession(input) {
+      await prisma.session.create({
+        data: {
+          sessionToken: input.sessionToken,
+          userId: BigInt(input.userId),
+          expires: input.expiresAt,
+        },
+      });
+    },
+
+    async findSessionUser(input) {
+      const session = await prisma.session.findUnique({
+        where: { sessionToken: input.sessionToken },
+      });
+      if (session === null || isTokenExpired(session.expires, input.now)) {
+        return null;
+      }
+      return { userId: session.userId.toString() };
+    },
+
+    async deleteSession(sessionToken) {
+      // 既に失効済み(不存在)でも logout は成功扱いにするため deleteMany を使う。
+      await prisma.session.deleteMany({ where: { sessionToken } });
+    },
   };
 }

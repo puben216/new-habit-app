@@ -14,5 +14,8 @@
   },
   "dependencies": {
     "@habit-app/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2"
   }
 }

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { EmailSenderPort } from "./ports";
 import { requestPasswordReset } from "./request-password-reset";
 import {
   createFakeAuthRepository,
@@ -46,5 +47,32 @@ describe("requestPasswordReset", () => {
 
     expect(result).toEqual({ accepted: true });
     expect(emailSender.sentPasswordResetEmails).toHaveLength(0);
+  });
+
+  it("通知メール送信が失敗してもtokenは発行され応答は変わらない(AUTH-INV-002)", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { deps, authRepository } = createTestContext();
+    await authRepository.createUserWithVerificationToken({
+      emailNormalized: "user@example.com",
+      passwordHash: "hash",
+      verificationTokenHash: "unused",
+      verificationTokenExpiresAt: new Date("2099-01-01T00:00:00Z"),
+    });
+    const failingEmailSender: EmailSenderPort = {
+      async sendVerificationEmail() {
+        throw new Error("smtp down");
+      },
+      async sendPasswordResetEmail() {
+        throw new Error("smtp down");
+      },
+    };
+
+    const result = await requestPasswordReset(
+      { ...deps, emailSender: failingEmailSender },
+      { email: "user@example.com" },
+    );
+
+    expect(result).toEqual({ accepted: true });
+    consoleErrorSpy.mockRestore();
   });
 });

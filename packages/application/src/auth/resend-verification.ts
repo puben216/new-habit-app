@@ -1,5 +1,6 @@
 import { normalizeEmail } from "@habit-app/domain";
 import { VERIFICATION_TOKEN_TTL_MS } from "./constants";
+import { sendBestEffort } from "./send-best-effort";
 import type {
   AuthRepositoryPort,
   Clock,
@@ -40,7 +41,9 @@ export async function resendVerification(
       tokenHash: verificationToken.hash,
       expiresAt,
     });
-    await deps.emailSender.sendVerificationEmail(emailNormalized, verificationToken.plaintext);
+    await sendBestEffort(() =>
+      deps.emailSender.sendVerificationEmail(emailNormalized, verificationToken.plaintext),
+    );
   }
 
   return { accepted: true };

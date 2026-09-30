@@ -1,3 +1,5 @@
+export { InvalidPasswordError } from "@habit-app/domain";
+
 export type {
   AuthRepositoryPort,
   AuthUserRecord,
@@ -11,6 +13,12 @@ export type {
   TokenConsumeResult,
   TokenGeneratorPort,
 } from "./ports";
+
+export {
+  PASSWORD_RESET_TOKEN_TTL_MS,
+  SESSION_TTL_MS,
+  VERIFICATION_TOKEN_TTL_MS,
+} from "./constants";
 
 export { signUp } from "./sign-up";
 export type { SignUpDeps, SignUpInput } from "./sign-up";

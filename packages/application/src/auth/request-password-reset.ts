@@ -1,5 +1,6 @@
 import { normalizeEmail } from "@habit-app/domain";
 import { PASSWORD_RESET_TOKEN_TTL_MS } from "./constants";
+import { sendBestEffort } from "./send-best-effort";
 import type {
   AuthRepositoryPort,
   Clock,
@@ -39,7 +40,9 @@ export async function requestPasswordReset(
       tokenHash: resetToken.hash,
       expiresAt,
     });
-    await deps.emailSender.sendPasswordResetEmail(emailNormalized, resetToken.plaintext);
+    await sendBestEffort(() =>
+      deps.emailSender.sendPasswordResetEmail(emailNormalized, resetToken.plaintext),
+    );
   }
 
   return { accepted: true };
