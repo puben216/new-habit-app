@@ -1,5 +1,6 @@
 import { assertPasswordPolicy, normalizeEmail } from "@habit-app/domain";
 import { VERIFICATION_TOKEN_TTL_MS } from "./constants";
+import { sendBestEffort } from "./send-best-effort";
 import type {
   AuthRepositoryPort,
   Clock,
@@ -44,7 +45,9 @@ export async function signUp(deps: SignUpDeps, input: SignUpInput): Promise<Requ
   });
 
   if (result === "created") {
-    await deps.emailSender.sendVerificationEmail(emailNormalized, verificationToken.plaintext);
+    await sendBestEffort(() =>
+      deps.emailSender.sendVerificationEmail(emailNormalized, verificationToken.plaintext),
+    );
   }
 
   return { accepted: true };

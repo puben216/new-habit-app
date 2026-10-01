@@ -259,4 +259,87 @@ describe("PrismaAuthRepository(T-101 Task4)", () => {
     expect(results.filter((r) => r === "consumed")).toHaveLength(1);
     expect(results.filter((r) => r === "invalid_or_expired")).toHaveLength(4);
   });
+
+  it("createSessionで作成したsessionをfindSessionUserで検証できる(AUTH-009)", async () => {
+    await repository.createUserWithVerificationToken({
+      emailNormalized: "session@example.com",
+      passwordHash: "hash",
+      verificationTokenHash: "verify-token-session",
+      verificationTokenExpiresAt: new Date(Date.now() + 60_000),
+    });
+    const user = await repository.findUserByEmailNormalized("session@example.com");
+    if (user === null) throw new Error("user not found");
+
+    await repository.createSession({
+      sessionToken: "session-token-valid",
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+
+    const found = await repository.findSessionUser({
+      sessionToken: "session-token-valid",
+      now: new Date(),
+    });
+    expect(found).toEqual({ userId: user.id });
+  });
+
+  it("期限切れsessionはfindSessionUserでnullを返す(AUTH-009)", async () => {
+    await repository.createUserWithVerificationToken({
+      emailNormalized: "session-expired@example.com",
+      passwordHash: "hash",
+      verificationTokenHash: "verify-token-session-expired",
+      verificationTokenExpiresAt: new Date(Date.now() + 60_000),
+    });
+    const user = await repository.findUserByEmailNormalized("session-expired@example.com");
+    if (user === null) throw new Error("user not found");
+
+    await repository.createSession({
+      sessionToken: "session-token-expired",
+      userId: user.id,
+      expiresAt: new Date(Date.now() - 1),
+    });
+
+    const found = await repository.findSessionUser({
+      sessionToken: "session-token-expired",
+      now: new Date(),
+    });
+    expect(found).toBeNull();
+  });
+
+  it("存在しないsessionTokenはfindSessionUserでnullを返す", async () => {
+    const found = await repository.findSessionUser({
+      sessionToken: "no-such-session-token",
+      now: new Date(),
+    });
+    expect(found).toBeNull();
+  });
+
+  it("deleteSessionでsessionを失効させるとfindSessionUserがnullになる(AUTH-006)", async () => {
+    await repository.createUserWithVerificationToken({
+      emailNormalized: "logout@example.com",
+      passwordHash: "hash",
+      verificationTokenHash: "verify-token-logout",
+      verificationTokenExpiresAt: new Date(Date.now() + 60_000),
+    });
+    const user = await repository.findUserByEmailNormalized("logout@example.com");
+    if (user === null) throw new Error("user not found");
+
+    await repository.createSession({
+      sessionToken: "session-token-to-delete",
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+
+    await repository.deleteSession("session-token-to-delete");
+
+    const found = await repository.findSessionUser({
+      sessionToken: "session-token-to-delete",
+      now: new Date(),
+    });
+    expect(found).toBeNull();
+  });
+
+  it("存在しないsessionTokenのdeleteSessionはエラーにならない", async () => {
+    await expect(repository.deleteSession("never-existed")).resolves.toBeUndefined();
+  });
 });

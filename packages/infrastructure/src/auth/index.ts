@@ -12,3 +12,6 @@ export { createPrismaAuthRepository } from "./prisma-auth-repository";
 
 export { createPrismaLoginAttemptRepository } from "./prisma-login-attempt-repository";
 export type { PrismaLoginAttemptRepositoryOptions } from "./prisma-login-attempt-repository";
+
+export { createAuthHandlers } from "./auth-options";
+export type { AuthHandlersDeps } from "./auth-options";

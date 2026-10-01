@@ -1,5 +1,6 @@
 import { InvalidPasswordError } from "@habit-app/domain";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { EmailSenderPort } from "./ports";
 import { signUp } from "./sign-up";
 import {
   createFakeAuthRepository,
@@ -59,5 +60,27 @@ describe("signUp", () => {
       InvalidPasswordError,
     );
     expect(authRepository.usersByEmail.size).toBe(0);
+  });
+
+  it("通知メール送信が失敗してもaccountは作成され応答は変わらない(AUTH-INV-002)", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { deps, authRepository } = createTestContext();
+    const failingEmailSender: EmailSenderPort = {
+      async sendVerificationEmail() {
+        throw new Error("smtp down");
+      },
+      async sendPasswordResetEmail() {
+        throw new Error("smtp down");
+      },
+    };
+
+    const result = await signUp(
+      { ...deps, emailSender: failingEmailSender },
+      { email: "user@example.com", password: "correct-horse-battery" },
+    );
+
+    expect(result).toEqual({ accepted: true });
+    expect(authRepository.usersByEmail.has("user@example.com")).toBe(true);
+    consoleErrorSpy.mockRestore();
   });
 });

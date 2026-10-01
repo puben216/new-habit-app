@@ -32,11 +32,17 @@ export interface FakeAuthRepository extends AuthRepositoryPort {
   readonly usersByEmail: ReadonlyMap<string, MutableAuthUser>;
 }
 
+interface StoredSession {
+  readonly userId: string;
+  readonly expiresAt: Date;
+}
+
 export function createFakeAuthRepository(): FakeAuthRepository {
   const usersByEmail = new Map<string, MutableAuthUser>();
   const usersById = new Map<string, MutableAuthUser>();
   const verificationTokens = new Map<string, StoredToken>();
   const passwordResetTokens = new Map<string, StoredToken>();
+  const sessions = new Map<string, StoredSession>();
   let nextUserId = 1;
 
   return {
@@ -122,6 +128,22 @@ export function createFakeAuthRepository(): FakeAuthRepository {
         user.passwordHash = input.newPasswordHash;
       }
       return "consumed";
+    },
+
+    async createSession(input) {
+      sessions.set(input.sessionToken, { userId: input.userId, expiresAt: input.expiresAt });
+    },
+
+    async findSessionUser(input) {
+      const session = sessions.get(input.sessionToken);
+      if (session === undefined || isTokenExpired(session.expiresAt, input.now)) {
+        return null;
+      }
+      return { userId: session.userId };
+    },
+
+    async deleteSession(sessionToken) {
+      sessions.delete(sessionToken);
     },
   };
 }
