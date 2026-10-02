@@ -15,10 +15,10 @@
   "dependencies": {
     "@habit-app/application": "workspace:*",
     "@habit-app/domain": "workspace:*",
-    "@testcontainers/postgresql": "12.1.0",
     "pg": "8.23.0"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "12.2.0",
     "@types/node": "22.20.2",
     "@types/pg": "8.23.1"
   }
