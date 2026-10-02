@@ -16,3 +16,10 @@ export type {
 
 export { createProblemDetails } from "./problem-details";
 export type { ProblemDetails } from "./problem-details";
+
+export {
+  UPDATE_PROFILE_MAX_BODY_BYTES,
+  profileResponseSchema,
+  updateProfileRequestSchema,
+} from "./profile";
+export type { ProfileResponse, UpdateProfileRequest } from "./profile";

@@ -41,7 +41,7 @@ admins/users 1--N audit_logs
 
 ### `user_profiles`
 
-`user_id` PK/FK、`display_name`、`timezone`、`locale`、`week_starts_on`、timestamps。タイムゾーンは IANA ID としてアプリ側 allowlist でも検証する。
+`user_id` PK/FK、`display_name`、`timezone`、`locale`、`week_starts_on`、timestamps。タイムゾーンは IANA ID としてアプリ側(Domain の `parseTimezone`)でも検証する(T-102。固定 allowlist ではなく ICU が受理する `Area/Location`/`UTC` 形式を検証する。理由は[../specs/user-profile.md](specs/user-profile.md) PROF-004 を参照)。
 
 ### `sessions`（T-101）
 
@@ -162,3 +162,12 @@ Auth adapter（[../specs/auth-adapter.md](specs/auth-adapter.md)、[../plans/aut
 - `verification_tokens` のみ Auth.js 標準スキーマ（`identifier`/`token`/`expires`、`id` 列なし）にそのまま準拠した。`token` 列には平文ではなく sha256 hash を保存する（Business Rules 準拠）。
 - OAuth 用の `accounts` テーブルは Spec の Out of Scope（Google/GitHub OAuth 除外）のため作成していない。
 - `login_attempts.purpose` の CHECK 制約値、rate limit 閾値（直近 15 分 5 回失敗 → 15 分 lockout）は `packages/config` の設定値として外出しする予定（Task 6 で実装、コード変更なしで調整可能にする）。
+
+## 実装時の補足（T-102）
+
+User/Profile（[../specs/user-profile.md](specs/user-profile.md)、[../plans/user-profile.md](plans/user-profile.md)）で `user_profiles` を実際に使用した際の差分・追加決定。migration は `20261002000000_t102_user_profile_constraints`。
+
+- `display_name` を nullable にした。`NULL` は「未設定（オンボーディング未完了）」を表し、空文字は保存しない。
+- CHECK 制約を追加した: `display_name IS NULL OR char_length(display_name) BETWEEN 1 AND 50`、`char_length(timezone) BETWEEN 1 AND 64`、`locale IN ('ja','en')`、`week_starts_on BETWEEN 0 AND 6`。`locale` は日本語/英語の対応範囲が P1 で未決のため暫定値であり、言語を追加する際は migration が必要。
+- プロフィール行は signup では作成せず、初回の `GET/PATCH /api/v1/me` で既定値（`timezone = Asia/Tokyo`、`locale = ja`、`week_starts_on = 1`、`display_name = NULL`）により遅延作成する（`INSERT ... ON CONFLICT DO NOTHING`）。T-101 の signup transaction は変更していない。
+- `user_profiles` には `version` 列を持たせず、項目単位の last-write-wins とした（Spec Business Rules 参照）。
