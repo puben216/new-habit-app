@@ -76,6 +76,15 @@
 
 `targetCount` は `build` のみ 2 以上を許可する（`reduce` は常に 1）。成功時は `201` とリソース、validation は `422`、未認証 `401`、所有権を含む非存在 `404`、version 競合 `409`、rate limit `429`。
 
+### T-104 で確定した Habit API の契約差分
+
+`/habits` 系の正式な契約は [../specs/habit-api.md](specs/habit-api.md) の API and Events 節と `packages/contracts/src/habits.ts` を正本とし、上記の例からの差分は次のとおり。
+
+- `schedule.effectiveFrom`（`YYYY-MM-DD`）を必須とする（サーバーがユーザーのローカル日付を推測しない）。`schedule.localTime` は受け付けない（T-401 で扱う）。
+- 楽観ロックの `version` は `If-Match` ではなく PATCH/archive の request body で受け取る。不一致は `409`（`version_conflict`）、アーカイブ済みの更新は `409`（`habit_archived`）。
+- `GET /habits` は `status`（`active|archived`、既定 `active`）、`limit`（1〜100、既定 20）、`cursor` を受け付け、`{ items, nextCursor }` を返す。
+- 状態変更メソッドは `Origin` 検証と `Content-Type: application/json` を必須とする。`Idempotency-Key` と rate limit は未対応。
+
 `PUT /habits/{habitId}/entries/{date}` は `status` に加えて `quantity`（当日の実施回数、`build` の target_count が複数の場合に使用）を受け付ける。
 
 ## AI 境界

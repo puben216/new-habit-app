@@ -37,6 +37,10 @@ interface AuthContainer {
   readonly emailSender: EmailSenderPort;
   readonly clock: Clock;
   readonly authHandlers: NextAuthResult["handlers"];
+  /** session 取得(actor 解決)用。T-104 以降の認可付き route が共有する。 */
+  readonly auth: NextAuthResult["auth"];
+  /** 業務 module の repository が共有する PrismaClient(接続 pool を増やさないため公開する)。 */
+  readonly prisma: PrismaClient;
 }
 
 const globalForPrisma = globalThis as unknown as { __habitAppPrisma?: PrismaClient };
@@ -80,9 +84,18 @@ async function buildAuthContainer(): Promise<AuthContainer> {
     dummyPasswordHash,
     authSecret: env.AUTH_SECRET,
   };
-  const { handlers: authHandlers } = createAuthHandlers(authHandlersDeps);
+  const { handlers: authHandlers, auth } = createAuthHandlers(authHandlersDeps);
 
-  return { authRepository, passwordHasher, tokenGenerator, emailSender, clock, authHandlers };
+  return {
+    authRepository,
+    passwordHasher,
+    tokenGenerator,
+    emailSender,
+    clock,
+    authHandlers,
+    auth,
+    prisma,
+  };
 }
 
 let containerPromise: Promise<AuthContainer> | undefined;

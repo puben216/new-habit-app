@@ -162,3 +162,13 @@ Auth adapter（[../specs/auth-adapter.md](specs/auth-adapter.md)、[../plans/aut
 - `verification_tokens` のみ Auth.js 標準スキーマ（`identifier`/`token`/`expires`、`id` 列なし）にそのまま準拠した。`token` 列には平文ではなく sha256 hash を保存する（Business Rules 準拠）。
 - OAuth 用の `accounts` テーブルは Spec の Out of Scope（Google/GitHub OAuth 除外）のため作成していない。
 - `login_attempts.purpose` の CHECK 制約値、rate limit 閾値（直近 15 分 5 回失敗 → 15 分 lockout）は `packages/config` の設定値として外出しする予定（Task 6 で実装、コード変更なしで調整可能にする）。
+
+## 実装時の補足（T-104）
+
+Habit repository/use case/API（[../specs/habit-api.md](specs/habit-api.md)、[../plans/habit-api.md](plans/habit-api.md)）の実装時の追加決定。schema/migration の変更はない。
+
+- `habits.version` を楽観ロックに使用する。作成時 1、状態変更（詳細更新・スケジュール変更・アーカイブ）ごとに +1。`UPDATE ... WHERE id = ? AND user_id = ? AND version = ?` の条件付き更新で競合を検出し、`habit_schedule_versions` の変更と同一 transaction で反映する。
+- 一覧の keyset は `(created_at desc, id desc)`（既存 index `habits_user_id_status_created_at_id_idx` に一致）。`habits.created_at` は DB の `now()`（マイクロ秒）ではなく Application の Clock（ミリ秒精度）を明示して書き込む。Prisma の `Date`（ミリ秒）との丸め差で keyset の比較がずれないようにするため。他 module が `habits` へ別経路で挿入する場合も同じ前提を守ること。
+- cursor は直前ページ最後の習慣の `public_id` と `status` のみを持ち、repository が actor 条件付きで `(created_at, id)` を引き直す。内部 PK・`user_id` を cursor に含めない。
+- `public_id` は Application が UUID を採番して明示的に挿入する（DB 既定の `gen_random_uuid()` は使用しない）。
+- `habit_schedule_versions` の更新は「既存行の `effective_to` 更新 → 新規行の insert」の順で行い、有効期間の exclusion constraint を一時的にも破らない。`local_time` 列は T-104 では読み書きしない（Domain が未対応。T-401 で扱う）。

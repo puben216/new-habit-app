@@ -118,6 +118,56 @@ export function createHabit(input: CreateHabitInput): Habit {
   });
 }
 
+/**
+ * 永続化済みの状態から Habit を復元するための入力(T-104)。
+ * Infrastructure が DB の行をこの形へ写像して渡す。
+ */
+export interface ReconstituteHabitInput extends HabitDetailsInput {
+  id: string;
+  /** 永続層の生の値を受けるため string とし、実行時に検証する。 */
+  kind: string;
+  /** 永続層の生の値を受けるため string とし、実行時に検証する。 */
+  status: string;
+  /** 1 件以上。順序は問わない(effectiveFrom 昇順に整列して復元する)。 */
+  scheduleVersions: readonly ScheduleVersionInput[];
+}
+
+/**
+ * 永続化済みの状態から Habit を復元する。
+ *
+ * 新しい業務ルールは持たず、createHabit/changeSchedule と同じ検証関数
+ * (kind、必須項目、ScheduleVersion 単体の値域、有効期間の重複禁止)を再実行して、
+ * 不変条件を満たさない保存データを黙って受け入れないようにする。
+ * 状態(status)は保存された値をそのまま復元する(archived のまま復元できる)。
+ */
+export function reconstituteHabit(input: ReconstituteHabitInput): Habit {
+  assertValidId(input.id);
+  assertHabitKind(input.kind);
+  const kind: HabitKind = input.kind;
+  if (input.status !== "active" && input.status !== "archived") {
+    throw new InvalidHabitDetailsError(`status が不正です: ${String(input.status)}`);
+  }
+  assertValidDetails(input);
+  if (input.scheduleVersions.length === 0) {
+    throw new InvalidHabitDetailsError("ScheduleVersion を 1 件以上持つ必要があります。");
+  }
+  const normalized = normalizeDetails(input);
+  const versions = input.scheduleVersions
+    .map((version) => createScheduleVersion(kind, version))
+    .sort((a, b) =>
+      a.effectiveFrom < b.effectiveFrom ? -1 : a.effectiveFrom > b.effectiveFrom ? 1 : 0,
+    );
+  assertNoOverlappingScheduleVersions(versions);
+
+  return Object.freeze({
+    id: input.id,
+    kind,
+    ...normalized,
+    status: input.status,
+    scheduleVersions: Object.freeze(versions),
+  });
+}
+
 function assertNotArchived(habit: Habit): void {
   if (habit.status === "archived") {
     throw new HabitArchivedError(`Habit(${habit.id}) は既にアーカイブ済みです。`);
