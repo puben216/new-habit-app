@@ -27,7 +27,7 @@ export type {
   UpdateHabitDetailsInput,
 } from "./habit";
 
-export { addCalendarDays, dayOfWeekOf } from "./calendar-date";
+export { addCalendarDays, dayOfWeekOf, isValidCalendarDate } from "./calendar-date";
 export { localDateAt } from "./local-date";
 export {
   MAX_OCCURRENCE_RANGE_DAYS,
