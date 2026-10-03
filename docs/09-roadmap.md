@@ -100,6 +100,9 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 - today query、entry upsert、idempotency
 - Integration: duplicate、concurrency、ownership
 - E2E: 成功/未実施/skip/訂正
+- 設計: Feature Spec([habit-entry.md](specs/habit-entry.md))と Implementation Plan([habit-entry.md](plans/habit-entry.md))を作成。reduce は`quantity`を持たず`status`のみ、対象日は今日から過去 7 日、予定のない日は 422 と決定(D-12)
+- 実装: Domain `resolveHabitEntry`(build の`success`は`quantity >= targetCount`、`missed`は途中経過、`skipped`/reduce は`quantity`なし)、Application `getTodayScheduleUseCase`/`upsertHabitEntryUseCase`(「今日」は`localDateAt(now, profile.timezone)`)、Infrastructure `PrismaHabitEntryRepository`(`INSERT ... ON CONFLICT`の単一文で冪等 upsert、`public_id`+`user_id`で習慣を解決)、Migration(`quantity`の CHECK)、`GET /api/v1/schedule/today`、`PUT /api/v1/habits/{habitId}/entries/{date}`
+- テスト: Unit(Domain/Application/契約/handler)と Integration(実 PostgreSQL: upsert 往復、再送、並行 6 件で 1 レコード、IDOR、CHECK 制約)を追加。E2E は Playwright 未導入のため対象外。`note`と履歴`GET /habit-entries`は対象外(P2 未決、T-204 以降)
 
 ### T-203 Daily check-in
 

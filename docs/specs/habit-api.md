@@ -269,7 +269,7 @@ Fake/Stub 方針: Application の unit test は in-memory fake repository を使
 - **`localTime`**: 本タスクでは受け付けない(Out of Scope)。T-401(通知)着手時に Domain `ScheduleVersion` への追加とあわせて設計する。
 - **`effectiveFrom` の既定値**: クライアント指定を必須とした。T-102(timezone)完了後に「ユーザーのローカル今日」を既定にするかを再検討できる。
 - **過去日への `effectiveFrom`**: Domain は「既存のどの版よりも後」のみを許可する。「今日より前を拒否する」ポリシーは timezone と Clock が必要なため本タスクでは課さない(Domain の `changeSchedule` コメントが示す Application 層の将来課題)。
-- **reduce の `quantity` 意味論**(`docs/specs/habit-domain.md` の Open Question): 本タスクは `HabitEntry` を扱わないため影響しない。T-201 着手前に確認する。
+- **reduce の `quantity` 意味論**(`docs/specs/habit-domain.md` の Open Question): 本タスクは `HabitEntry` を扱わないため影響しない。T-202 で解決済み(reduce は `quantity` を持たず `status` のみで判定。[habit-entry.md](habit-entry.md)、`docs/10` D-12)。
 
 ## Implementation Readiness
 

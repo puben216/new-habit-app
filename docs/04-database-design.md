@@ -82,7 +82,7 @@ Index:
 
 ### `habit_entries`
 
-`id`, `public_id`, `user_id`, `habit_id`, `habit_date date`, `scheduled_for timestamptz nullable`, `status` (`success|missed|skipped`), `quantity numeric nullable`, `note text nullable`, `source` (`web|system`), timestamps。`quantity` は `build` の当日実施回数を表し、対応する schedule version の `target_count` 以上で `status = success` とする。`reduce` は `target_count = 1` のため quantity は使用しないか常に 0/1 とする。
+`id`, `public_id`, `user_id`, `habit_id`, `habit_date date`, `scheduled_for timestamptz nullable`, `status` (`success|missed|skipped`), `quantity numeric nullable`, `note text nullable`, `source` (`web|system`), timestamps。`quantity` は `build` の当日実施回数を表し、対応する schedule version の `target_count` 以上で `status = success` とする。`reduce` は `target_count = 1` のため quantity は使用せず常に `NULL` とし、成否は `status` のみで表す（T-202 で確定。[../specs/habit-entry.md](specs/habit-entry.md) HENT-003）。`build` の `missed` は途中経過（`quantity < target_count`）を持てる。
 
 制約・Index:
 
@@ -181,3 +181,13 @@ Habit repository/use case/API（[../specs/habit-api.md](specs/habit-api.md)、[.
 - cursor は直前ページ最後の習慣の `public_id` と `status` のみを持ち、repository が actor 条件付きで `(created_at, id)` を引き直す。内部 PK・`user_id` を cursor に含めない。
 - `public_id` は Application が UUID を採番して明示的に挿入する（DB 既定の `gen_random_uuid()` は使用しない）。
 - `habit_schedule_versions` の更新は「既存行の `effective_to` 更新 → 新規行の insert」の順で行い、有効期間の exclusion constraint を一時的にも破らない。`local_time` 列は T-104 では読み書きしない（Domain が未対応。T-401 で扱う）。
+
+## 実装時の補足（T-202）
+
+Habit entry（[../specs/habit-entry.md](specs/habit-entry.md)、[../plans/habit-entry.md](plans/habit-entry.md)）の実装時の追加決定。
+
+- Migration `20261003000000_t202_habit_entry_quantity_check` で `habit_entries_quantity_check CHECK (quantity IS NULL OR (quantity >= 0 AND quantity <= 1000))` を追加した（expand のみ。T-202 以前にアプリが書き込んでおらず既存行がないため backfill 不要）。
+- 記録は `INSERT ... ON CONFLICT (habit_id, habit_date) DO UPDATE` の単一文で冪等に upsert する。`habit_id` は `habits` を `public_id` と `user_id` の両方で解決するサブクエリから得る（他ユーザーの習慣へ書けない）。
+- `created_at` は新規作成時のみ Application の Clock を書き込む。更新時の `updated_at` は DB の `set_updated_at` trigger（`CURRENT_TIMESTAMP`）が上書きする。
+- `note`、`scheduled_for` は T-202 では書かない（常に `NULL`）。`source` は常に `web`。
+- 今日の予定の取得（`WHERE user_id = ? AND habit_date = ?`）は `(user_id, habit_date desc, id desc)` index を使う。

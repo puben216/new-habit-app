@@ -39,6 +39,19 @@ export type {
   UpdateHabitRequest,
 } from "./habits";
 
+export {
+  HABIT_ENTRY_MAX_QUANTITY,
+  habitEntryDateParamSchema,
+  habitEntryResponseSchema,
+  todayScheduleResponseSchema,
+  upsertHabitEntryRequestSchema,
+} from "./tracking";
+export type {
+  HabitEntryResponse,
+  TodayScheduleResponse,
+  UpsertHabitEntryRequest,
+} from "./tracking";
+
 export { createProblemDetails } from "./problem-details";
 export type { ProblemDetails } from "./problem-details";
 
