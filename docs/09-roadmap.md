@@ -91,6 +91,9 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 
 - タイムゾーン/DST 対応の予定機会生成
 - Unit/property test: 境界日、非予定日、version 切替
+- 設計: Feature Spec([schedule-calculation.md](specs/schedule-calculation.md))と Implementation Plan([schedule-calculation.md](plans/schedule-calculation.md))を作成
+- 実装: `packages/domain/src/habits/`に`localDateAt`(IANA timezone のローカル暦日、DST は壁時計 0 時境界)、`dayOfWeekOf`/`addCalendarDays`(UTC 暦演算)、`resolveScheduleForDate`/`scheduledOccurrenceOn`/`generateOccurrences`(版切替対応、範囲上限 366 日)、`weekStartOf`を純粋関数として追加。`findScheduleVersionForDate`は`resolveScheduleForDate`へ委譲(有効期間が重複する版は例外)。`quantity`は扱わないため reduce の意味論は T-202 着手前に確認する
+- テスト: `pnpm test:unit`(DST 春/秋、日付変更線、うるう日、版切替日、上限、シード固定の性質テストを含む)、`format:check`/`lint`/`lint:boundaries`/`typecheck`/`build`を実行し成功を確認。DB/API 変更がないため`test:integration`は対象外
 
 ### T-202 Habit entry
 

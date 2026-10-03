@@ -4,6 +4,7 @@ import {
   InvalidHabitDetailsError,
   UnsupportedScheduleChangeError,
 } from "./errors";
+import { resolveScheduleForDate } from "./occurrence";
 import { assertHabitKind } from "./habit-kind";
 import type { HabitKind } from "./habit-kind";
 import {
@@ -260,13 +261,5 @@ export function findScheduleVersionForDate(
   habit: Habit,
   calendarDate: string,
 ): ScheduleVersion | null {
-  for (const version of habit.scheduleVersions) {
-    const afterStart = !isBeforeCalendarDate(calendarDate, version.effectiveFrom);
-    const beforeEnd =
-      version.effectiveTo === null || !isBeforeCalendarDate(version.effectiveTo, calendarDate);
-    if (afterStart && beforeEnd) {
-      return version;
-    }
-  }
-  return null;
+  return resolveScheduleForDate(habit.scheduleVersions, calendarDate);
 }
