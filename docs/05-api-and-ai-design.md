@@ -96,6 +96,14 @@
 - 状態変更の共通要件（`Origin` 検証、`Content-Type: application/json`、body 上限）は `/habits` と同じ。rate limit は未対応。
 - `GET /habit-entries`（履歴）は T-202 の対象外。
 
+`/daily-check-ins/{date}` の正式な契約は [../specs/daily-check-in.md](specs/daily-check-in.md) の API and Events 節と `packages/contracts/src/check-in.ts` を正本とし、上記の例からの差分は次のとおり。
+
+- `GET /daily-check-ins/{date}` を追加する（自分のその日のチェックインを返す。なければ `404`、`check_in_not_found`）。対象日の範囲制限はない。
+- `PUT` の body は `{ mood?, difficulty?, note? }`（`mood`/`difficulty` は 1〜5 の整数、`note` は 1000 文字以内で改行・タブのみ許可）。`PUT` は対象日のチェックイン全体の置き換えで、省略した項目は未設定（`null`）になる。3 項目がすべて未設定の入力は `422`（`invalid_check_in`）。
+- `PUT` の対象日は actor の「今日」から過去 7 日まで。範囲外は `422`（`check_in_date_out_of_range`）。習慣の有無・予定の有無は問わない。
+- 自然キー `(user, date)` で冪等であり `Idempotency-Key` は使わない。並行送信は後勝ちで 1 レコードに収束する。成功は常に `200`。状態変更の共通要件は `/habits` と同じ。rate limit は未対応。
+- 履歴・期間取得と削除は対象外。
+
 ## AI 境界
 
 `AiCoachPort` は provider SDK を抽象化する。Application が渡すのは目的別 DTO のみで、provider 固有の response object を返さない。実装時点の公式仕様を再確認し、OpenAI 採用時は Responses API の Structured Outputs と function calling を Adapter 内に閉じ込める。

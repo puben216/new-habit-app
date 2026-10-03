@@ -52,6 +52,14 @@ export type {
   UpsertHabitEntryRequest,
 } from "./tracking";
 
+export {
+  CHECK_IN_NOTE_MAX_LENGTH,
+  checkInDateParamSchema,
+  dailyCheckInResponseSchema,
+  upsertDailyCheckInRequestSchema,
+} from "./check-in";
+export type { DailyCheckInResponse, UpsertDailyCheckInRequest } from "./check-in";
+
 export { createProblemDetails } from "./problem-details";
 export type { ProblemDetails } from "./problem-details";
 
