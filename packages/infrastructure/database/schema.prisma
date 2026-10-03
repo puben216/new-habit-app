@@ -91,9 +91,10 @@ model LoginAttempt {
 
 // weekStartsOn: 0=日曜〜6=土曜。既定値は10-decisions-and-open-questions.mdのP1で未決のため
 // DB defaultを設けず、作成時に必ずApplication層が値を指定する。
+// displayName: nullは未設定(オンボーディング未完了)。値域のCHECK制約はmigration(T-102)で追加。
 model UserProfile {
   userId       BigInt   @id @map("user_id")
-  displayName  String   @map("display_name")
+  displayName  String?  @map("display_name")
   timezone     String
   locale       String
   weekStartsOn Int      @map("week_starts_on") @db.SmallInt
