@@ -31,3 +31,6 @@ export class UnsupportedScheduleChangeError extends HabitDomainError {}
 
 /** 既にアーカイブ済みの Habit に対して許可されない操作を行おうとした場合。 */
 export class HabitArchivedError extends HabitDomainError {}
+
+/** 予定機会の計算入力(日時、timezone、暦日、範囲、週開始日)が不正な場合。 */
+export class InvalidScheduleCalculationInputError extends HabitDomainError {}

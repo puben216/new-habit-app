@@ -27,8 +27,20 @@ export type {
   UpdateHabitDetailsInput,
 } from "./habit";
 
+export { addCalendarDays, dayOfWeekOf } from "./calendar-date";
+export { localDateAt } from "./local-date";
+export {
+  MAX_OCCURRENCE_RANGE_DAYS,
+  resolveScheduleForDate,
+  scheduledOccurrenceOn,
+  generateOccurrences,
+} from "./occurrence";
+export type { ScheduledOccurrence, OccurrenceRange } from "./occurrence";
+export { weekStartOf } from "./week";
+
 export {
   HabitDomainError,
+  InvalidScheduleCalculationInputError,
   InvalidHabitKindError,
   InvalidHabitDetailsError,
   InvalidScheduleVersionError,
