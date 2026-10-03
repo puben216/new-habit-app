@@ -66,8 +66,9 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 ### T-102 User/Profile
 
 - Domain/Application、`GET/PATCH /me`、timezone validation
+- 設計: Feature Spec([user-profile.md](specs/user-profile.md))と Implementation Plan([user-profile.md](plans/user-profile.md))を作成
 - Unit: policy/value object。Integration: persistence/ownership
-- E2E: onboarding profile
+- E2E: onboarding profile。Playwright 未導入のため本タスクでは対象外とし、Route Handler 単体テストと Repository Integration Test で代替する。Playwright 導入後に追加する
 
 ### T-103 Habit Domain
 
@@ -78,9 +79,11 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 
 ### T-104 Habit repository/use cases/API
 
-- create/list/get/update/archive、cursor、optimistic lock
-- Integration: constraint、IDOR、409、pagination
-- E2E: build/reduce CRUD
+- 設計: Feature Spec([habit-api.md](specs/habit-api.md))と Implementation Plan([habit-api.md](plans/habit-api.md))を作成し、Implementation Readiness Gate を通過
+- 実装: T-103 の Domain を再利用し、`HabitRepositoryPort`/use case 5 本(Application)、`PrismaHabitRepository`(Infrastructure、条件付き UPDATE による楽観ロック、`(created_at, id)` keyset の cursor pagination)、`/api/v1/habits` 5 endpoint(Presentation、session の actor、Origin 検証、Problem Details)を実装。Domain には DB 行の復元用 `reconstituteHabit` のみ追加。Migration なし
+- テスト: Unit(Domain/Application/Contracts/HTTP handler)と、実 PostgreSQL の Integration(constraint、IDOR、並行更新の 409、pagination)を追加
+- 未実装(Spec の Out of Scope/Accepted Risks): `Idempotency-Key`、rate limit、`localTime`、構造化ログ、OpenAPI 生成。文字数上限は P2 未決のため暫定値
+- E2E: Playwright 未導入のため、導入後に build/reduce CRUD を追加
 
 ## Phase 2: Tracking と可視化
 

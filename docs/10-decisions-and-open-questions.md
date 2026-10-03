@@ -45,6 +45,7 @@ P0-03（AI provider）と P0-05（メールの region/ドメイン確定）は A
 - Rate limit の具体的な閾値（endpoint / actor / IP 別のリクエスト数と時間窓）
 - 通知の quiet hours のデフォルト値（開始・終了時刻、タイムゾーン基準）
 - `habit_entries.note` 等、自由記述系フィールドの文字数上限
+  - T-104 の暫定既定値: 習慣の `name` 100 文字、`purpose`/`cue`/`minimumAction`/`replacementAction` 各 500 文字、制御文字不可（契約 schema の定数のみ。確定時に更新する。[habit-api.md](specs/habit-api.md) HAPI-INV-005）
 
 ## 検証すべき仮説
 

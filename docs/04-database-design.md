@@ -41,7 +41,7 @@ admins/users 1--N audit_logs
 
 ### `user_profiles`
 
-`user_id` PK/FK、`display_name`、`timezone`、`locale`、`week_starts_on`、timestamps。タイムゾーンは IANA ID としてアプリ側 allowlist でも検証する。
+`user_id` PK/FK、`display_name`、`timezone`、`locale`、`week_starts_on`、timestamps。タイムゾーンは IANA ID としてアプリ側(Domain の `parseTimezone`)でも検証する(T-102。固定 allowlist ではなく ICU が受理する `Area/Location`/`UTC` 形式を検証する。理由は[../specs/user-profile.md](specs/user-profile.md) PROF-004 を参照)。
 
 ### `sessions`（T-101）
 
@@ -162,3 +162,22 @@ Auth adapter（[../specs/auth-adapter.md](specs/auth-adapter.md)、[../plans/aut
 - `verification_tokens` のみ Auth.js 標準スキーマ（`identifier`/`token`/`expires`、`id` 列なし）にそのまま準拠した。`token` 列には平文ではなく sha256 hash を保存する（Business Rules 準拠）。
 - OAuth 用の `accounts` テーブルは Spec の Out of Scope（Google/GitHub OAuth 除外）のため作成していない。
 - `login_attempts.purpose` の CHECK 制約値、rate limit 閾値（直近 15 分 5 回失敗 → 15 分 lockout）は `packages/config` の設定値として外出しする予定（Task 6 で実装、コード変更なしで調整可能にする）。
+
+## 実装時の補足（T-102）
+
+User/Profile（[../specs/user-profile.md](specs/user-profile.md)、[../plans/user-profile.md](plans/user-profile.md)）で `user_profiles` を実際に使用した際の差分・追加決定。migration は `20261002000000_t102_user_profile_constraints`。
+
+- `display_name` を nullable にした。`NULL` は「未設定（オンボーディング未完了）」を表し、空文字は保存しない。
+- CHECK 制約を追加した: `display_name IS NULL OR char_length(display_name) BETWEEN 1 AND 50`、`char_length(timezone) BETWEEN 1 AND 64`、`locale IN ('ja','en')`、`week_starts_on BETWEEN 0 AND 6`。`locale` は日本語/英語の対応範囲が P1 で未決のため暫定値であり、言語を追加する際は migration が必要。
+- プロフィール行は signup では作成せず、初回の `GET/PATCH /api/v1/me` で既定値（`timezone = Asia/Tokyo`、`locale = ja`、`week_starts_on = 1`、`display_name = NULL`）により遅延作成する（`INSERT ... ON CONFLICT DO NOTHING`）。T-101 の signup transaction は変更していない。
+- `user_profiles` には `version` 列を持たせず、項目単位の last-write-wins とした（Spec Business Rules 参照）。
+
+## 実装時の補足（T-104）
+
+Habit repository/use case/API（[../specs/habit-api.md](specs/habit-api.md)、[../plans/habit-api.md](plans/habit-api.md)）の実装時の追加決定。schema/migration の変更はない。
+
+- `habits.version` を楽観ロックに使用する。作成時 1、状態変更（詳細更新・スケジュール変更・アーカイブ）ごとに +1。`UPDATE ... WHERE id = ? AND user_id = ? AND version = ?` の条件付き更新で競合を検出し、`habit_schedule_versions` の変更と同一 transaction で反映する。
+- 一覧の keyset は `(created_at desc, id desc)`（既存 index `habits_user_id_status_created_at_id_idx` に一致）。`habits.created_at` は DB の `now()`（マイクロ秒）ではなく Application の Clock（ミリ秒精度）を明示して書き込む。Prisma の `Date`（ミリ秒）との丸め差で keyset の比較がずれないようにするため。他 module が `habits` へ別経路で挿入する場合も同じ前提を守ること。
+- cursor は直前ページ最後の習慣の `public_id` と `status` のみを持ち、repository が actor 条件付きで `(created_at, id)` を引き直す。内部 PK・`user_id` を cursor に含めない。
+- `public_id` は Application が UUID を採番して明示的に挿入する（DB 既定の `gen_random_uuid()` は使用しない）。
+- `habit_schedule_versions` の更新は「既存行の `effective_to` 更新 → 新規行の insert」の順で行い、有効期間の exclusion constraint を一時的にも破らない。`local_time` 列は T-104 では読み書きしない（Domain が未対応。T-401 で扱う）。
