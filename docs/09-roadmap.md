@@ -66,8 +66,9 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 ### T-102 User/Profile
 
 - Domain/Application、`GET/PATCH /me`、timezone validation
+- 設計: Feature Spec([user-profile.md](specs/user-profile.md))と Implementation Plan([user-profile.md](plans/user-profile.md))を作成
 - Unit: policy/value object。Integration: persistence/ownership
-- E2E: onboarding profile
+- E2E: onboarding profile。Playwright 未導入のため本タスクでは対象外とし、Route Handler 単体テストと Repository Integration Test で代替する。Playwright 導入後に追加する
 
 ### T-103 Habit Domain
 
