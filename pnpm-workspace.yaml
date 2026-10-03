@@ -14,6 +14,11 @@ auditConfig:
     - GHSA-ggr8-5vv4-36mx
     - GHSA-3f6p-5ww8-9rcr
     - GHSA-rgwj-5xj2-c3m3
+    # braces(GHSA-vfj7-8cjw-p6xm): 2026-10-03時点で修正版なし(3.0.3が最新)。
+    # eslint-config-next > fast-glob > micromatch 経由のdevDependencyのみで、
+    # lint時にリポジトリ内の固定globを展開するだけでユーザー入力は渡らず、runtimeへ同梱されない。
+    # 修正版が出たら本ignoreを削除する。
+    - GHSA-vfj7-8cjw-p6xm
 # T-101 Task5(2026-10-01): eslint/testcontainers/prismaのdevDependencyチェーン経由で
 # 古いtranstive依存が解決されていたため、既知の修正済みバージョンへ強制固定する。
 # 上限なしのrange(">=x")は使わない: 別majorの依存先(例: eslint本体が使うminimatch@3系の
