@@ -23,3 +23,24 @@ export class HabitNotScheduledError extends TrackingApplicationError {
     super("habit not scheduled on the date");
   }
 }
+
+/** チェックインの対象日が「今日から過去 N 日まで」の範囲外(未来日を含む)。 */
+export class CheckInDateOutOfRangeError extends TrackingApplicationError {
+  constructor() {
+    super("check-in date out of range");
+  }
+}
+
+/** その日のチェックインが存在しない(自分の分のみが対象)。 */
+export class DailyCheckInNotFoundError extends TrackingApplicationError {
+  constructor() {
+    super("daily check-in not found");
+  }
+}
+
+/** actor の user が存在しない(削除済み等)。 */
+export class UserNotFoundError extends TrackingApplicationError {
+  constructor() {
+    super("user not found");
+  }
+}

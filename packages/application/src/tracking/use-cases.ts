@@ -1,9 +1,7 @@
 import {
   HabitArchivedError,
   addCalendarDays,
-  createDefaultProfile,
   isValidCalendarDate,
-  localDateAt,
   resolveHabitEntry,
   scheduledOccurrenceOn,
 } from "@habit-app/domain";
@@ -13,6 +11,7 @@ import type { Clock } from "../auth";
 import { HabitNotFoundError } from "../habits/errors";
 import type { HabitRecord, HabitRepositoryPort } from "../habits/ports";
 import type { ProfileRepositoryPort } from "../identity/ports";
+import { resolveLocalToday } from "./local-today";
 import { EntryDateOutOfRangeError, HabitNotScheduledError } from "./errors";
 import type { HabitEntryRecord, HabitEntryRepositoryPort } from "./ports";
 
@@ -27,23 +26,6 @@ export const ENTRY_BACKDATE_LIMIT_DAYS = 7;
 
 /** 1 回の取得で habits を走査するときのページサイズ。 */
 const HABIT_PAGE_SIZE = 100;
-
-interface LocalToday {
-  readonly date: string;
-  readonly timezone: string;
-}
-
-async function resolveLocalToday(
-  profileRepository: ProfileRepositoryPort,
-  now: Clock,
-  actorUserId: string,
-): Promise<LocalToday> {
-  // プロフィールが未作成なら既定値で作成して timezone を得る(T-102 の遅延作成)。
-  const profile = await profileRepository.ensure(actorUserId, createDefaultProfile());
-  // user が存在しない(削除済み等)。習慣も存在しない扱いにする。
-  if (profile === null) throw new HabitNotFoundError();
-  return { date: localDateAt(now(), profile.timezone), timezone: profile.timezone };
-}
 
 export interface TodayScheduleItem {
   readonly habit: HabitRecord["habit"];
@@ -97,6 +79,8 @@ export async function getTodayScheduleUseCase(
   input: GetTodayScheduleInput,
 ): Promise<TodaySchedule> {
   const today = await resolveLocalToday(deps.profileRepository, deps.now, input.actorUserId);
+  // user が存在しない(削除済み等)。習慣も存在しない扱いにする。
+  if (today === null) throw new HabitNotFoundError();
   const [habits, entries] = await Promise.all([
     listAllActiveHabits(deps.habitRepository, input.actorUserId),
     deps.entryRepository.listByDate({ actorUserId: input.actorUserId, date: today.date }),
@@ -146,6 +130,8 @@ export async function upsertHabitEntryUseCase(
   input: UpsertHabitEntryInput,
 ): Promise<HabitEntryRecord> {
   const today = await resolveLocalToday(deps.profileRepository, deps.now, input.actorUserId);
+  // user が存在しない(削除済み等)。習慣も存在しない扱いにする。
+  if (today === null) throw new HabitNotFoundError();
 
   const oldest = addCalendarDays(today.date, -ENTRY_BACKDATE_LIMIT_DAYS);
   if (!isValidCalendarDate(input.date) || input.date < oldest || input.date > today.date) {

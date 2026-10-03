@@ -109,6 +109,9 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 - mood/difficulty/note upsert
 - Unit/Integration: 値域、local date、ownership
 - E2E: 当日チェックイン
+- 設計: Feature Spec([daily-check-in.md](specs/daily-check-in.md))と Implementation Plan([daily-check-in.md](plans/daily-check-in.md))を作成。`PUT`は全項目置換、対象日は今日から過去 7 日、3 項目すべて未設定は 422、メモは暫定 1000 文字(改行・タブのみ許可)と決定
+- 実装: Domain `resolveDailyCheckIn`、Application `getDailyCheckInUseCase`/`upsertDailyCheckInUseCase`(「今日」の算出を`resolveLocalToday`へ切り出し T-202 と共有)、Infrastructure `PrismaDailyCheckInRepository`(`INSERT ... ON CONFLICT`の単一文で冪等 upsert、user 不存在は FK 違反でなく「見つからない」)、`GET/PUT /api/v1/daily-check-ins/{date}`。Migration なし(既存の制約・index で足りる)
+- テスト: Unit(Domain/Application/契約/handler)と Integration(実 PostgreSQL: 往復、置換、再送、並行 6 件で 1 レコード、他ユーザーとの分離、user 不存在、mood/difficulty の CHECK)を追加。E2E は Playwright 未導入のため対象外。履歴・WAU 集計は T-204 以降
 
 ### T-204 Statistics dashboard
 
