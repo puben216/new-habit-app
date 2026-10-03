@@ -12,6 +12,7 @@ export type { ScheduleVersion, ScheduleVersionInput } from "./schedule-version";
 
 export {
   createHabit,
+  reconstituteHabit,
   updateHabitDetails,
   archiveHabit,
   changeSchedule,
@@ -22,6 +23,7 @@ export type {
   HabitStatus,
   HabitDetailsInput,
   CreateHabitInput,
+  ReconstituteHabitInput,
   UpdateHabitDetailsInput,
 } from "./habit";
 

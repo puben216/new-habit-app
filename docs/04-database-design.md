@@ -171,3 +171,13 @@ User/Profile（[../specs/user-profile.md](specs/user-profile.md)、[../plans/use
 - CHECK 制約を追加した: `display_name IS NULL OR char_length(display_name) BETWEEN 1 AND 50`、`char_length(timezone) BETWEEN 1 AND 64`、`locale IN ('ja','en')`、`week_starts_on BETWEEN 0 AND 6`。`locale` は日本語/英語の対応範囲が P1 で未決のため暫定値であり、言語を追加する際は migration が必要。
 - プロフィール行は signup では作成せず、初回の `GET/PATCH /api/v1/me` で既定値（`timezone = Asia/Tokyo`、`locale = ja`、`week_starts_on = 1`、`display_name = NULL`）により遅延作成する（`INSERT ... ON CONFLICT DO NOTHING`）。T-101 の signup transaction は変更していない。
 - `user_profiles` には `version` 列を持たせず、項目単位の last-write-wins とした（Spec Business Rules 参照）。
+
+## 実装時の補足（T-104）
+
+Habit repository/use case/API（[../specs/habit-api.md](specs/habit-api.md)、[../plans/habit-api.md](plans/habit-api.md)）の実装時の追加決定。schema/migration の変更はない。
+
+- `habits.version` を楽観ロックに使用する。作成時 1、状態変更（詳細更新・スケジュール変更・アーカイブ）ごとに +1。`UPDATE ... WHERE id = ? AND user_id = ? AND version = ?` の条件付き更新で競合を検出し、`habit_schedule_versions` の変更と同一 transaction で反映する。
+- 一覧の keyset は `(created_at desc, id desc)`（既存 index `habits_user_id_status_created_at_id_idx` に一致）。`habits.created_at` は DB の `now()`（マイクロ秒）ではなく Application の Clock（ミリ秒精度）を明示して書き込む。Prisma の `Date`（ミリ秒）との丸め差で keyset の比較がずれないようにするため。他 module が `habits` へ別経路で挿入する場合も同じ前提を守ること。
+- cursor は直前ページ最後の習慣の `public_id` と `status` のみを持ち、repository が actor 条件付きで `(created_at, id)` を引き直す。内部 PK・`user_id` を cursor に含めない。
+- `public_id` は Application が UUID を採番して明示的に挿入する（DB 既定の `gen_random_uuid()` は使用しない）。
+- `habit_schedule_versions` の更新は「既存行の `effective_to` 更新 → 新規行の insert」の順で行い、有効期間の exclusion constraint を一時的にも破らない。`local_time` 列は T-104 では読み書きしない（Domain が未対応。T-401 で扱う）。

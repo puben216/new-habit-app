@@ -4,6 +4,7 @@ import {
   changeSchedule,
   createHabit,
   findScheduleVersionForDate,
+  reconstituteHabit,
   updateHabitDetails,
 } from "./habit";
 import type { CreateHabitInput } from "./habit";
@@ -11,6 +12,8 @@ import {
   HabitArchivedError,
   InvalidHabitDetailsError,
   InvalidHabitKindError,
+  InvalidScheduleVersionError,
+  OverlappingScheduleVersionError,
   UnsupportedScheduleChangeError,
 } from "./errors";
 
@@ -269,5 +272,90 @@ describe("findScheduleVersionForDate", () => {
 
     expect(findScheduleVersionForDate(habit, "2024-01-01")).toBeNull();
     expect(findScheduleVersionForDate(habit, "2024-07-01")).toBeNull();
+  });
+});
+
+describe("reconstituteHabit", () => {
+  const stored = {
+    id: "habit-1",
+    kind: "build" as const,
+    status: "active" as const,
+    name: "水を飲む",
+    purpose: "健康維持",
+    cue: "起床直後",
+    minimumAction: "コップ1杯の水を飲む",
+    replacementAction: null,
+    scheduleVersions: [
+      { effectiveFrom: "2024-04-01", effectiveTo: null, daysOfWeek: [1, 3], targetCount: 2 },
+      {
+        effectiveFrom: "2024-01-01",
+        effectiveTo: "2024-03-31",
+        daysOfWeek: [0, 6],
+        targetCount: 1,
+      },
+    ],
+  };
+
+  it("保存済みの状態を復元し、ScheduleVersionをeffectiveFrom昇順に整列する", () => {
+    const habit = reconstituteHabit(stored);
+
+    expect(habit.status).toBe("active");
+    expect(habit.scheduleVersions.map((v) => v.effectiveFrom)).toEqual([
+      "2024-01-01",
+      "2024-04-01",
+    ]);
+    expect(Object.isFrozen(habit)).toBe(true);
+  });
+
+  it("archivedのまま復元できる", () => {
+    expect(reconstituteHabit({ ...stored, status: "archived" }).status).toBe("archived");
+  });
+
+  it("復元したHabitに対して通常のDomain操作ができる", () => {
+    const habit = reconstituteHabit(stored);
+    const changed = changeSchedule(habit, {
+      effectiveFrom: "2024-07-01",
+      daysOfWeek: [2],
+      targetCount: 1,
+    });
+    expect(changed.scheduleVersions).toHaveLength(3);
+    expect(changed.scheduleVersions[1]?.effectiveTo).toBe("2024-06-30");
+  });
+
+  it("有効期間が重複する保存データを拒否する", () => {
+    expect(() =>
+      reconstituteHabit({
+        ...stored,
+        scheduleVersions: [
+          { effectiveFrom: "2024-01-01", effectiveTo: null, daysOfWeek: [1], targetCount: 1 },
+          { effectiveFrom: "2024-02-01", effectiveTo: null, daysOfWeek: [1], targetCount: 1 },
+        ],
+      }),
+    ).toThrow(OverlappingScheduleVersionError);
+  });
+
+  it("reduceでtargetCountが1以外の保存データを拒否する", () => {
+    expect(() =>
+      reconstituteHabit({
+        ...stored,
+        kind: "reduce",
+        scheduleVersions: [
+          { effectiveFrom: "2024-01-01", effectiveTo: null, daysOfWeek: [1], targetCount: 2 },
+        ],
+      }),
+    ).toThrow(InvalidScheduleVersionError);
+  });
+
+  it("不正なkind/status/空のname/空のscheduleVersionsを拒否する", () => {
+    expect(() => reconstituteHabit({ ...stored, kind: "other" as never })).toThrow(
+      InvalidHabitKindError,
+    );
+    expect(() => reconstituteHabit({ ...stored, status: "deleted" as never })).toThrow(
+      InvalidHabitDetailsError,
+    );
+    expect(() => reconstituteHabit({ ...stored, name: "  " })).toThrow(InvalidHabitDetailsError);
+    expect(() => reconstituteHabit({ ...stored, scheduleVersions: [] })).toThrow(
+      InvalidHabitDetailsError,
+    );
   });
 });
