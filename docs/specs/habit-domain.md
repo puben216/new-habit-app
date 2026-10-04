@@ -213,6 +213,7 @@ Integration/E2EはT-104(repository/use case/API)以降で、実際の永続化�
 ## Open Questions
 
 - **reduceのquantity意味論**: `docs/04-database-design.md`は「buildの当日成功はquantity>=target_count」と明記するが、reduceのquantityが「対象行動を回避できた回数(1=回避成功)」を表すのか、「対象行動が発生した回数」を表すのかが `01-product-requirements.md`/`04-database-design.md` に明記されていない。本Spec/実装では`isTargetMet`をkindによらず同一の`quantity >= targetCount`公式として実装し、reduceでも`quantity=1`を成功として扱う前提を置いた。この前提はHabitEntry(tracking, T-201/T-202)のUI入力仕様・保存方式の確定と合わせて再確認が必要。
+  - **解決(T-202, 2026-10-03)**: reduceは`quantity`を持たず`status`のみで成否を表す([habit-entry.md](habit-entry.md) HENT-003、`docs/10` D-12)。`isTargetMet`はbuildの`quantity >= targetCount`判定として維持し、reduceの記録判定には使わない。
 - **Habit `id`の型**: 本SpecはDomainの`id`をvalidationなしの非空文字列として扱う。UUID形式であることの検証やbrand型化が必要かは、T-104でのID発行方式(Application/Infrastructureがpublic_id UUIDを生成)確定時に見直す。
 - **文字数上限**: `name`/`purpose`/`cue`/`minimumAction`/`replacementAction`の最大文字数は`10-decisions-and-open-questions.md`のP2で未決のため、Domainでは空文字のみを拒否し上限は設けていない。上限確定後にDomainへ追加する。
 

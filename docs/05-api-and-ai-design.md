@@ -87,6 +87,15 @@
 
 `PUT /habits/{habitId}/entries/{date}` は `status` に加えて `quantity`（当日の実施回数、`build` の target_count が複数の場合に使用）を受け付ける。
 
+`/schedule/today` と `/habits/{habitId}/entries/{date}` の正式な契約は [../specs/habit-entry.md](specs/habit-entry.md) の API and Events 節と `packages/contracts/src/tracking.ts` を正本とし、上記の例からの差分は次のとおり。
+
+- `GET /schedule/today` は actor の timezone のローカル日に予定された active な習慣と当日の記録を `{ date, timezone, items }` で返す。クライアントは `date` を `PUT` の日付に使う。
+- `PUT` の body は `{ status, quantity? }`。`note` は受け付けない（文字数上限が P2 で未決のため）。`build` の `success` は `quantity >= target_count`（省略時は target_count）、`missed` は `quantity < target_count`（省略時は 0）、`skipped` と `reduce` は `quantity` を指定できない。`reduce` は `status` のみで成否を表す。
+- 対象日は actor の「今日」から過去 7 日まで。範囲外は `422`（`entry_date_out_of_range`）、予定のない日は `422`（`habit_not_scheduled`）、内容の不整合は `422`（`invalid_habit_entry`）、アーカイブ済みの習慣は `409`（`habit_archived`）。
+- `PUT` は `(habit, date)` の自然キーで冪等であり、`Idempotency-Key` は使わない。同じ日への並行送信は後勝ちで 1 レコードに収束する。成功は常に `200`。
+- 状態変更の共通要件（`Origin` 検証、`Content-Type: application/json`、body 上限）は `/habits` と同じ。rate limit は未対応。
+- `GET /habit-entries`（履歴）は T-202 の対象外。
+
 ## AI 境界
 
 `AiCoachPort` は provider SDK を抽象化する。Application が渡すのは目的別 DTO のみで、provider 固有の response object を返さない。実装時点の公式仕様を再確認し、OpenAI 採用時は Responses API の Structured Outputs と function calling を Adapter 内に閉じ込める。

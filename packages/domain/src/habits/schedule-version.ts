@@ -173,10 +173,9 @@ export function assertNoOverlappingScheduleVersions(versions: readonly ScheduleV
  * その日の実施回数(quantity)が targetCount 以上かどうかで成功判定する。
  *
  * docs/04-database-design.md「集計定義」: `build の当日成功は quantity >= target_count`。
- * reduce は targetCount=1 に固定されるため式は共通化できるが、reduce の quantity が
- * 「対象行動を回避できた(1)/できなかった(0)」を表すのか「対象行動が発生した回数」を
- * 表すのかは 01/04 に明記がなく、本 PR の Open Question として扱う
- * (HabitEntry 自体は tracking モジュール(T-201/T-202)の管轄であり本 PR の実装範囲外)。
+ * reduce は targetCount=1 に固定されるため式は共通化できるが、reduce の記録は
+ * quantity を持たず status のみで成否を表す(docs/specs/habit-entry.md HENT-003、D-12)。
+ * 記録内容の検証は tracking の `resolveHabitEntry` が行い、この関数は build の判定に使う。
  */
 export function isTargetMet(
   scheduleVersion: Pick<ScheduleVersion, "targetCount">,
