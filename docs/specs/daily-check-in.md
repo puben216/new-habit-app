@@ -1,23 +1,23 @@
 # Daily Check-in Spec
 
 Status: Ready
-Owner: TBD
-Last updated: 2026-10-03
-Change classification: Standard
-Roadmap Task: T-203
+責任者: TBD
+最終更新: 2026-10-03
+変更区分: Standard
+ロードマップ項目: T-203
 
-## Goal
+## 目的
 
 ログイン済みのユーザーが、その日の気分・難易度・メモを 1 日 1 件のチェックインとして保存・訂正・取得できるようにする(UC-10)。習慣の実行記録(T-202)とは独立に、「今日どうだったか」を最小の入力で残せる。週次継続率(WAU: 週 3 日以上のチェックイン)と週次レビュー(T-301)の入力になる。
 
-## Success Metrics
+## 成功指標
 
 - `PUT /api/v1/daily-check-ins/{date}` が冪等な upsert として動作し、同一内容の再送・並行送信でも 1 ユーザー 1 日 1 レコードのまま、重複や 500 が起きない(Integration Test で確認)。
 - 対象日(今日と過去 7 日)の判定が、ユーザーの timezone のローカル日(T-201 の `localDateAt`)で行われ、DST 日・日付境界を Unit Test で確認している。
 - 他ユーザーのチェックインは取得も更新もできず、path にユーザーを指定する余地がない(actor は session のみ)。
 - mood/difficulty の値域・メモの正規化を Domain の関数だけが判定し、Application/Presentation/Infrastructure で再実装していない。
 
-## Scope
+## 範囲
 
 - Domain(tracking): `resolveDailyCheckIn`(mood/difficulty の 1〜5、メモの正規化、「少なくとも 1 項目」ルール)。
 - Application: `getDailyCheckInUseCase`、`upsertDailyCheckInUseCase`、`DailyCheckInRepositoryPort`、Application error。
@@ -27,7 +27,7 @@ Roadmap Task: T-203
 - 内部整理: T-202 の「actor の今日を求める」処理を tracking 内の共通関数へ切り出す(振る舞いは変えない)。
 - 文書: `docs/04`、`docs/05`、`docs/09`、`docs/10`(P2 の暫定上限)。
 
-## Out of Scope
+## 対象外
 
 - 履歴一覧・期間取得(`GET /daily-check-ins?from=&to=`)、集計・WAU の算出(T-204 以降)。
 - チェックインの削除(訂正は上書きで行う。全項目を空にする更新は拒否する)。
@@ -35,7 +35,7 @@ Roadmap Task: T-203
 - DB の変更(`mood`/`difficulty` の CHECK は既存。Migration なし)。
 - Rate limit、Playwright E2E(基盤未導入)、AI への入力(メモを AI/analytics へ送らない)。
 
-## Actors and Preconditions
+## アクターと前提条件
 
 | Actor                  | Preconditions                                                                       |
 | ---------------------- | ----------------------------------------------------------------------------------- |
@@ -44,7 +44,7 @@ Roadmap Task: T-203
 
 actor の user ID は session のみから取得し、request の body/query/path/header から受け取らない。
 
-## Functional Requirements
+## 機能要件
 
 ### DCI-001 チェックインの作成・訂正(冪等 upsert)
 
@@ -73,7 +73,7 @@ actor の user ID は session のみから取得し、request の body/query/pat
 - `GET /api/v1/daily-check-ins/{date}` は、actor 自身のその日のチェックインを `200` で返す。なければ `404`(`code: check_in_not_found`)。
 - `GET` の対象日に範囲制限はない(実在する暦日であればよい)。不正な暦日は `422`。
 
-## Business Rules and Invariants
+## 業務ルールと不変条件
 
 - DCI-INV-001(所有者限定): すべての repository 操作は actor user ID を条件に含む。API に他ユーザーを指定する手段がない。
 - DCI-INV-002(一意性): 1 ユーザー 1 日につきチェックインは高々 1 件(DB の `UNIQUE (user_id, check_in_date)`)。upsert は `INSERT ... ON CONFLICT (user_id, check_in_date) DO UPDATE` の単一文で行う。
@@ -81,7 +81,7 @@ actor の user ID は session のみから取得し、request の body/query/pat
 - DCI-INV-004(入力上限、暫定): `note` は 1〜1000 文字(trim 前の `String.length`)。改行(`\n`)とタブは許可し、それ以外の制御文字(NUL を含む)は拒否する。body は 16 KiB まで。上限値は `docs/10` P2 が確定するまでの暫定値で、確定後は契約 schema の定数だけを変更する(Domain/DB は変更しない)。
 - DCI-INV-005(過去に遡れる日数): Application の定数 `CHECK_IN_BACKDATE_LIMIT_DAYS`(7)1 箇所のみで定義する。
 
-## State Transitions
+## 状態遷移
 
 | Current            | Action          | Next               | Rejected when                                  |
 | ------------------ | --------------- | ------------------ | ---------------------------------------------- |
@@ -90,7 +90,7 @@ actor の user ID は session のみから取得し、request の body/query/pat
 
 削除はない。
 
-## Acceptance Criteria
+## 受け入れ基準
 
 ```gherkin
 Scenario: 今日のチェックインを保存して取得する
@@ -139,7 +139,7 @@ Scenario: 並行送信
   Then すべて 200 で、レコードは 1 件
 ```
 
-## Authorization Matrix
+## 認可マトリクス
 
 | Operation                   | Guest | Member(自分) |           Member(他人) |
 | --------------------------- | ----: | -----------: | ---------------------: |
@@ -148,7 +148,7 @@ Scenario: 並行送信
 
 path にユーザーを含めないため IDOR の経路がない。Admin は対象外(T-403)。
 
-## API and Events
+## APIとイベント
 
 共通: base path `/api/v1`、JSON、未知キー拒否、Problem Details、`Cache-Control: no-store`。`PUT` は `Content-Type: application/json` 必須(`415`)、body 上限 16 KiB(`413`)、Origin 検証(`403 invalid_origin`)。T-104/T-202 と同じ共通処理を再利用する。Events は発行しない。
 
@@ -173,7 +173,7 @@ path にユーザーを含めないため IDOR の経路がない。Admin は対
 - 422 の `code`: `validation_failed`(schema 違反。`fieldErrors` に項目)、`check_in_date_out_of_range`、`invalid_check_in`(Domain の内容違反。全項目が未設定を含む)。
 - `404` は `check_in_not_found`(GET でチェックインがない)、`user_not_found`(session の user が存在しない)。
 
-## Data and Migration
+## データとMigration
 
 - Migration なし。既存の `daily_check_ins`(`UNIQUE(user_id, check_in_date)`、`mood`/`difficulty` の CHECK 1〜5、FK `ON DELETE CASCADE`)を使う。FK `user_id` の index は `UNIQUE(user_id, check_in_date)` の先頭列で兼ねる。
 - アクセスパターン `WHERE user_id = ? AND check_in_date = ?` は上記 unique index に一致する。
@@ -181,7 +181,7 @@ path にユーザーを含めないため IDOR の経路がない。Admin は対
 - `check_in_date` は `date`、`created_at` は新規作成時のみ Clock の値、更新時の `updated_at` は既存の `set_updated_at` trigger が決める(T-202 と同じ)。
 - rollback: スキーマ変更なしのため、アプリの revert のみで戻せる。
 
-## Failure and Edge Cases
+## 失敗・境界ケース
 
 - 不正な暦日(`2026-02-30`、形式違い)→ 422 `validation_failed`(`fieldErrors.date`)。
 - 未来日、8 日以上前 → 422 `check_in_date_out_of_range`。
@@ -192,28 +192,28 @@ path にユーザーを含めないため IDOR の経路がない。Admin は対
 - session の user が削除済み → 404 `user_not_found`。
 - DB 制約違反(Domain/契約をすり抜けた場合)→ 内部エラー(500)。内部詳細は応答に含めない。
 
-## Security and Privacy
+## セキュリティとプライバシー
 
-- Data collected: 気分・難易度・メモ(健康に関わりうる自由記述を含む個人データ)。user ID は actor 取得のみに使用し外部送信しない。外部 provider(AI を含む)への送信なし。
+- 収集データ: 気分・難易度・メモ(健康に関わりうる自由記述を含む個人データ)。user ID は actor 取得のみに使用し外部送信しない。外部 provider(AI を含む)への送信なし。
 - 保持/アクセス: 本人のみ参照・更新可。削除は T-404 のユーザー削除フロー(`ON DELETE CASCADE`)に従う。メモを AI/analytics へ送る場合は将来の Spec で最小化と同意を定義する(本タスクでは送らない)。
-- Data forbidden in logs: メモ、気分・難易度、request body、session、cookie、email。route に独自ログを追加しない。エラー応答に stack・SQL・DB エラー内容を含めない。
+- ログ禁止データ: メモ、気分・難易度、request body、session、cookie、email。route に独自ログを追加しない。エラー応答に stack・SQL・DB エラー内容を含めない。
 - IDOR/BOLA: DCI-INV-001(path に user を持たない)。CSRF: Origin 検証 + `Content-Type: application/json`。XSS: JSON のみを返し、メモは制御文字を拒否する(UI は表示時にエスケープする前提)。Injection: `$queryRaw` のタグ付きテンプレート(バインド変数のみ)。
-- Abuse: メモ 1000 文字、body 16 KiB、対象日の範囲。Rate limit は Out of Scope(Accepted Risks)。
+- Abuse: メモ 1000 文字、body 16 KiB、対象日の範囲。Rate limit は 対象外(受容リスク)。
 
-## AI Requirements
+## AI要件
 
 N/A。AI を利用しない。
 
-## Observability and Operations
+## 可観測性と運用
 
-- Logs: route に独自ログを追加しない(構造化ログ基盤が未導入)。
+- ログ: route に独自ログを追加しない(構造化ログ基盤が未導入)。
 - Metrics/Alerts: 既存方針(`docs/06`)の request count/error/latency に含まれる。専用 metric/alarm は追加しない。
 - Runbook: 不要。
-- Rollout/rollback: Feature Flag なし(新規 route のみ)。Migration なし。rollback はアプリの revert。
+- 展開/ロールバック: Feature Flag なし(新規 route のみ)。Migration なし。rollback はアプリの revert。
 
-## Test Coverage Matrix
+## テスト対応表
 
-| Requirement | Unit                                                                                                      | Integration(実 PostgreSQL)                             | E2E                       |
+| 要件        | Unit                                                                                                      | Integration(実 PostgreSQL)                             | E2E                       |
 | ----------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------- |
 | DCI-001     | `upsertDailyCheckInUseCase`(fake: 作成/訂正/置換/再送)、handler の 200/401/403/413/415/422                | upsert の作成→更新、置換、再送、並行 6 件で 1 レコード | N/A(E2E 基盤導入後に追加) |
 | DCI-002     | `resolveDailyCheckIn`(境界値 1/5/0/6、小数、メモ trim・空、全項目未設定)、契約 schema(メモ上限・制御文字) | DB の mood/difficulty CHECK(0/6 を拒否)                | N/A                       |
@@ -224,7 +224,7 @@ N/A。AI を利用しない。
 
 Fake/Stub 方針: Application の unit test は in-memory fake と固定 Clock、プロフィールは既存の fake。Integration は Testcontainers の実 PostgreSQL。fixture は架空データのみ。
 
-## Open Questions
+## 未決事項
 
 実装をブロックしない事項:
 
@@ -233,7 +233,7 @@ Fake/Stub 方針: Application の unit test は in-memory fake と固定 Clock�
 - **過去に遡れる日数(7)**: T-202 と同じ暫定値。利用実態を見て定数のみ変更する。
 - **チェックインの削除**: 要望が出た時点で別途検討する。
 
-## Implementation Readiness
+## 実装準備状況
 
 Status: Ready
 Reviewed at: 2026-10-03
@@ -251,7 +251,7 @@ Reviewed by: —
 | Operations           | Pass   | Observability and Operations(ログ方針、rollout/rollback)                                                             |
 | Planning             | Pass   | [../plans/daily-check-in.md](../plans/daily-check-in.md)                                                             |
 
-### Accepted Risks
+### 受容リスク
 
 - Rate limit 未実装(T-104/T-202 と同じ)。入力上限と対象日の範囲のみで抑える。
 - `PUT` は後勝ち。古い画面からの訂正が別端末の入力を上書きしうる(日次入力の単純さを優先して楽観ロックは導入しない)。
