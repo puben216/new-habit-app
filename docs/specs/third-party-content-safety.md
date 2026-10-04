@@ -1,34 +1,34 @@
 # Third-Party Content Safety Spec
 
 Status: Draft
-Owner: TBD
-Last updated: 2026-09-13
-Change classification: Standard
-Roadmap Task: T-302、T-304、T-305
+責任者: TBD
+最終更新: 2026-09-13
+変更区分: Standard
+ロードマップ項目: T-302、T-304、T-305
 
-## Goal
+## 目的
 
 一般的な習慣形成の知見を活用しつつ、AIが第三者の著作物やブランド表現を再現・再配布したり、公式・提携・監修と誤認させたりする結果をユーザーへ提供しない。
 
-## Success Metrics
+## 成功指標
 
 - human-reviewed adversarial golden datasetで、明確な転載・翻訳・文体模倣・ブランド誤認ケースの公開通過率0%
 - validator障害時に未検証AI出力が公開・永続化されるケース0件
 - 一般的な習慣助言のfalse positive率をbeta開始前に定める閾値以下とする
 
-## Scope
+## 範囲
 
 - AI habit designとweekly improvementのprompt、入力、構造化出力、決定論的validator、fallback、eval
 - AI/RAG/few-shot/evalで使用する第三者資料のrights allowlist
 - 商品名・機能名・販促・素材利用をhuman reviewへ送る境界
 
-## Out of Scope
+## 対象外
 
 - 個別案件の法的適否の自動判定
 - 第三者とのライセンス交渉
 - ユーザーが私的に入力する内容そのものの事前検閲
 
-## Functional Requirements
+## 機能要件
 
 ### IPG-001 権利資料allowlist
 
@@ -54,7 +54,7 @@ validator拒否、timeout、例外、設定欠損時は未検証結果を破棄�
 
 ユーザー入力に第三者コンテンツが含まれる場合もprovider送信と再掲を必要最小限とし、監査ログには本文ではなくversion、status、reason codeだけを記録する。
 
-## Business Rules and Invariants
+## 業務ルールと不変条件
 
 - promptの自己申告だけで公開可否を決めない。
 - 出典表示だけを転載許可の根拠にしない。
@@ -62,7 +62,7 @@ validator拒否、timeout、例外、設定欠損時は未検証結果を破棄�
 - rights allowlistの期限切れ・不明・許可用途外はdenyとする。
 - 一般的アイデアへの言及を侵害と断定せず、公開用途で判断が必要なものはhuman reviewへ送る。
 
-## Acceptance Criteria
+## 受け入れ基準
 
 ```gherkin
 Scenario: 明確な第三者文章の再現要求
@@ -91,48 +91,48 @@ Scenario: ブランドを販促へ使用する提案
   Then required_human_reviewとなり自動公開されない
 ```
 
-## API and Events
+## APIとイベント
 
 - 既存AI job contractへ`contentSafety: { status, reasonCodes, validatorVersion }`を追加する。公開APIの詳細はT-302でversioned schemaとして確定する。
 - DB/API実装前のため、現時点でmigrationは行わない。
 
-## Security and Privacy
+## セキュリティとプライバシー
 
-- Data collected: validator status、reason code、各version、rights metadata
-- Data sent externally: 必要最小限のユーザー入力。権利確認のない第三者資料は送信しない
-- Data forbidden in logs: 問題となった入力・生成本文、引用候補、AI prompt/response
+- 収集データ: validator status、reason code、各version、rights metadata
+- 外部送信データ: 必要最小限のユーザー入力。権利確認のない第三者資料は送信しない
+- ログ禁止データ: 問題となった入力・生成本文、引用候補、AI prompt/response
 - Controls: allowlist、length limit、structured output、deterministic validation、fail closed、human review
 
-## AI Requirements
+## AI要件
 
 - prompt/schema/validator/fallbackを独立version管理する。
 - validatorは管理されたブランド・誤認表示、長い引用形態、許可資料との過度な一致、危険な再現指示をreason code化する。
 - validator拒否後の再生成は最大1回。再拒否時はfallbackとする。
 - adversarial evalと一般助言のfalse positive evalをprovider/model/prompt変更時に実行する。
 
-## Observability and Operations
+## 可観測性と運用
 
 - 本文なしのstatus/reason code別metricsを記録する。
 - 急激な拒否率・human review率・fallback率増加をalarm候補とする。
 - validatorまたはrights registry障害時はAI機能を縮退し、記録機能は継続する。
 
-## Test Coverage Matrix
+## テスト対応表
 
-| Requirement | Unit                 | Integration               | E2E                        |
-| ----------- | -------------------- | ------------------------- | -------------------------- |
-| IPG-001     | rights rule/expiry   | registry deny             | N/A（内部境界）            |
-| IPG-002     | adversarial fixtures | provider fake             | 再現要求→fallback          |
-| IPG-003     | status transition    | 未検証結果の保存/表示拒否 | passのみ表示               |
-| IPG-004     | timeout/exception    | fail-closed pipeline      | 障害時fallback             |
-| IPG-005     | review routing       | 自動公開拒否              | N/A（MVP管理フロー未確定） |
-| IPG-006     | redacted audit       | log sink検証              | N/A（本文を観測しない）    |
+| 要件    | Unit                 | Integration               | E2E                        |
+| ------- | -------------------- | ------------------------- | -------------------------- |
+| IPG-001 | rights rule/expiry   | registry deny             | N/A（内部境界）            |
+| IPG-002 | adversarial fixtures | provider fake             | 再現要求→fallback          |
+| IPG-003 | status transition    | 未検証結果の保存/表示拒否 | passのみ表示               |
+| IPG-004 | timeout/exception    | fail-closed pipeline      | 障害時fallback             |
+| IPG-005 | review routing       | 自動公開拒否              | N/A（MVP管理フロー未確定） |
+| IPG-006 | redacted audit       | log sink検証              | N/A（本文を観測しない）    |
 
-## Open Questions
+## 未決事項
 
 - beta開始前のfalse positive率の許容閾値とgolden datasetのレビュー担当者
 - human review queueをMVP管理画面に含めるか、公開対象機能自体をfeature flagで停止するか
 
-## Implementation Readiness
+## 実装準備状況
 
 Status: Not Ready
 Reviewed at: —
@@ -150,6 +150,6 @@ Reviewed by: —
 | Operations           | Fail   | human review運用が未確定             |
 | Planning             | Pass   | 対応Implementation Plan              |
 
-### Accepted Risks
+### 受容リスク
 
 なし

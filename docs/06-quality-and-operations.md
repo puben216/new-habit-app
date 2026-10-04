@@ -88,7 +88,7 @@ OIDC で GitHub Actions から AWS role を引き受け、長期 AWS key を保�
 
 - 構造化 JSON log: timestamp、level、service、environment、requestId/traceId、route/useCase、duration、result、errorCode
 - 禁止: email、token、cookie、自由記述、AI prompt/response、Authorization header
-- Metrics: request count/error/latency、DB pool、queue depth/age、DLQ、Lambda error/throttle、AI 成功/validation/fallback/latency/token/cost、通知 delivery
+- メトリクス: request count/error/latency、DB pool、queue depth/age、DLQ、Lambda error/throttle、AI 成功/validation/fallback/latency/token/cost、通知 delivery
 - AI の権利保護 metric は reason code ごとの拒否・human review・fallback 件数だけを記録し、問題となった入力文・出力文そのものはログへ記録しない
 - Tracing: Next.js → DB/queue、Lambda → provider。OpenTelemetry は相関が不足した段階で導入し、まず requestId を一貫伝播
 - Alarm: 5xx 比率、認証異常、DLQ > 0、oldest message age、AI fallback 急増、DB CPU/storage/connections、synthetic login failure

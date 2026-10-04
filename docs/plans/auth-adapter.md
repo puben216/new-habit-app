@@ -1,14 +1,14 @@
 # Auth Adapter and Session Implementation Plan
 
 Status: Draft
-Owner: TBD
-Last updated: 2026-09-22
+責任者: TBD
+最終更新: 2026-09-22
 Spec: [../specs/auth-adapter.md](../specs/auth-adapter.md)
-Change classification: Standard
+変更区分: Standard
 
 本 Plan は Spec の決定事項(password hash は `users` へ直接保持、email verification 必須化、login rate limit は email 単位で直近 15 分 5 回失敗→15 分 lockout、IP ベース rate limit は含めない、Google/GitHub OAuth は MVP スコープ外、Admin TOTP 2FA は T-403、Auth.js 標準 route は [ADR-009](../adr/ADR-009-api-style.md) に基づき `/api/v1` の例外)を前提に設計する。Spec の Open Question は解決済みであり、実装は Task 1 から着手できる。
 
-## Approach
+## 方針
 
 Auth.js(NextAuth v5系)を `apps/web` に統合する。Credentials provider は Auth.js の標準機構だけでは password hash 検証・rate limit・email verification を賄えないため、これらは `packages/application` に置く use case として実装し、Credentials provider の `authorize` からはこの use case を呼ぶだけにする。
 
@@ -31,20 +31,20 @@ DB に実体を持つ点は当初方針(ADR-001 の「DB session」要求)と変
 - `packages/infrastructure/src/auth/`: port の実装(argon2id hasher、crypto ベースの token generator、Prisma 経由の repository)。Auth.js の `authOptions`(Credentials provider、`jwt`/`session` callback、`events.signOut`)もここに置く。`PrismaAdapter` は使用しない(上記理由)。
 - `apps/web/src/app/api/`: Auth.js の route handler と、signup/verify-email/password-reset の Route Handler。Application の use case を呼ぶだけの薄い層にする。
 
-## Impact Analysis
+## 影響分析
 
-| Area           | Change                                                                                                               | Risk |
-| -------------- | -------------------------------------------------------------------------------------------------------------------- | ---- |
-| Domain         | `packages/domain/src/auth/` を新規追加(password policy、token 有効期限判定、email 正規化)                            | 低   |
-| Application    | `packages/application/src/auth/` を新規追加(use case、port 定義)。初めて中身が入る                                   | 中   |
-| Infrastructure | `packages/infrastructure/src/auth/` を新規追加(Prisma repository、hasher、token生成、email sender)                   | 中   |
-| Presentation   | `apps/web/src/app/api/*` を新規追加                                                                                  | 中   |
-| Database       | `users` へ列追加、`sessions`/`verification_tokens`/`password_reset_tokens`/`login_attempts` を新規追加する migration | 高   |
-| API/Event      | 新規 endpoint 追加のみ、既存 endpoint への影響なし                                                                   | 低   |
-| AWS/Terraform  | 変更なし(T-501 以降の対象)                                                                                           | N/A  |
-| Observability  | login/lockout/reset のログ・メトリクスを新規追加                                                                     | 低   |
+| 領域           | 変更                                                                                                                 | リスク |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- | ------ |
+| Domain         | `packages/domain/src/auth/` を新規追加(password policy、token 有効期限判定、email 正規化)                            | 低     |
+| Application    | `packages/application/src/auth/` を新規追加(use case、port 定義)。初めて中身が入る                                   | 中     |
+| Infrastructure | `packages/infrastructure/src/auth/` を新規追加(Prisma repository、hasher、token生成、email sender)                   | 中     |
+| Presentation   | `apps/web/src/app/api/*` を新規追加                                                                                  | 中     |
+| Database       | `users` へ列追加、`sessions`/`verification_tokens`/`password_reset_tokens`/`login_attempts` を新規追加する migration | 高     |
+| API/Event      | 新規 endpoint 追加のみ、既存 endpoint への影響なし                                                                   | 低     |
+| AWS/Terraform  | 変更なし(T-501 以降の対象)                                                                                           | N/A    |
+| Observability  | login/lockout/reset のログ・メトリクスを新規追加                                                                     | 低     |
 
-## Interfaces and Contracts
+## インターフェースと契約
 
 `@habit-app/domain`(追加):
 
@@ -69,7 +69,7 @@ DB に実体を持つ点は当初方針(ADR-001 の「DB session」要求)と変
 - `Argon2PasswordHasher`(`PasswordHasherPort` 実装)。
 - `CryptoTokenGenerator`(`TokenGeneratorPort` 実装、Node `crypto.randomBytes` + `crypto.createHash("sha256")` で hash 化)。
 - `PrismaLoginAttemptRepository`(`LoginAttemptPort` 実装、`login_attempts` テーブル)。
-- `EmailSenderPort` の実装は環境ごとに差し替える(詳細は Rollout and Operations 節):
+- `EmailSenderPort` の実装は環境ごとに差し替える(詳細は 展開と運用 節):
   - `InMemoryEmailSender`(Unit/Integration Test 用の fake。プロセス内メモリに保持し、テストコードから直接参照する。DB・ログのいずれにも書き込まない)。
   - `SmtpEmailSender`(dev/E2E 用。ローカルの Mailpit(SMTP キャプチャツール)へ実際に SMTP 送信する)。
   - `SesEmailSender`(T-401 で実装、本番用。現時点では未実装)。
@@ -86,30 +86,30 @@ DB に実体を持つ点は当初方針(ADR-001 の「DB session」要求)と変
 
 Auth.js 標準 route のみ `/api/auth/*` のままとする([ADR-009](../adr/ADR-009-api-style.md) が外部ライブラリの標準 endpoint を `/api/v1` の例外として認めているため、`/api/v1` 配下への移動は不要)。
 
-## Data Migration
+## データMigration
 
 Expand のみで、既存データへの backfill は不要(新規機能のため)。
 
 - `users` に列追加: `password_hash text not null`、`email_verified_at timestamptz nullable`。Credentials のみを扱う MVP では password を持たない user が存在しないため `not null` とする(OAuth 追加時に nullable へ変更する migration が必要になる)。`email_normalized` の既存 UNIQUE 制約(T-004 で追加済み)をそのまま利用する。
 - 新規テーブル(Auth.js Prisma adapter 標準スキーマ準拠): `sessions`(DB session)、`verification_tokens`(Auth.js 標準の汎用 token、email verification に使用)。OAuth 用の `accounts` テーブルは MVP スコープ外のため作らない(将来 OAuth 追加時に別 migration で追加する)。
 - 新規テーブル `password_reset_tokens`: `id`, `user_id`, `token_hash`(UNIQUE), `expires_at`, `used_at nullable`, `created_at`。
-- 新規テーブル `login_attempts`: `id`, `purpose`(`signup|login|verify_resend|password_reset`), `email_normalized`, `attempted_at`, `succeeded boolean`。email 単位のみで判定するため IP 列は持たない(Spec Out of Scope)。Index: `(purpose, email_normalized, attempted_at desc)`。retention: 判定ウィンドウ(Spec 確定値: 15 分)を超えた行は `LoginAttemptPort.pruneExpired` による opportunistic cleanup で削除する(Task 6、Spec の retention 要求をこの Plan のスコープ内で満たす)。閾値(15 分 5 回、15 分 lockout)は `packages/config` の設定値として外出しし、コード変更なしで調整可能にする。
-- 平文 token を保持する専用テーブルは作らない。開発/テストでのメール内容確認は `InMemoryEmailSender`(Integration Test)と Mailpit(E2E、アプリの DB とは独立したローカルツール)で行う(Rollout and Operations 節)。
+- 新規テーブル `login_attempts`: `id`, `purpose`(`signup|login|verify_resend|password_reset`), `email_normalized`, `attempted_at`, `succeeded boolean`。email 単位のみで判定するため IP 列は持たない(Spec 対象外)。Index: `(purpose, email_normalized, attempted_at desc)`。retention: 判定ウィンドウ(Spec 確定値: 15 分)を超えた行は `LoginAttemptPort.pruneExpired` による opportunistic cleanup で削除する(Task 6、Spec の retention 要求をこの Plan のスコープ内で満たす)。閾値(15 分 5 回、15 分 lockout)は `packages/config` の設定値として外出しし、コード変更なしで調整可能にする。
+- 平文 token を保持する専用テーブルは作らない。開発/テストでのメール内容確認は `InMemoryEmailSender`(Integration Test)と Mailpit(E2E、アプリの DB とは独立したローカルツール)で行う(展開と運用 節)。
 - Switch/Contract: 該当なし(新規機能であり既存読み取りパスの切り替え・旧列削除は発生しない)。
-- Rollback/forward fix: 認証データを含む migration のため down migration は前提にしない。問題発生時は application code を revert し、追加した列・テーブルはそのまま残す。migration 自体の不具合は新しい forward-fix migration で対応し、データ破損時のみ backup restore を行う(既存 `04-database-design.md` の migration 方針と同じ)。
+- ロールバック/前方修正: 認証データを含む migration のため down migration は前提にしない。問題発生時は application code を revert し、追加した列・テーブルはそのまま残す。migration 自体の不具合は新しい forward-fix migration で対応し、データ破損時のみ backup restore を行う(既存 `04-database-design.md` の migration 方針と同じ)。
 - 実装時に `04-database-design.md` へ追記する。
 
-## Security Review
+## セキュリティレビュー
 
-- Authentication/authorization: 本 Plan は認証基盤そのものを実装する。認可(ownership 等)は T-104 以降が `session` から取得した actor user ID を用いて個別実装する。
-- PII/secrets/logging: password/token の平文を DB・ログに残さない(argon2id hash、token は sha256 hash 化して保存)。開発/テスト用のメール送信(`InMemoryEmailSender`、Mailpit)はいずれもアプリの永続 DB に平文を書き込まない設計とする。
-- Abuse controls: AUTH-010 の rate limit/lockout(email 単位、直近 15 分 5 回失敗→15 分 lockout)を `login_attempts` テーブルで実装する。判定は `SELECT COUNT(*) WHERE purpose=? AND email_normalized=? AND attempted_at > now() - window` による直近ウィンドウ集計。record の insert と判定 SELECT の間に race condition があり得るが、rate limit は多少の緩みを許容する性質の防御(hard security boundary ではない)ため、MVP では厳密な atomic counter を採用しない。DB 障害時(`login_attempts` への insert/select が失敗する場合)は fail-open(rate limit 判定をスキップしてログイン処理自体は継続)とする。認証自体が DB 依存のため DB 障害時は多くの場合ログイン自体が機能せず、fail-closed にしても可用性上の追加メリットが小さい一方、fail-closed は「DB が少し不安定なだけで全ユーザーがログインできなくなる」新たな可用性リスクを生むため。
-- IP ベースの rate limit は Spec Out of Scope のため実装しない。ECS Fargate + ALB 経由の client IP 取得(`X-Forwarded-For` の信頼境界)は、将来 IP 単位判定を追加する際に別 Spec/Plan で検討する。
+- 認証/認可: 本 Plan は認証基盤そのものを実装する。認可(ownership 等)は T-104 以降が `session` から取得した actor user ID を用いて個別実装する。
+- 個人情報/Secret/ログ: password/token の平文を DB・ログに残さない(argon2id hash、token は sha256 hash 化して保存)。開発/テスト用のメール送信(`InMemoryEmailSender`、Mailpit)はいずれもアプリの永続 DB に平文を書き込まない設計とする。
+- 悪用対策: AUTH-010 の rate limit/lockout(email 単位、直近 15 分 5 回失敗→15 分 lockout)を `login_attempts` テーブルで実装する。判定は `SELECT COUNT(*) WHERE purpose=? AND email_normalized=? AND attempted_at > now() - window` による直近ウィンドウ集計。record の insert と判定 SELECT の間に race condition があり得るが、rate limit は多少の緩みを許容する性質の防御(hard security boundary ではない)ため、MVP では厳密な atomic counter を採用しない。DB 障害時(`login_attempts` への insert/select が失敗する場合)は fail-open(rate limit 判定をスキップしてログイン処理自体は継続)とする。認証自体が DB 依存のため DB 障害時は多くの場合ログイン自体が機能せず、fail-closed にしても可用性上の追加メリットが小さい一方、fail-closed は「DB が少し不安定なだけで全ユーザーがログインできなくなる」新たな可用性リスクを生むため。
+- IP ベースの rate limit は Spec 対象外 のため実装しない。ECS Fargate + ALB 経由の client IP 取得(`X-Forwarded-For` の信頼境界)は、将来 IP 単位判定を追加する際に別 Spec/Plan で検討する。
 - Session 管理(2026-09-22 改訂): JWT には `sessionToken`(ランダム値)と `expires` のみを持たせ、role/権限等の認可情報は含めない。JWT の署名(`AUTH_SECRET`、最低 32 byte のランダム値を環境ごとに用意)は payload 改ざんの検知のみを担い、実際の認可判定は毎リクエスト DB の `sessions` テーブル照合で行う(AUTH-009)。これにより JWT 自体の漏洩時の実質的なリスクは、Auth.js の `database` strategy で cookie に平文 `sessionToken` を持たせる場合と同等(session 行を削除すれば即座に無効化できる)。
 
-## Test Plan
+## テスト計画
 
-| Requirement  | Test level  | Planned test                                                                                                                          |
+| 要件         | テスト種別  | 予定テスト                                                                                                                            |
 | ------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | AUTH-001     | Integration | 重複 email signup で応答が初回と区別できないこと、account が実際には作成されないこと                                                  |
 | AUTH-002     | Unit        | 境界値(7/8/128/129 文字)、trim 後長判定、制御文字拒否、先頭・末尾空白ありパスワードがそのままハッシュ化・照合されること               |
@@ -127,17 +127,17 @@ Expand のみで、既存データへの backfill は不要(新規機能のた�
 | AUTH-INV-002 | Integration | signup/verification 再送/login/password reset request の応答(status/body)が存在有無で差がないこと。login での dummy hash 検証実行確認 |
 | 全体         | E2E         | signup → verify(Mailpit から token 取得)→ login → logout、password reset の一連                                                       |
 
-## Rollout and Operations
+## 展開と運用
 
 - Feature Flag: 不要。新規 route 追加のみで既存導線に影響しない。
 - Secret 管理(2026-09-22 改訂): Auth.js の JWT 署名用に `AUTH_SECRET`(最低 32 byte のランダム値)を環境ごとに用意し、`packages/config` の env schema で必須値として検証する。値の漏洩は session token 自体の漏洩(cookie 窃取)と同程度のリスクであり、他の secret と同様にローテーション対象とする。
 - 開発/テスト用メール送信: Unit/Integration Test は `InMemoryEmailSender` をテストコードから直接注入し、送信内容をメモリ上で検証する(DB を経由しない)。E2E とローカル開発では Docker Compose に Mailpit(SMTP キャプチャ用のローカル専用ツール、本番相当の DB や migration とは独立)を追加し、`SmtpEmailSender` が実際に SMTP 送信したメールを Mailpit の HTTP API から取得して token を検証する。どの実装を使うかは env(`AUTH_EMAIL_SENDER=smtp|ses`)で切り替え、本番デプロイ設定では `smtp` を許可しない(起動時に env を検証し、本番で `smtp` が指定されていたら起動を失敗させる)。
-- Deployment order: DB migration を先に apply してから application code をデプロイする(新規列・テーブルのみの追加のため、通常の expand で安全)。
-- Metrics/alarms: login 失敗率、lockout 発動回数を新規に計測対象へ追加。
-- Rollback trigger and procedure: application code は即時 revert する。migration は down migration を前提にせず、追加した列・テーブルは残したまま forward-fix migration で問題箇所を修正する(Data Migration 節参照)。
+- デプロイ順序: DB migration を先に apply してから application code をデプロイする(新規列・テーブルのみの追加のため、通常の expand で安全)。
+- メトリクス/アラーム: login 失敗率、lockout 発動回数を新規に計測対象へ追加。
+- ロールバック条件と手順: application code は即時 revert する。migration は down migration を前提にせず、追加した列・テーブルは残したまま forward-fix migration で問題箇所を修正する(データMigration 節参照)。
 - Runbook: (1) lockout の手動解除は `login_attempts` の該当 `email_normalized` 行を無効化するオペレーション手順を用意する。(2) reset token の不正発行が疑われる場合、該当 `password_reset_tokens` を一括失効させる手順を用意する。
 
-## Task Breakdown
+## タスク分解
 
 1. `packages/domain/src/auth/` 実装(password policy、token 有効期限判定、email 正規化)+ Unit Test。
 2. Prisma schema へ `password_hash`/`email_verified_at` 列と `sessions`/`verification_tokens`/`password_reset_tokens`/`login_attempts` テーブルを追加し migration 作成。Testcontainers で fresh migration 適用を確認。`04-database-design.md` に追記。
@@ -150,29 +150,29 @@ Expand のみで、既存データへの backfill は不要(新規機能のた�
 
 各 task は「設計確認 → 実装 → テスト → セルフレビュー」を含む。
 
-## Dependencies
+## 依存関係
 
 - 先行 task: T-001〜T-005(完了済み)。T-103(完了済み、依存なし)。
 - ADR: [ADR-001](../adr/ADR-001-authentication.md)(accepted、2026-09-16 改訂)。
 - 外部 provider: なし(OAuth は MVP スコープ外のため、Google/GitHub client 登録は不要)。
 
-## Risks
+## リスク
 
-| Risk                                                                                                                                                                                                                                                                | Mitigation                                                                                                                                                                     | Owner |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
-| Auth.js の Credentials provider は `session.strategy: "database"` を許可しないため、`jwt` strategy 配下で session を自前実装する(2026-09-22 改訂、Approach 節参照)。`jwt`/`session`/`events.signOut` callback の引数形状は Auth.js のマイナーバージョンで変わりうる | `next-auth` はバージョン固定(`package.json` で exact version)し、Integration Test で callback の実際の呼び出し契約(login→session発行→session検証→logout→session失効)を検証する | TBD   |
-| `login_attempts` の rate limit 判定に race condition があり、閾値超過をわずかに見逃す可能性                                                                                                                                                                         | hard security boundary ではなく abuse 抑制目的と位置付け、深刻化すれば Task 6 で atomic な実装(unique constraint 併用等)に切り替える                                           | TBD   |
-| `pruneExpired` の opportunistic cleanup が呼ばれる頻度が低い場合、削除が遅延する                                                                                                                                                                                    | 呼び出し頻度(rate limit 判定発生ごと)で通常は十分だが、運用データを見て頻度不足なら明示的な定期実行に切り替える                                                                | TBD   |
-| Mailpit が E2E/ローカル開発以外の環境で利用できない                                                                                                                                                                                                                 | Mailpit は Docker Compose のみに追加し、CI の E2E ジョブでも同じ Compose 構成を使う                                                                                            | TBD   |
-| 将来 OAuth を追加する際、`users.password_hash` が `not null` のため migration で `nullable` に変更する必要がある                                                                                                                                                    | OAuth 追加 Spec の Task として明記しておく(本 Plan の対象外)                                                                                                                   | TBD   |
+| リスク                                                                                                                                                                                                                                                              | 対策                                                                                                                                                                           | 責任者 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| Auth.js の Credentials provider は `session.strategy: "database"` を許可しないため、`jwt` strategy 配下で session を自前実装する(2026-09-22 改訂、Approach 節参照)。`jwt`/`session`/`events.signOut` callback の引数形状は Auth.js のマイナーバージョンで変わりうる | `next-auth` はバージョン固定(`package.json` で exact version)し、Integration Test で callback の実際の呼び出し契約(login→session発行→session検証→logout→session失効)を検証する | TBD    |
+| `login_attempts` の rate limit 判定に race condition があり、閾値超過をわずかに見逃す可能性                                                                                                                                                                         | hard security boundary ではなく abuse 抑制目的と位置付け、深刻化すれば Task 6 で atomic な実装(unique constraint 併用等)に切り替える                                           | TBD    |
+| `pruneExpired` の opportunistic cleanup が呼ばれる頻度が低い場合、削除が遅延する                                                                                                                                                                                    | 呼び出し頻度(rate limit 判定発生ごと)で通常は十分だが、運用データを見て頻度不足なら明示的な定期実行に切り替える                                                                | TBD    |
+| Mailpit が E2E/ローカル開発以外の環境で利用できない                                                                                                                                                                                                                 | Mailpit は Docker Compose のみに追加し、CI の E2E ジョブでも同じ Compose 構成を使う                                                                                            | TBD    |
+| 将来 OAuth を追加する際、`users.password_hash` が `not null` のため migration で `nullable` に変更する必要がある                                                                                                                                                    | OAuth 追加 Spec の Task として明記しておく(本 Plan の対象外)                                                                                                                   | TBD    |
 
-## Start Conditions
+## 着手条件
 
 - [x] Spec Status が Ready(2026-09-17 レビューで Ready)
 - [x] 必須 ADR が Accepted([ADR-001](../adr/ADR-001-authentication.md)、[ADR-009](../adr/ADR-009-api-style.md))
-- [x] API/event 契約がレビュー済み(Auth.js 標準 route の `/api/v1` 例外は [ADR-009](../adr/ADR-009-api-style.md) により確定。Spec の API and Events 節で全 endpoint 定義済み)
-- [x] Migration 方針がレビュー済み(password hash 保存先、email 一意性制約の扱いは確定済み。テーブル一覧は Data Migration 節を参照)
-- [x] 認可・データ保護方針がレビュー済み(Spec Security and Privacy 節)
+- [x] API/event 契約がレビュー済み(Auth.js 標準 route の `/api/v1` 例外は [ADR-009](../adr/ADR-009-api-style.md) により確定。Spec の APIとイベント節で全 endpoint 定義済み)
+- [x] Migration 方針がレビュー済み(password hash 保存先、email 一意性制約の扱いは確定済み。テーブル一覧は データMigration 節を参照)
+- [x] 認可・データ保護方針がレビュー済み(Spec セキュリティとプライバシー節)
 - [x] テスト環境と Fake/Stub を準備できる(Vitest + Testcontainers、fake port を注入可能な設計、`InMemoryEmailSender`、Mailpit)
 - [x] 依存 task が完了している(T-001〜T-005、T-103 完了済み)
 - [x] rollout/rollback 方針が決定している(forward-fix 重視、down migration を前提にしない)

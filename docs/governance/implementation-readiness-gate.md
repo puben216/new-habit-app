@@ -18,14 +18,14 @@
 
 - [ ] 解決するユーザー課題と期待する価値が定義されている
 - [ ] MVPまたは承認済みロードマップに含まれている
-- [ ] Scope / Out of Scope が明記されている
+- [ ] Scope / 対象外 が明記されている
 - [ ] 成功条件が観測・検証可能である
 - [ ] 既存のプロダクト要件・用語との矛盾がない
 
 ## Gate 2: Specification
 
 - [ ] 機能要件に一意なIDがある
-- [ ] 正常系のAcceptance Criteriaがある
+- [ ] 正常系の受け入れ基準がある
 - [ ] 主要な異常系、境界値、空状態が定義されている
 - [ ] 状態遷移と業務上の不変条件が定義されている
 - [ ] 関連Spec、API、DB、UI、非同期処理への影響を確認した
@@ -102,7 +102,7 @@
 個別Specには次の形式で証跡を残す。
 
 ```markdown
-## Implementation Readiness
+## 実装準備状況
 
 Status: Ready
 Reviewed at: YYYY-MM-DD
@@ -120,11 +120,11 @@ Reviewed by: <role or name>
 | Operations           | Pass   | Observability節                      |
 | Planning             | Pass   | 対応する実装Plan                     |
 
-### Accepted Risks
+### 受容リスク
 
 - <承認した残存リスク。なければ「なし」>
 
-### Open Questions
+### 未決事項
 
 なし
 ```

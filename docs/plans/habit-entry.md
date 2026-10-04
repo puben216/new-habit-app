@@ -1,12 +1,12 @@
 # Habit Entry Implementation Plan
 
 Status: Done
-Owner: TBD
-Last updated: 2026-10-03
+責任者: TBD
+最終更新: 2026-10-03
 Spec: [../specs/habit-entry.md](../specs/habit-entry.md)
-Change classification: Standard
+変更区分: Standard
 
-## Approach
+## 方針
 
 T-104 と同じ層構成・パターンで、縦に薄く実装する。
 
@@ -18,9 +18,9 @@ T-104 と同じ層構成・パターンで、縦に薄く実装する。
 6. **Presentation**(`apps/web`): `entry-handlers.ts`(`habit-http.ts` の `readJsonBody`/`isTrustedOrigin`/`problemResponse` を再利用)、`entry-container.ts`、`app/api/v1/schedule/today/route.ts`、`app/api/v1/habits/[habitId]/entries/[date]/route.ts`。
 7. **文書**: `docs/04`、`docs/05`、`docs/10`(P2 の note 保留と、reduce の意味論の決定を追記)、`docs/09`(roadmap)、habit-domain/habit-api Spec の Open Question に解決先を追記。
 
-## Impact Analysis
+## 影響分析
 
-| Area           | Change                                                                    | Risk                                                        |
+| 領域           | 変更                                                                      | リスク                                                      |
 | -------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | Domain         | `tracking/` を追加(`resolveHabitEntry`、エラー)。既存 habits は変更しない | 低                                                          |
 | Application    | `tracking/` を追加(2 use case、port、error)。既存 use case は変更しない   | 低                                                          |
@@ -31,7 +31,7 @@ T-104 と同じ層構成・パターンで、縦に薄く実装する。
 | AWS/Terraform  | 変更なし                                                                  | N/A                                                         |
 | Observability  | 変更なし(ログ方針は Spec のとおり)                                        | N/A                                                         |
 
-## Interfaces and Contracts
+## インターフェースと契約
 
 - Domain(`@habit-app/domain`): `resolveHabitEntry`、型 `HabitEntryStatus`、`HabitEntryInput`、`ResolvedHabitEntry`、`HABIT_ENTRY_STATUSES`、`HABIT_ENTRY_MAX_QUANTITY`、エラー `InvalidHabitEntryError`。
 - Application(`@habit-app/application`):
@@ -40,26 +40,26 @@ T-104 と同じ層構成・パターンで、縦に薄く実装する。
   - use case: `getTodaySchedule(deps, { actorUserId })`、`upsertHabitEntry(deps, { actorUserId, habitId, date, status, quantity })`。
   - error: `EntryDateOutOfRangeError`、`HabitNotScheduledError`。既存の `HabitNotFoundError`、Domain の `HabitArchivedError` を再利用する。
 - Contracts: zod schema(上記)。request は `.strict()`。
-- HTTP: Spec の API and Events 節のとおり。
+- HTTP: Spec の APIとイベント節のとおり。
 
-## Data Migration
+## データMigration
 
 - Expand: `habit_entries_quantity_check CHECK (quantity IS NULL OR (quantity >= 0 AND quantity <= 1000))` を追加する(新しい Migration ファイル。適用済み Migration は編集しない)。
 - Backfill: 不要(T-202 以前にアプリが `habit_entries` へ書き込んでおらず既存行がない)。
 - Switch/Contract: N/A(後方互換な追加のみ)。
-- Rollback/forward fix: 制約が問題になった場合は drop する Migration を追加する(forward fix)。アプリの revert のみで機能は無効化できる。
+- ロールバック/前方修正: 制約が問題になった場合は drop する Migration を追加する(forward fix)。アプリの revert のみで機能は無効化できる。
 - 検証: 既存の migration 統合テストの方法で fresh DB と既存スキーマからのアップグレードの両方を確認する。
 
-## Security Review
+## セキュリティレビュー
 
-- Authentication/authorization: session から actor を取得し、repository の全 query に actor user ID を渡す。習慣の解決は `public_id` と `user_id` の両条件。他人の習慣は 404。
-- PII/secrets/logging: 記録の内容・body・session はログに出さない。route に独自ログを追加しない。fixture は架空データのみ。
-- Abuse controls: `quantity` ≤ 1000、対象日の範囲、body 16 KiB。Rate limit は Accepted Risk。
+- 認証/認可: session から actor を取得し、repository の全 query に actor user ID を渡す。習慣の解決は `public_id` と `user_id` の両条件。他人の習慣は 404。
+- 個人情報/Secret/ログ: 記録の内容・body・session はログに出さない。route に独自ログを追加しない。fixture は架空データのみ。
+- 悪用対策: `quantity` ≤ 1000、対象日の範囲、body 16 KiB。Rate limit は Accepted Risk。
 - SQL: raw SQL は `Prisma.sql`/タグ付きテンプレートのバインド変数のみ。文字列連結をしない。
 
-## Test Plan
+## テスト計画
 
-| Requirement  | Test level  | Planned test                                                                                                                                                      |
+| 要件         | テスト種別  | 予定テスト                                                                                                                                                        |
 | ------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | HENT-003     | Unit        | `resolve-habit-entry.test.ts`: build/reduce × status × quantity の境界値(省略時の既定値、targetCount ちょうど/未満、0、1000/1001、負数、小数、reduce の quantity) |
 | HENT-001     | Unit        | `get-today-schedule.test.ts`: ローカル日(Asia/Tokyo の日付繰り上がり、America/New_York の DST 日)、非予定日、archived 除外、記録の結合、並び順、空                |
@@ -72,14 +72,14 @@ T-104 と同じ層構成・パターンで、縦に薄く実装する。
 
 property test: 追加しない(入力空間が小さく境界値の網羅で足りる)。
 
-## Rollout and Operations
+## 展開と運用
 
 - Feature Flag: 不要(新規 route のみ)。
-- Deployment order: Migration を先に適用、次にアプリ(古いアプリは新 route を持たず互換)。
-- Metrics/alarms: 追加なし。
-- Rollback trigger and procedure: 新 route で不具合が出た場合はアプリを revert する。Migration の CHECK は無害なため残してよい。必要なら drop の Migration を追加する。
+- デプロイ順序: Migration を先に適用、次にアプリ(古いアプリは新 route を持たず互換)。
+- メトリクス/アラーム: 追加なし。
+- ロールバック条件と手順: 新 route で不具合が出た場合はアプリを revert する。Migration の CHECK は無害なため残してよい。必要なら drop の Migration を追加する。
 
-## Task Breakdown
+## タスク分解
 
 1. Feature Spec と Plan の作成、Readiness Gate 評価(本文書)
 2. Domain: `resolveHabitEntry` + Unit Test
@@ -93,27 +93,27 @@ property test: 追加しない(入力空間が小さく境界値の網羅で足�
 
 各 task は「設計確認 → 実装 → テスト → セルフレビュー」を含む。
 
-## Dependencies
+## 依存関係
 
 - 先行 task: T-101(session)、T-102(timezone)、T-103/T-104(Habit)、T-201(予定機会計算。PR #12。本ブランチは T-201 のブランチを起点にするため、PR #12 の merge 後に main へ rebase する)。
 - ADR 依存、外部権限、provider: なし。
 
-## Risks
+## リスク
 
-| Risk                                                            | Mitigation                                                                                | Owner |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----- |
-| raw SQL の upsert で型変換(bigint/numeric/date)を誤る           | Integration Test(実 PostgreSQL)で往復と並行を検証。戻り値は明示的に変換・検証する         | TBD   |
-| PR #12(T-201)の merge 前に本 PR を出すと差分に T-201 が含まれる | 本 PR の base を `feat/t-201-schedule-calculation` にするか、#12 の merge を待つ          | TBD   |
-| 「今日」の判定が DST/日付境界でずれる                           | T-201 の関数を使用し、use case では `now()` を 1 回だけ呼ぶ。DST 日と日付境界の Unit Test | TBD   |
-| 後勝ち upsert による別端末の記録の上書き                        | Accepted Risk として Spec に記載。必要になれば `If-Match` 等を別タスクで追加              | TBD   |
+| リスク                                                          | 対策                                                                                      | 責任者 |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------ |
+| raw SQL の upsert で型変換(bigint/numeric/date)を誤る           | Integration Test(実 PostgreSQL)で往復と並行を検証。戻り値は明示的に変換・検証する         | TBD    |
+| PR #12(T-201)の merge 前に本 PR を出すと差分に T-201 が含まれる | 本 PR の base を `feat/t-201-schedule-calculation` にするか、#12 の merge を待つ          | TBD    |
+| 「今日」の判定が DST/日付境界でずれる                           | T-201 の関数を使用し、use case では `now()` を 1 回だけ呼ぶ。DST 日と日付境界の Unit Test | TBD    |
+| 後勝ち upsert による別端末の記録の上書き                        | Accepted Risk として Spec に記載。必要になれば `If-Match` 等を別タスクで追加              | TBD    |
 
-## Start Conditions
+## 着手条件
 
 - [x] Spec StatusがReady
 - [x] 必須ADRがAccepted(該当ADRなし)
-- [x] API/event契約がレビュー済み、またはN/A(Spec の API and Events 節)
+- [x] API/event契約がレビュー済み、またはN/A(Spec の APIとイベント節)
 - [x] Migration方針がレビュー済み、またはN/A(expand のみ、forward fix)
-- [x] 認可・データ保護方針がレビュー済み(Security and Privacy 節)
+- [x] 認可・データ保護方針がレビュー済み(セキュリティとプライバシー節)
 - [x] テスト環境とFake/Stubを準備できる(Testcontainers、既存 fake)
 - [x] 依存taskが完了している(T-201 は PR #12 で review 待ちだがコードは本ブランチに含まれる。PR #12 の merge 後に main へ rebase する)
 - [x] rollout/rollback方針が決定している

@@ -160,7 +160,7 @@ Auth adapter（[../specs/auth-adapter.md](specs/auth-adapter.md)、[../plans/aut
 - `password_hash` は MVP が Credentials のみのため `NOT NULL` とした。将来 OAuth を追加する際は `nullable` へ変更する migration が別途必要になる（Plan Risks 参照）。
 - `sessions`/`password_reset_tokens`/`login_attempts` の内部 PK は本設計の既存方針（bigint identity、Prisma の `autoincrement()`）に合わせた。Auth.js 標準の Prisma adapter スキーマは `id` に `cuid()` の `String` を用いるが、本プロジェクトは `users.id` が既に `bigint` であるため、標準 `@auth/prisma-adapter` をそのまま使わずカスタム adapter 実装で吸収する前提とする（Plan の Risks・Task 4/5 で対応）。
 - `verification_tokens` のみ Auth.js 標準スキーマ（`identifier`/`token`/`expires`、`id` 列なし）にそのまま準拠した。`token` 列には平文ではなく sha256 hash を保存する（Business Rules 準拠）。
-- OAuth 用の `accounts` テーブルは Spec の Out of Scope（Google/GitHub OAuth 除外）のため作成していない。
+- OAuth 用の `accounts` テーブルは Spec の 対象外（Google/GitHub OAuth 除外）のため作成していない。
 - `login_attempts.purpose` の CHECK 制約値、rate limit 閾値（直近 15 分 5 回失敗 → 15 分 lockout）は `packages/config` の設定値として外出しする予定（Task 6 で実装、コード変更なしで調整可能にする）。
 
 ## 実装時の補足（T-102）
