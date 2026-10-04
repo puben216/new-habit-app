@@ -95,7 +95,7 @@ Index:
 
 ### `daily_check_ins`
 
-`id`, `user_id`, `check_in_date date`, `mood smallint nullable`, `difficulty smallint nullable`, `note text nullable`, timestamps。`UNIQUE(user_id, check_in_date)`、値域は 1〜5。
+`id`, `user_id`, `check_in_date date`, `mood smallint nullable`, `difficulty smallint nullable`, `note text nullable`, timestamps。`UNIQUE(user_id, check_in_date)`、値域は 1〜5。1 項目以上が非 NULL であることは DB 制約ではなく Domain（`resolveDailyCheckIn`）が保証する（T-203）。
 
 ### `weekly_reviews`
 
@@ -191,3 +191,12 @@ Habit entry（[../specs/habit-entry.md](specs/habit-entry.md)、[../plans/habit-
 - `created_at` は新規作成時のみ Application の Clock を書き込む。更新時の `updated_at` は DB の `set_updated_at` trigger（`CURRENT_TIMESTAMP`）が上書きする。
 - `note`、`scheduled_for` は T-202 では書かない（常に `NULL`）。`source` は常に `web`。
 - 今日の予定の取得（`WHERE user_id = ? AND habit_date = ?`）は `(user_id, habit_date desc, id desc)` index を使う。
+
+## 実装時の補足（T-203）
+
+Daily check-in（[../specs/daily-check-in.md](specs/daily-check-in.md)、[../plans/daily-check-in.md](plans/daily-check-in.md)）の実装時の追加決定。schema/migration の変更はない。
+
+- 既存の制約（`UNIQUE(user_id, check_in_date)`、`mood`/`difficulty` の CHECK 1〜5、FK `ON DELETE CASCADE`）をそのまま使う。
+- 記録は `INSERT ... SELECT ... FROM users ... ON CONFLICT (user_id, check_in_date) DO UPDATE` の単一文で冪等に upsert する。user が存在しない場合は 0 行になり、FK 違反を起こさず「見つからない」として扱う。更新は全項目の置換（部分更新ではない）。
+- `created_at` は新規作成時のみ Application の Clock、更新時の `updated_at` は DB の `set_updated_at` trigger が上書きする。
+- `note` の文字数上限の DB CHECK は追加していない（P2 未決の暫定値を DB に焼き込まないため。契約 schema の定数が上限）。
