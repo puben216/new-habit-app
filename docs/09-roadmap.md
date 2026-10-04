@@ -155,6 +155,9 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 
 - opt-in、quiet hours、timezone、unsubscribe
 - Unit/Integration/E2E: 設定と停止
+- 設計: Feature Spec([notification-preferences.md](specs/notification-preferences.md))と Implementation Plan([notification-preferences.md](plans/notification-preferences.md))を作成。ユーザー単位の設定のみ(習慣ごとの通知は対象外)、既定は無効(opt-in)、quiet hours は暫定で 22:00〜07:00・ユーザーの timezone 基準、配信停止はログイン後の設定 OFF のみ(メール内ワンクリック unsubscribe は T-402)と決定
+- 実装: Domain `resolveNotificationPreference`/`isWithinQuietHours`、Application `getNotificationSettingsUseCase`/`upsertNotificationSettingsUseCase`、Infrastructure `PrismaNotificationSettingsRepository`(部分 unique index に対する `INSERT ... ON CONFLICT` の単一文で冪等 upsert)、`GET/PUT /api/v1/notification-settings`。Migration は unique index と CHECK の追加のみ(expand)
+- テスト: Unit(Domain/Application/契約/handler)と Integration(実 PostgreSQL: 往復、置換、停止と再開、並行 6 件で 1 行、他ユーザーとの分離、CHECK、fresh と upgrade の Migration)を追加。E2E は Playwright 未導入のため対象外。メール送信・dedupe・unsubscribe リンクは T-402
 
 ### T-402 Notification scheduler/delivery
 

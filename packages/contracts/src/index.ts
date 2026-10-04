@@ -69,3 +69,12 @@ export {
   updateProfileRequestSchema,
 } from "./profile";
 export type { ProfileResponse, UpdateProfileRequest } from "./profile";
+
+export {
+  notificationSettingsResponseSchema,
+  upsertNotificationSettingsRequestSchema,
+} from "./notification-settings";
+export type {
+  NotificationSettingsResponse,
+  UpsertNotificationSettingsRequest,
+} from "./notification-settings";
