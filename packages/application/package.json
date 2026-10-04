@@ -13,6 +13,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@habit-app/contracts": "workspace:*",
     "@habit-app/domain": "workspace:*"
   },
   "devDependencies": {
