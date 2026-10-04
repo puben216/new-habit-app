@@ -36,4 +36,14 @@ export interface HabitEntryRepositoryPort {
     readonly actorUserId: string;
     readonly date: string;
   }): Promise<readonly HabitEntryRecord[]>;
+
+  /**
+   * actor の `[from, to]`(両端を含む)の記録を、日付の昇順(同日は作成順)で返す。
+   * 他ユーザーの記録は含まれない。統計(T-204)が 1 回の取得で全習慣分を得るために使う。
+   */
+  listByDateRange(input: {
+    readonly actorUserId: string;
+    readonly from: string;
+    readonly to: string;
+  }): Promise<readonly HabitEntryRecord[]>;
 }

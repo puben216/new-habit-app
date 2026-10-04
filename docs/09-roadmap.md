@@ -118,6 +118,9 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 - streak、7/30 日成功率、空状態
 - Unit: 全集計定義。Integration: query count/性能
 - E2E: 記録後の反映
+- 設計: Feature Spec([statistics-dashboard.md](specs/statistics-dashboard.md))と Implementation Plan([statistics-dashboard.md](plans/statistics-dashboard.md))を作成。今日の未記録は保留(分母外・ストリークを切らない)、期間は今日を含む直近 7/30 日、成功率・ストリークは習慣ごと+全体の成功率、`GET /dashboard`は`from`/`to`なしの固定集計、スコープは API+集計ロジックのみ(UI・E2E は対象外)と決定(D-13)
+- 実装: Domain `calculateHabitStatistics`/`aggregateWindowStatistics`(予定機会ごとに success/missed/skipped/pending へ分類し、ストリークは success で加算・missed で 0・skipped/pending は中立、366 日まで遡る)、Application `getDashboardUseCase`(記録は習慣数に依らず 1 回の範囲取得。アーカイブ済み習慣は除外)、Infrastructure `HabitEntryRepository.listByDateRange`、`GET /api/v1/dashboard`。Migration なし
+- テスト: Unit(Domain の全集計定義とシード固定の性質テスト/Application/契約/handler)と Integration(実 PostgreSQL: 範囲取得の境界・他ユーザー分離、応答全体、アーカイブ除外、問い合わせ回数が習慣数に依らず記録取得は 1 回)を追加。E2E は Playwright 未導入のため対象外
 
 ## Phase 3: 週次レビューと AI
 

@@ -32,3 +32,10 @@ export type {
   UpsertDailyCheckInDeps,
   UpsertDailyCheckInInput,
 } from "./check-in-use-cases";
+export { getDashboardUseCase } from "./dashboard-use-cases";
+export type {
+  Dashboard,
+  DashboardHabit,
+  GetDashboardDeps,
+  GetDashboardInput,
+} from "./dashboard-use-cases";
