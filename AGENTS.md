@@ -185,7 +185,7 @@ pnpm db:migrate:deploy  # 保留中のmigrationを適用(CI/本番相当)
 
 `prisma migrate reset`等、DBを破壊的にリセットするコマンドはAIエージェントからの実行を明示的にブロックされる（Prisma 7の安全機構）。実行する場合は必ずユーザーに対象環境と影響を説明し、明示的な同意を得てから`PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`を設定する。
 
-`pnpm test:e2e`はPlaywright導入後（T-101のE2Eシナリオ着手時）に追加する。それまでは存在しないコマンドや成功結果を推測して報告しない。
+`pnpm test:e2e`はPlaywright導入後（T-211のE2E基盤導入時）に追加する。それまでは存在しないコマンドや成功結果を推測して報告しない。
 
 `.github/workflows/security-scan.yml`はmain向けPRでsecret scan（gitleaks）と`pnpm audit --audit-level=moderate`を実行する。Prisma CLI自身が同梱する開発時専用依存由来の既知vulnerabilityは`pnpm-workspace.yaml`の`auditConfig.ignoreGhsas`にレビュー済みとして記録済み。Terraform/IaC scan、SBOM生成、staging deployはインフラ未着手のため未実装（T-501以降）。SAST（Semgrep/CodeQL等）はAuth/API（T-101〜）未実装で攻撃面が薄いため今回は対象外とし、T-101着手時に再検討する。依存方向チェック（`pnpm lint:boundaries`、dependency-cruiser）はpr-quality.ymlに既に導入済み。
 
