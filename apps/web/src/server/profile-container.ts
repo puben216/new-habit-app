@@ -1,4 +1,4 @@
-import { parseEnv } from "@habit-app/config";
+import { getServerEnv } from "./env";
 import { getMyProfile, updateMyProfile } from "@habit-app/application";
 import { createPrismaProfileRepository } from "@habit-app/infrastructure";
 
@@ -11,7 +11,7 @@ import { actorUserIdFromSession } from "./session-actor";
  * 初回リクエスト時まで遅延構築する(`next build` が env 検証や DB 接続で失敗しないようにするため)。
  */
 async function buildProfileHandlers(): Promise<ProfileHandlers> {
-  const env = parseEnv(process.env);
+  const env = getServerEnv();
   const { auth, prisma } = await getAuthContainer();
   const profileRepository = createPrismaProfileRepository(prisma);
 

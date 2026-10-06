@@ -4,6 +4,7 @@
     "lib": ["dom", "dom.iterable", "ES2022"],
     "jsx": "preserve",
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": {

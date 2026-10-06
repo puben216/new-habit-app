@@ -6,7 +6,7 @@ import {
   updateHabitUseCase,
 } from "@habit-app/application";
 import type { Clock } from "@habit-app/application";
-import { parseEnv } from "@habit-app/config";
+import { getServerEnv } from "./env";
 import { createPrismaHabitRepository, createUuidGenerator } from "@habit-app/infrastructure";
 
 import { getAuthContainer } from "./auth-container";
@@ -22,7 +22,7 @@ import type { HabitHandlers } from "./habit-handlers";
 const ACTOR_USER_ID_PATTERN = /^[1-9][0-9]*$/;
 
 async function buildHabitHandlers(): Promise<HabitHandlers> {
-  const env = parseEnv(process.env);
+  const env = getServerEnv();
   const { auth, prisma } = await getAuthContainer();
 
   const habitRepository = createPrismaHabitRepository(prisma);

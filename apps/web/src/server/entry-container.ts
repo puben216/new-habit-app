@@ -1,6 +1,6 @@
 import { getTodayScheduleUseCase, upsertHabitEntryUseCase } from "@habit-app/application";
 import type { Clock } from "@habit-app/application";
-import { parseEnv } from "@habit-app/config";
+import { getServerEnv } from "./env";
 import {
   createPrismaHabitEntryRepository,
   createPrismaHabitRepository,
@@ -18,7 +18,7 @@ import { actorUserIdFromSession } from "./session-actor";
  * (`next build` が env 検証や DB 接続を実行しないようにするため)。
  */
 async function buildEntryHandlers(): Promise<EntryHandlers> {
-  const env = parseEnv(process.env);
+  const env = getServerEnv();
   const { auth, prisma } = await getAuthContainer();
 
   const deps = {

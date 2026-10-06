@@ -16,5 +16,19 @@ services:
       timeout: 5s
       retries: 10
 
+  # ローカル/CI 専用の SMTP キャプチャ(ADR-010)。アプリの DB とは独立で、データは永続化しない。
+  # SMTP は 1025、Web UI と HTTP API は 8025。ローカルからのみ接続できるよう loopback に bind する。
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   postgres-data:
