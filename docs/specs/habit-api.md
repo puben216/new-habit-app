@@ -1,23 +1,23 @@
 # Habit Repository, Use Cases and API Spec
 
 Status: Ready
-Owner: TBD
-Last updated: 2026-10-02
-Change classification: Standard
-Roadmap Task: T-104
+責任者: TBD
+最終更新: 2026-10-02
+変更区分: Standard
+ロードマップ項目: T-104
 
-## Goal
+## 目的
 
 ログイン済みのユーザーが、自分の習慣(`build`/`reduce`)を作成・一覧・取得・更新・アーカイブできるようにする。T-103 の Habit Domain を唯一の業務ルール定義として再利用し、永続化(repository)、認可(所有者のみ)、楽観ロック、cursor pagination、HTTP 契約(`/api/v1/habits`)を提供する。以降の tracking(T-201〜)が「自分の習慣」を安全に参照できる基盤になる。
 
-## Success Metrics
+## 成功指標
 
 - create/list/get/update/archive が実 PostgreSQL に対して Integration Test で green(constraint、IDOR、409、pagination を含む)。
 - 他ユーザーの習慣は、取得・更新・アーカイブ・cursor のいずれの経路でも読み書きできず、常に 404 または cursor 無効として扱われる。
 - 同一 `version` に対する並行更新は最大 1 件だけ成功し、残りは 409 になる(lost update が起きない)。
 - 業務ルール(kind 不変、reduce の targetCount=1、daysOfWeek 値域、有効期間重複、有効開始日保持)を Application/Presentation/Infrastructure で再実装していない(Domain の公開関数のみを使用)。
 
-## Scope
+## 範囲
 
 - Application: `createHabit`/`listHabits`/`getHabit`/`updateHabit`/`archiveHabit` の use case、`HabitRepositoryPort`、`IdGeneratorPort`、cursor の符号化/復号、Application error 型。
 - Infrastructure: `PrismaHabitRepository`(`habits`/`habit_schedule_versions` の読み書き、transaction、楽観ロック、keyset pagination)、`IdGeneratorPort` の実装。
@@ -26,10 +26,10 @@ Roadmap Task: T-104
 - Presentation(`apps/web`): `GET/POST /api/v1/habits`、`GET/PATCH /api/v1/habits/{habitId}`、`POST /api/v1/habits/{habitId}/archive`。session からの actor 取得、Origin 検証、Problem Details へのエラー変換。
 - DB schema の変更なし(Migration なし)。既存の `habits.version` 列、`habits_user_id_status_created_at_id_idx`、`habit_schedule_versions` の制約を使用する。
 
-## Out of Scope
+## 対象外
 
 - `HabitEntry`(記録)、`GET /schedule/today` 等の tracking(T-201 以降)。
-- `Idempotency-Key`(POST の二重送信対策)。`idempotency_keys` テーブルと共通処理は別タスクで扱う。二重送信時は習慣が重複作成されうる(Accepted Risks 参照)。
+- `Idempotency-Key`(POST の二重送信対策)。`idempotency_keys` テーブルと共通処理は別タスクで扱う。二重送信時は習慣が重複作成されうる(受容リスク 参照)。
 - Rate limit(具体的閾値が `docs/10` P2 で未決、かつ共通基盤が未実装)。
 - `localTime`(リマインド用の実施予定時刻)。Domain の `ScheduleVersion` が `localTime` を持たず、用途は習慣ごとの通知であり、T-401 はユーザー単位の設定のみを扱うため、本タスクの API は受け付けない(未知キーとして 422)。DB 列 `habit_schedule_versions.local_time` は変更しない。
 - 習慣の物理削除、ユーザー削除に伴う削除フロー(T-404)。
@@ -37,7 +37,7 @@ Roadmap Task: T-104
 - OpenAPI 文書の生成。本リポジトリには OpenAPI 生成基盤が未導入のため、runtime schema(`packages/contracts/src/habits.ts`)と本 Spec の API 節を契約の正本とする。生成基盤導入時にこの schema から導出する(ADR-009)。
 - 習慣数の上限、`status` 以外の絞り込み・検索・並び替え。
 
-## Actors and Preconditions
+## アクターと前提条件
 
 | Actor                  | Preconditions                                                        |
 | ---------------------- | -------------------------------------------------------------------- |
@@ -46,7 +46,7 @@ Roadmap Task: T-104
 
 actor の user ID は、T-101 の Auth.js `auth()`(session callback が付与する `session.user.id`、`users.id` の十進文字列)から取得する。この値以外(request body、query、header)から user ID を受け取らない。
 
-## Functional Requirements
+## 機能要件
 
 ### HAPI-001 習慣の作成
 
@@ -79,7 +79,7 @@ actor の user ID は、T-101 の Auth.js `auth()`(session callback が付与す
 - `POST /api/v1/habits/{habitId}/archive` は `version`(必須)を受け取り、Domain の `archiveHabit` で `archived` にして `200` で返す。`version` は +1。
 - 既に `archived` の習慣への再実行は冪等とし、`version` が古くても `200` で現状を返す(クライアントの再送が 409 にならないようにするため)。`version` は増やさない。
 
-## Business Rules and Invariants
+## 業務ルールと不変条件
 
 - HAPI-INV-001(所有者限定): すべての repository クエリは actor user ID を条件に含む。取得後の所有者チェックに依存しない。他ユーザーの習慣は存在しないものと区別できない(404 / cursor 無効)。
 - HAPI-INV-002(楽観ロック): 習慣の状態変更(詳細更新、スケジュール変更、アーカイブ)は「`version` が期待値と一致する行」にのみ適用され、適用ごとに `version` が 1 増える。習慣行と `habit_schedule_versions` の変更は同一 transaction で行い、部分的に反映されない。
@@ -87,7 +87,7 @@ actor の user ID は、T-101 の Auth.js `auth()`(session callback が付与す
 - HAPI-INV-004(pagination の決定性): 並び順は `(created_at desc, id desc)`、既存 index `habits_user_id_status_created_at_id_idx` に一致する。`created_at` は Application の Clock(ミリ秒精度)から設定し、JS `Date` と DB 間でマイクロ秒の丸めによる keyset のずれを起こさない。
 - HAPI-INV-005(入力上限、暫定): `name` は 1〜100 文字、`purpose`/`cue`/`minimumAction`/`replacementAction` は 1〜500 文字(trim 前の文字数、UTF-16 code unit ではなく `String.length`)。制御文字(改行・タブ・NUL を含む)は拒否する。リクエスト body は 16 KiB まで。`daysOfWeek` は最大 7 要素。上限値は `docs/10` P2 が確定するまでの暫定既定値で、確定後は契約 schema の定数だけを変更する(Domain/DB は変更しない)。
 
-## State Transitions
+## 状態遷移
 
 Domain の遷移表(`docs/specs/habit-domain.md`)をそのまま使用する。本タスクで追加される遷移はない。HTTP 上の対応:
 
@@ -101,7 +101,7 @@ Domain の遷移表(`docs/specs/habit-domain.md`)をそのまま使用する。�
 | archived | PATCH                        | 変更なし、409 `habit_archived`    |
 | archived | POST archive                 | 変更なし(冪等)、200、version 不変 |
 
-## Acceptance Criteria
+## 受け入れ基準
 
 ```gherkin
 Scenario: buildの習慣を作成する
@@ -145,7 +145,7 @@ Scenario: 未認証
   Then 401(unauthorized)
 ```
 
-## Authorization Matrix
+## 認可マトリクス
 
 | Operation                 | Guest | Member(自分の習慣) | Member(他人の習慣) |
 | ------------------------- | ----: | -----------------: | -----------------: |
@@ -157,7 +157,7 @@ Scenario: 未認証
 
 Admin は本 Spec の対象外(T-403)。認可は Application/Infrastructure(actor user ID を含む query)で行い、認証(401)は Presentation で session から判定する。
 
-## API and Events
+## APIとイベント
 
 共通: base path `/api/v1`、JSON、未知キー拒否、エラーは Problem Details(`code`、`message`、`fieldErrors`、`requestId`。既存の `createProblemDetails`)。応答に `Cache-Control: no-store`。request body を持つメソッド(POST/PATCH)は `Content-Type: application/json` 必須(違えば `415`)、body 16 KiB 超は `413`、JSON として解釈できない/schema 違反は `422`。状態変更メソッドは CSRF 対策として `Origin` ヘッダが `APP_BASE_URL` の origin と一致すること(`Origin` が無い場合は `Sec-Fetch-Site: same-origin` のみ許可)を要求し、満たさなければ `403`(`code: invalid_origin`)。Events は発行しない。
 
@@ -200,10 +200,10 @@ Admin は本 Spec の対象外(T-403)。認可は Application/Infrastructure(act
 | `POST /habits/{habitId}/archive` | `version`                                                                                                                    | 200  | 401, 403, 404, 409, 413, 415, 422 |
 
 - 409 の `code` は `version_conflict` または `habit_archived`。422 は schema 違反(`validation_failed`、`fieldErrors` に項目)と Domain 不変条件違反(reduce の targetCount≠1、遡及的なスケジュール変更等。`fieldErrors` は Domain エラー種別に応じた固定の項目名と固定文言)。
-- 05 の契約例との差分: `schedule.localTime` は受け付けない(Out of Scope)。`schedule.effectiveFrom` を必須とする。`version` は `If-Match` ではなく body で受ける(PATCH/archive)。これらは `docs/05-api-and-ai-design.md` に追記する。
-- 429 は返さない(Out of Scope)。
+- 05 の契約例との差分: `schedule.localTime` は受け付けない(対象外)。`schedule.effectiveFrom` を必須とする。`version` は `If-Match` ではなく body で受ける(PATCH/archive)。これらは `docs/05-api-and-ai-design.md` に追記する。
+- 429 は返さない(対象外)。
 
-## Data and Migration
+## データとMigration
 
 - Migration なし。使用する制約は既存のとおり: `habits_kind_check`/`habits_status_check`、`habits_user_id_fkey`(`ON DELETE CASCADE`)、`habits_public_id_key`、`habit_schedule_versions` の `UNIQUE(habit_id, effective_from)`、`days_of_week`/`target_count` の CHECK、有効期間の exclusion constraint。FK `habits.user_id` の index は `habits_user_id_status_created_at_id_idx` が先頭列で兼ねる。`habit_schedule_versions.habit_id` は `UNIQUE(habit_id, effective_from)` の先頭列で兼ねる。
 - list のアクセスパターン `WHERE user_id = ? AND status = ? ORDER BY created_at DESC, id DESC` は上記 index に一致する。
@@ -212,7 +212,7 @@ Admin は本 Spec の対象外(T-403)。認可は Application/Infrastructure(act
 - rollback/forward fix: スキーマ変更なしのため、コードの revert のみで戻せる。
 - 削除方針: 習慣は物理削除せずアーカイブ(`docs/04` 削除方針)。
 
-## Failure and Edge Cases
+## 失敗・境界ケース
 
 - 他ユーザーの habitId / 存在しない habitId / UUID でない habitId → 404(区別しない)。
 - 古い `version` → 409。並行更新 → 1 件のみ成功、他は 409。
@@ -222,31 +222,31 @@ Admin は本 Spec の対象外(T-403)。認可は Application/Infrastructure(act
 - DB 制約違反(Domain 検証をすり抜けた場合)や FK 違反(session の user が削除済み等)→ 内部エラー(500)。内部詳細は応答に含めない。
 - 永続化済みの行が Domain の不変条件を満たさない(データ破損)→ 内部エラー(500)。内容は応答・ログに含めない。
 
-## Security and Privacy
+## セキュリティとプライバシー
 
-- Data collected: 習慣の自由記述(name/purpose/cue/minimumAction/replacementAction)。user ID は actor 取得のためのみに使用し、外部送信しない。外部 provider への送信なし。
+- 収集データ: 習慣の自由記述(name/purpose/cue/minimumAction/replacementAction)。user ID は actor 取得のためのみに使用し、外部送信しない。外部 provider への送信なし。
 - 保持/アクセス: 習慣は本人のみが参照・更新できる。アーカイブ後も保持。削除は T-404 のユーザー削除フローに従う。
-- Data forbidden in logs: 習慣の自由記述、request body、session token、cookie、email。Presentation はこれらをログ出力しない。エラー応答に stack・SQL・DB エラー内容を含めない。
+- ログ禁止データ: 習慣の自由記述、request body、session token、cookie、email。Presentation はこれらをログ出力しない。エラー応答に stack・SQL・DB エラー内容を含めない。
 - IDOR/BOLA: HAPI-INV-001。cursor は習慣の外部 ID と status のみを含み、user ID・内部 ID を含めない。cursor を他ユーザーが流用しても actor 条件の query で解決できず 422。
 - CSRF: `SameSite=Lax` cookie に加え、状態変更メソッドで Origin 検証と `Content-Type: application/json` 必須(単純リクエストによる CSRF を不可能にする)。
 - XSS: API は JSON のみ返し HTML を返さない。自由記述は制御文字を拒否し、UI での表示時にエスケープする前提(UI は T-104 の対象外)。
 - Injection: Prisma のパラメータ化クエリのみを使用し生 SQL を使わない。
-- Abuse: 入力上限(HAPI-INV-005)、`limit` 最大 100、body 16 KiB。Rate limit は Out of Scope(Accepted Risks)。
+- Abuse: 入力上限(HAPI-INV-005)、`limit` 最大 100、body 16 KiB。Rate limit は 対象外(受容リスク)。
 
-## AI Requirements
+## AI要件
 
 N/A。AI を利用しない。
 
-## Observability and Operations
+## 可観測性と運用
 
-- Logs: 本タスクでは route handler に自前のログ出力を追加しない(構造化ログ基盤は未導入で、`docs/06` の observability 整備タスクで共通化する)。予期しない例外は Next.js の標準エラー処理に委ね、応答は汎用 500 のみ。ログ導入時に出してよいのは route template、use case 名、status、duration、error code のみで、body・自由記述・ID は出さない。
+- ログ: 本タスクでは route handler に自前のログ出力を追加しない(構造化ログ基盤は未導入で、`docs/06` の observability 整備タスクで共通化する)。予期しない例外は Next.js の標準エラー処理に委ね、応答は汎用 500 のみ。ログ導入時に出してよいのは route template、use case 名、status、duration、error code のみで、body・自由記述・ID は出さない。
 - Metrics/Alerts: 既存方針(`docs/06`)の request count/error/latency に含まれる。専用の metric/alarm は追加しない。
 - Runbook: 不要(新しい運用手順なし)。409/404 の増加は通常のクライアント競合として扱う。
-- Rollout/rollback: Feature Flag なし(新規 route のみで既存機能に影響しない)。revert で完結する。Migration なしのため deploy 順序の制約なし。
+- 展開/ロールバック: Feature Flag なし(新規 route のみで既存機能に影響しない)。revert で完結する。Migration なしのため deploy 順序の制約なし。
 
-## Test Coverage Matrix
+## テスト対応表
 
-| Requirement  | Unit                                                                         | Integration(実 PostgreSQL)                                                                                       | E2E                       |
+| 要件         | Unit                                                                         | Integration(実 PostgreSQL)                                                                                       | E2E                       |
 | ------------ | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------- |
 | HAPI-001     | createHabit(fake repo)、契約 schema、HTTP handler の 201/422/401/403/413/415 | repository create→find の往復、DB の kind/days_of_week/重複 CHECK・exclusion 制約                                | N/A(E2E 基盤導入後に追加) |
 | HAPI-002     | cursor 符号化/復号、listHabits(limit+1、status 不一致 cursor)、query schema  | 25 件のページング(重複/欠落なし)、status 絞り込み、同一 created_at の順序、他ユーザー cursor 拒否                | N/A                       |
@@ -261,17 +261,17 @@ N/A。AI を利用しない。
 
 Fake/Stub 方針: Application の unit test は in-memory fake repository を使用(`test-fakes.ts`)。Integration Test は Testcontainers の実 PostgreSQL(既存 `startPostgresContainer`)。外部サービスなし。fixture はすべて架空データ。
 
-## Open Questions
+## 未決事項
 
 実装をブロックしない事項(既定値を置いて進める):
 
 - **自由記述の文字数上限**(`docs/10` P2 で未決): HAPI-INV-005 の暫定値(name 100、他 500)を契約 schema にのみ置く。確定後に定数を更新し、必要なら Domain へ移す。
-- **`localTime`**: 本タスクでは受け付けない(Out of Scope)。習慣ごとの通知時刻は T-401 の対象外（T-401 はユーザー単位の設定のみ）であり、必要になった時点で別タスクとして Domain `ScheduleVersion` への追加とあわせて設計する。
+- **`localTime`**: 本タスクでは受け付けない(対象外)。習慣ごとの通知時刻は T-401 の対象外（T-401 はユーザー単位の設定のみ）であり、必要になった時点で別タスクとして Domain `ScheduleVersion` への追加とあわせて設計する。
 - **`effectiveFrom` の既定値**: クライアント指定を必須とした。T-102(timezone)完了後に「ユーザーのローカル今日」を既定にするかを再検討できる。
 - **過去日への `effectiveFrom`**: Domain は「既存のどの版よりも後」のみを許可する。「今日より前を拒否する」ポリシーは timezone と Clock が必要なため本タスクでは課さない(Domain の `changeSchedule` コメントが示す Application 層の将来課題)。
 - **reduce の `quantity` 意味論**(`docs/specs/habit-domain.md` の Open Question): 本タスクは `HabitEntry` を扱わないため影響しない。T-202 で解決済み(reduce は `quantity` を持たず `status` のみで判定。[habit-entry.md](habit-entry.md)、`docs/10` D-12)。
 
-## Implementation Readiness
+## 実装準備状況
 
 Status: Ready
 Reviewed at: 2026-10-02
@@ -288,12 +288,12 @@ Reviewed at: 2026-10-02
 | Operations           | Pass   | Observability and Operations 節(ログ方針、rollout/rollback、Runbook 不要の理由)                                                           |
 | Planning             | Pass   | [../plans/habit-api.md](../plans/habit-api.md)                                                                                            |
 
-### Accepted Risks
+### 受容リスク
 
 - `Idempotency-Key` 未対応のため、POST の二重送信で習慣が重複作成されうる(習慣はアーカイブで整理可能で、データ破損にはならない)。共通の冪等性基盤の導入時に追加する。
 - Rate limit 未実装のため、認証済みユーザーによる大量作成を制限できない(入力上限と pagination 上限のみ)。P2 の閾値確定後に共通基盤として追加する。
 - 構造化ログ未導入のため、本 API 固有の運用 metric/ログは追加しない。
 
-### Open Questions
+### 未決事項
 
-上記「Open Questions」節のとおり(すべて非ブロック)。
+上記「未決事項」節のとおり(すべて非ブロック)。

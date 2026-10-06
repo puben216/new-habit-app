@@ -1,23 +1,23 @@
 # Habit Entry Spec
 
 Status: Ready
-Owner: TBD
-Last updated: 2026-10-03
-Change classification: Standard
-Roadmap Task: T-202
+責任者: TBD
+最終更新: 2026-10-03
+変更区分: Standard
+ロードマップ項目: T-202
 
-## Goal
+## 目的
 
 ログイン済みのユーザーが、自分のローカル日の「今日の予定」を確認し、予定された習慣の実施結果(成功/未実施/スキップ)を記録・訂正できるようにする。T-201 の予定機会計算と T-103/T-104 の Habit を再利用し、「手動で価値が成立する記録」の核を提供する。
 
-## Success Metrics
+## 成功指標
 
 - `GET /api/v1/schedule/today` が、ユーザーの timezone のローカル日に予定されている active な習慣と、その日の記録の有無を返す(Integration Test で実 PostgreSQL に対して確認)。
 - `PUT /api/v1/habits/{habitId}/entries/{date}` が冪等な upsert として動作し、同一内容の再送・並行送信でも 1 習慣 1 日 1 レコードのまま、重複や 500 が起きない。
 - 他ユーザーの習慣への記録・他ユーザーの記録の参照は常に 404 または一覧に含まれず、IDOR が成立しない。
 - 成功判定(build の `quantity >= targetCount`)・予定日判定・対象日の範囲判定を Application/Presentation/Infrastructure で再実装していない(Domain の公開関数のみを使用)。
 
-## Scope
+## 範囲
 
 - Domain(tracking): 記録の入力(`status`、`quantity`)を habit の kind と、その日に適用される ScheduleVersion の `targetCount` に対して検証・正規化する純粋関数 `resolveHabitEntry`。
 - Application: `getTodaySchedule`、`upsertHabitEntry` の use case、`HabitEntryRepositoryPort`、Application error。
@@ -27,7 +27,7 @@ Roadmap Task: T-202
 - DB: Migration を 1 件追加する(`habit_entries.quantity` の値域 CHECK)。他のスキーマ変更なし。
 - 文書: `docs/05-api-and-ai-design.md`、`docs/04-database-design.md`、`docs/10-decisions-and-open-questions.md`、`docs/09-roadmap.md`。
 
-## Out of Scope
+## 対象外
 
 - `GET /habit-entries`(期間・習慣指定の履歴)、統計・ストリーク(T-204)、daily check-in(T-203)。
 - 記録の `note`(自由記述)。文字数上限が `docs/10` P2 で未決のため、本タスクでは API に含めず列は常に `NULL` とする。
@@ -37,7 +37,7 @@ Roadmap Task: T-202
 - Rate limit、Playwright E2E(基盤未導入。AGENTS.md の方針)。
 - 記録の削除(訂正は status の更新で行う)。
 
-## Actors and Preconditions
+## アクターと前提条件
 
 | Actor                  | Preconditions                                                                         |
 | ---------------------- | ------------------------------------------------------------------------------------- |
@@ -46,7 +46,7 @@ Roadmap Task: T-202
 
 actor の user ID は session(`session.user.id`)のみから取得し、request の body/query/path/header から受け取らない。
 
-## Functional Requirements
+## 機能要件
 
 ### HENT-001 今日の予定の取得
 
@@ -86,7 +86,7 @@ actor の user ID は session(`session.user.id`)のみから取得し、request 
 - アーカイブ済みの習慣への記録は `409`(`code: habit_archived`)。
 - 習慣が存在しない、他ユーザーの所有、`habitId` が UUID でない場合は同一の `404`(`code: habit_not_found`)。
 
-## Business Rules and Invariants
+## 業務ルールと不変条件
 
 - HENT-INV-001(所有者限定): すべての repository 操作は actor user ID を条件に含み、取得後の所有者チェックに依存しない。他ユーザーの習慣・記録は存在しないものと区別できない。
 - HENT-INV-002(一意性): 1 習慣 1 日につき記録は高々 1 件(DB の `UNIQUE (habit_id, habit_date)`)。複数回実施は `quantity` で表す。upsert は `INSERT ... ON CONFLICT (habit_id, habit_date) DO UPDATE` の単一文で行い、並行時も一意制約違反を起こさない。
@@ -94,7 +94,7 @@ actor の user ID は session(`session.user.id`)のみから取得し、request 
 - HENT-INV-004(業務ルールは Domain のみ): 予定日判定は `scheduledOccurrenceOn`、成功判定は `resolveHabitEntry`(`isTargetMet` と同値)のみが行う。
 - HENT-INV-005(対象日の範囲定数): 過去に遡れる日数(7)は Application の定数 `ENTRY_BACKDATE_LIMIT_DAYS` 1 箇所のみで定義する。
 
-## State Transitions
+## 状態遷移
 
 | Current                 | Action          | Next                                     | Rejected when                                              |
 | ----------------------- | --------------- | ---------------------------------------- | ---------------------------------------------------------- |
@@ -103,7 +103,7 @@ actor の user ID は session(`session.user.id`)のみから取得し、request 
 
 `status` 間の遷移に制約はない(訂正のため success→missed 等を許す)。記録の削除はない。
 
-## Acceptance Criteria
+## 受け入れ基準
 
 ```gherkin
 Scenario: 今日の予定を取得する
@@ -160,7 +160,7 @@ Scenario: 並行送信
   Then どちらも 200 で、記録は 1 件
 ```
 
-## Authorization Matrix
+## 認可マトリクス
 
 | Operation                            | Guest | Member(自分の習慣) | Member(他人の習慣) |
 | ------------------------------------ | ----: | -----------------: | -----------------: |
@@ -169,7 +169,7 @@ Scenario: 並行送信
 
 Admin は対象外(T-403)。認証(401)は Presentation で session から判定し、認可は actor user ID を含む query で行う。
 
-## API and Events
+## APIとイベント
 
 共通: base path `/api/v1`、JSON、未知キー拒否、エラーは Problem Details(`createProblemDetails`)、応答に `Cache-Control: no-store`。`PUT` は `Content-Type: application/json` 必須(`415`)、body 上限 16 KiB(`413`)、状態変更メソッドの Origin 検証(`403 invalid_origin`)。T-104 と同じ共通処理を再利用する。Events は発行しない。
 
@@ -217,7 +217,7 @@ Admin は対象外(T-403)。認証(401)は Presentation で session から判定
 - 422 の `code` は `validation_failed`(schema 違反、`fieldErrors` に項目)、`entry_date_out_of_range`、`habit_not_scheduled`、`invalid_habit_entry`(Domain の記録内容違反。`fieldErrors.quantity` / `status` に固定文言)。
 - 05 の契約例との差分: `GET /schedule/today` の応答形、`PUT` の body(`note` を受け付けない)、`quantity` の扱いを `docs/05-api-and-ai-design.md` に反映する。
 
-## Data and Migration
+## データとMigration
 
 - Migration を 1 件追加する(expand のみ、後方互換): `habit_entries_quantity_check CHECK (quantity IS NULL OR (quantity >= 0 AND quantity <= 1000))`。`habit_entries` は T-202 以前にアプリが書き込んでおらず既存行がないため backfill は不要。`NOT VALID` は使わない。rollback は forward fix(制約の drop migration を追加)。fresh DB と既存スキーマからのアップグレードの両方を Integration Test で検証する(既存の migration 検証と同じ方法)。
 - 既存の制約・index を利用する: `habit_entries_status_check`、`source_check`、`UNIQUE(habit_id, habit_date)`、`(user_id, habit_date desc, id desc)`、FK `habit_id`/`user_id`(`ON DELETE CASCADE`)。FK `habit_id` の index は `UNIQUE(habit_id, habit_date)` の先頭列、`user_id` は `(user_id, habit_date, id)` の先頭列で兼ねる。
@@ -225,7 +225,7 @@ Admin は対象外(T-403)。認証(401)は Presentation で session から判定
 - `quantity` は `numeric`。T-202 は整数のみ書き込み、読み出しは整数であることを検証する(非整数の保存値はデータ破損として内部エラー)。
 - `habit_date` は `date`、`created_at`/`updated_at` は呼び出し側 Clock のミリ秒精度。`scheduled_for` と `note` は書かない(`NULL`)。
 
-## Failure and Edge Cases
+## 失敗・境界ケース
 
 - `date` が実在しない暦日・形式不正 → 422 `validation_failed`(`fieldErrors.date`)。
 - 未来日、8 日以上前 → 422 `entry_date_out_of_range`。予定のない日 → 422 `habit_not_scheduled`。
@@ -237,29 +237,29 @@ Admin は対象外(T-403)。認証(401)は Presentation で session から判定
 - DB 制約違反(Domain 検証をすり抜けた場合)→ 内部エラー(500)。内部詳細は応答に含めない。
 - 保存済みの記録が不変条件を満たさない(データ破損)→ 内部エラー(500)。内容は応答・ログに含めない。
 
-## Security and Privacy
+## セキュリティとプライバシー
 
-- Data collected: 記録の status、quantity、日付(ユーザーの行動履歴)。user ID は actor 取得のみに使用し外部送信しない。外部 provider への送信なし。
+- 収集データ: 記録の status、quantity、日付(ユーザーの行動履歴)。user ID は actor 取得のみに使用し外部送信しない。外部 provider への送信なし。
 - 保持/アクセス: 本人のみ参照・更新可。削除は T-404 のユーザー削除フロー(`ON DELETE CASCADE`)に従う。
-- Data forbidden in logs: request body、session、cookie、email、習慣の自由記述。本タスクで route に独自ログを追加しない(T-104 と同じ方針)。エラー応答に stack・SQL・DB エラー内容を含めない。
+- ログ禁止データ: request body、session、cookie、email、習慣の自由記述。本タスクで route に独自ログを追加しない(T-104 と同じ方針)。エラー応答に stack・SQL・DB エラー内容を含めない。
 - IDOR/BOLA: HENT-INV-001。habit は `public_id` と `user_id` の両方で解決する。URL の `habitId` だけで他人の習慣へ書けない。
 - CSRF: Origin 検証 + `Content-Type: application/json` 必須(T-104 と同じ)。XSS: JSON のみを返す。Injection: Prisma のパラメータ化クエリ(upsert は `$queryRaw` のタグ付きテンプレートでバインド変数のみを使い、文字列連結をしない)。
-- Abuse: `quantity` 上限 1000、対象日の範囲(過去 7 日〜今日)、body 16 KiB。Rate limit は Out of Scope(Accepted Risks)。
+- Abuse: `quantity` 上限 1000、対象日の範囲(過去 7 日〜今日)、body 16 KiB。Rate limit は 対象外(受容リスク)。
 
-## AI Requirements
+## AI要件
 
 N/A。AI を利用しない。
 
-## Observability and Operations
+## 可観測性と運用
 
-- Logs: route に独自ログを追加しない(構造化ログ基盤が未導入。導入時に出してよいのは route template、use case 名、status、duration、error code のみ)。
+- ログ: route に独自ログを追加しない(構造化ログ基盤が未導入。導入時に出してよいのは route template、use case 名、status、duration、error code のみ)。
 - Metrics/Alerts: 既存方針(`docs/06`)の request count/error/latency に含まれる。専用 metric/alarm は追加しない。
 - Runbook: 不要(新しい運用手順なし)。422 の増加はクライアントの日付/timezone 不整合の兆候として参照する。
-- Rollout/rollback: Feature Flag なし(新規 route のみ)。Deployment order: Migration を先に適用してからアプリを deploy する(古いアプリは新 route を持たないため互換)。rollback はアプリの revert。制約の撤去が必要な場合は forward fix の Migration を追加する。
+- 展開/ロールバック: Feature Flag なし(新規 route のみ)。Deployment order: Migration を先に適用してからアプリを deploy する(古いアプリは新 route を持たないため互換)。rollback はアプリの revert。制約の撤去が必要な場合は forward fix の Migration を追加する。
 
-## Test Coverage Matrix
+## テスト対応表
 
-| Requirement  | Unit                                                                                                         | Integration(実 PostgreSQL)                                                   | E2E                       |
+| 要件         | Unit                                                                                                         | Integration(実 PostgreSQL)                                                   | E2E                       |
 | ------------ | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------- |
 | HENT-001     | `getTodaySchedule`(fake repo: ローカル日、timezone 差、非予定日、archived 除外、記録の結合、DST 日)、handler | repository の日付別一覧、他ユーザーの記録が含まれない                        | N/A(E2E 基盤導入後に追加) |
 | HENT-002     | `upsertHabitEntry`(fake repo: 作成/訂正/再送)、handler の 200/401/403/404/409/413/415/422                    | upsert の作成→更新、同一内容の再送、並行 2 件で 1 レコード、各 status の往復 | N/A                       |
@@ -271,18 +271,18 @@ N/A。AI を利用しない。
 
 Fake/Stub 方針: Application の unit test は in-memory fake(`test-fakes.ts`)と固定 Clock、プロフィールは既存の fake を使用。Integration は Testcontainers の実 PostgreSQL。fixture は架空データのみ。
 
-## Open Questions
+## 未決事項
 
 実装をブロックしない事項:
 
 - **記録の `note`**: P2(文字数上限)確定後に別タスクで追加する。列は残る。
 - **履歴 `GET /habit-entries`**: T-204(統計)または UI タスクで必要になった時点で Spec 化する。
 - **過去記録の遡及上限(7 日)**: 暫定値。利用実態を見て定数のみ変更する。
-- **習慣数の上限**: today query は active な習慣を全件走査する。習慣数の上限が決まるまで性能上限は未定義(Accepted Risks)。
+- **習慣数の上限**: today query は active な習慣を全件走査する。習慣数の上限が決まるまで性能上限は未定義(受容リスク)。
 
 決定済み(2026-10-03 ユーザー確認): reduce は `quantity` を使わず `status` のみで判定する。対象日は今日と過去 7 日まで。予定のない日への記録は拒否(422)する。
 
-## Implementation Readiness
+## 実装準備状況
 
 Status: Ready
 Reviewed at: 2026-10-03
@@ -300,7 +300,7 @@ Reviewed by: —
 | Operations           | Pass   | Observability and Operations(ログ方針、deploy 順序、rollback)                                                                     |
 | Planning             | Pass   | [../plans/habit-entry.md](../plans/habit-entry.md)                                                                                |
 
-### Accepted Risks
+### 受容リスク
 
 - Rate limit 未実装(T-104 と同じ)。入力上限と対象日の範囲のみで抑える。
 - today query は active 習慣を全件走査する。習慣数の上限が未定義のため、極端に多い習慣を持つユーザーで遅くなりうる(index は利用される)。上限の導入時に見直す。

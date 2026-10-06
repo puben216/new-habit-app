@@ -1,23 +1,23 @@
 # User Profile Spec
 
 Status: Ready
-Owner: TBD
-Last updated: 2026-10-02
-Change classification: Standard
-Roadmap Task: T-102
+責任者: TBD
+最終更新: 2026-10-02
+変更区分: Standard
+ロードマップ項目: T-102
 
-## Goal
+## 目的
 
 認証済みの Member が自分のプロフィール(表示名、タイムゾーン、ロケール、週の開始曜日)を取得・更新できるようにする(01-product-requirements.md 機能要件 2、UC-03、オンボーディング手順 2)。タイムゾーンは習慣日付の判定・予定機会生成(T-201 以降)の基準になるため、IANA ID として厳密に検証して保存する。actor は T-101 が提供する session からのみ取得する([auth-adapter.md](auth-adapter.md) AUTH-009)。
 
-## Success Metrics
+## 成功指標
 
 - 新規 Member が初回の `GET /api/v1/me` と `PATCH /api/v1/me` だけでオンボーディングのプロフィール設定(表示名とタイムゾーン)を完了できる。
 - 不正なタイムゾーン・表示名等はすべて 422 + `fieldErrors` で拒否され、DB へ保存されない(Unit/Integration Test で検証)。
 - あるユーザーの操作が他ユーザーの `user_profiles` 行を読み書きできない(Integration Test で検証)。
 - T-201 以降が「ユーザーの IANA タイムゾーン」を `GET`/Application API 経由でそのまま再利用でき、検証ロジックを再実装する必要がない。
 
-## Scope
+## 範囲
 
 - Domain: プロフィールの値オブジェクト(`DisplayName`、`IanaTimezone`、`Locale`、`WeekStartsOn`)と検証、既定プロフィール、変更の検証(`validateProfileChanges`)。
 - Application: `getMyProfile`、`updateMyProfile` use case、`ProfileRepositoryPort`、所有権 policy。
@@ -26,19 +26,19 @@ Roadmap Task: T-102
 - DB: `user_profiles` の制約追加(`display_name` を nullable 化、値域 CHECK)。
 - Contracts: request/response の runtime schema。
 
-## Out of Scope
+## 対象外
 
 - 通知設定(`notification_settings`、UC-14)。機能要件 2 の「通知設定」は別 endpoint `/notification-settings` で扱い、T-401 で設計・実装した（[notification-preferences.md](notification-preferences.md)）。
 - `DELETE /me`、`GET /me/export`(T-404)。
 - email 変更・表示、パスワード変更(再認証を伴う sensitive action。別 Spec)。
-- 週の開始曜日の既定値の最終決定(10-decisions-and-open-questions.md P1)。本 Spec は暫定既定値を置く(Open Questions 参照)。
+- 週の開始曜日の既定値の最終決定(10-decisions-and-open-questions.md P1)。本 Spec は暫定既定値を置く(未決事項 参照)。
 - 日本語/英語の対応範囲の最終決定(同 P1)。本 Spec は `ja`/`en` を許可する暫定仕様とする。
 - timezone 変更を受けた予定機会・集計の再計算ルール(T-201 以降。本タスクは値の保存のみ)。
 - Playwright E2E(onboarding profile)。Playwright は未導入であり、AGENTS.md の方針どおり導入(T-101 の E2E シナリオ着手時)までは対象外とする。Integration Test と Route Handler 単体テストで代替し、E2E は導入後のタスクで追加する。
 - OpenAPI ドキュメントの生成基盤。リポジトリには未導入のため、契約は zod の runtime schema(`packages/contracts`)と本 Spec を正本とし、基盤導入時に schema から導出する(ADR-009)。
 - API の rate limit 実装(P2 未決。Security 節参照)。
 
-## Actors and Preconditions
+## アクターと前提条件
 
 | Actor                  | Preconditions                                            |
 | ---------------------- | -------------------------------------------------------- |
@@ -47,12 +47,12 @@ Roadmap Task: T-102
 
 email 未確認の Member は login できない(AUTH-005)ため、本 Spec では email 確認済みの Member のみが対象となる。
 
-## Functional Requirements
+## 機能要件
 
 ### PROF-001 プロフィール取得
 
 - 認証済み Member は `GET /api/v1/me` で自分のプロフィールを取得できる。
-- プロフィール行が未作成の場合は、既定値で作成した上で返す(遅延作成、Data and Migration 参照)。結果として、どの Member も常にプロフィールを取得できる。
+- プロフィール行が未作成の場合は、既定値で作成した上で返す(遅延作成、データとMigration 参照)。結果として、どの Member も常にプロフィールを取得できる。
 - 返す項目は `displayName`(未設定は `null`)、`timezone`、`locale`、`weekStartsOn`、`updatedAt`。email その他の認証情報・内部 ID は返さない。
 
 ### PROF-002 プロフィール部分更新
@@ -80,7 +80,7 @@ email 未確認の Member は login できない(AUTH-005)ため、本 Spec で�
 
 ### PROF-005 ロケールと週の開始曜日の検証
 
-- `locale` は `ja` または `en` のみ許可する(暫定。Open Questions 参照)。
+- `locale` は `ja` または `en` のみ許可する(暫定。未決事項 参照)。
 - `weekStartsOn` は 0(日曜)〜6(土曜)の整数のみ許可する。
 
 ### PROF-006 既定プロフィール
@@ -96,7 +96,7 @@ email 未確認の Member は login できない(AUTH-005)ため、本 Spec で�
 - すべての DB 問い合わせは actor user ID を条件に含める。取得後の所有者チェックだけに依存しない。
 - actor に対応する user が存在しない(削除済み等)場合は、存在を漏らさない `404` を返す。
 
-## Business Rules and Invariants
+## 業務ルールと不変条件
 
 - PROF-INV-001: `user_profiles` は user あたり最大 1 行(`user_id` PK)。並行した初回アクセスでも重複・エラーにならず、1 行のみ作成される。
 - PROF-INV-002: 保存される `timezone` は常に Domain の検証(PROF-004)を通過した IANA ID である。
@@ -105,7 +105,7 @@ email 未確認の Member は login できない(AUTH-005)ため、本 Spec で�
 - timezone の変更は「変更時点以降」の予定機会に適用し、既存の `habit_date` は書き換えない(02-use-cases.md 例外・競合)。本タスクは値を保存するのみで、過去データには一切触れない。消費側(T-201 以降)は計算時点の現在値を参照し、必要なら `weekly_reviews.timezone_snapshot` 等でスナップショットを保持する。
 - 更新競合: プロフィールは 1 人の所有者のみが更新し、各項目は互いに独立した partial update であるため、`version`/`If-Match` による楽観ロックは導入せず、項目単位の last-write-wins とする(05-api-and-ai-design.md の楽観ロック原則からの意図的な逸脱。理由: 複数ユーザー間の競合が存在せず、`user_profiles` に version 列を追加するコストに見合う利益がない)。複数項目を持つ集約へ拡張する場合は再評価する。
 
-## State Transitions
+## 状態遷移
 
 | Current            | Action            | Next                                       | Rejected when                         |
 | ------------------ | ----------------- | ------------------------------------------ | ------------------------------------- |
@@ -114,7 +114,7 @@ email 未確認の Member は login できない(AUTH-005)ため、本 Spec で�
 | プロフィールあり   | PATCH /me         | 指定項目を更新                             | 検証違反(422)、user が存在しない(404) |
 | 任意               | GET/PATCH(未認証) | 変更なし                                   | 常に 401                              |
 
-## Acceptance Criteria
+## 受け入れ基準
 
 ```gherkin
 Scenario: 初回の GET /me は既定プロフィールを返す
@@ -163,7 +163,7 @@ Scenario: 別 Origin からの PATCH は拒否される
   Then 403 が返り、プロフィールは変更されない
 ```
 
-## Authorization Matrix
+## 認可マトリクス
 
 | Operation        | Guest | Member | Admin | Ownership rule                                      |
 | ---------------- | ----: | -----: | ----: | --------------------------------------------------- |
@@ -172,9 +172,9 @@ Scenario: 別 Origin からの PATCH は拒否される
 
 Admin による他ユーザーのプロフィール参照・変更は本 Spec の対象外(T-403)。
 
-## API and Events
+## APIとイベント
 
-共通仕様は [auth-adapter.md](auth-adapter.md) API and Events 節と同じ(`Content-Type: application/json`、未知キー拒否、エラーは Problem Details `code`/`message`/`fieldErrors`/`requestId`)。base path は `/api/v1`([ADR-009](../adr/ADR-009-api-style.md))。event は発行しない(N/A)。
+共通仕様は [auth-adapter.md](auth-adapter.md) APIとイベント節と同じ(`Content-Type: application/json`、未知キー拒否、エラーは Problem Details `code`/`message`/`fieldErrors`/`requestId`)。base path は `/api/v1`([ADR-009](../adr/ADR-009-api-style.md))。event は発行しない(N/A)。
 
 ### `GET /api/v1/me`
 
@@ -211,15 +211,15 @@ Admin による他ユーザーのプロフィール参照・変更は本 Spec �
 
 `validation_failed` の `fieldErrors` キーは request のフィールド名(`displayName`/`timezone`/`locale`/`weekStartsOn`)、値は固定の日本語メッセージ。入力値そのもの(自由記述)をエラー応答へ含めない。
 
-## Data and Migration
+## データとMigration
 
 - 既存 `user_profiles`(`user_id` PK/FK `ON DELETE CASCADE`、`display_name`、`timezone`、`locale`、`week_starts_on`、timestamps、`updated_at` trigger)をそのまま使用する。FK は PK と兼用のため追加 index 不要。
 - Migration(expand、後方互換): ① `display_name` の `NOT NULL` を外す(プロフィール未設定を `NULL` で表す)、② CHECK 制約を追加: `week_starts_on BETWEEN 0 AND 6`、`display_name IS NULL OR char_length(display_name) BETWEEN 1 AND 50`、`char_length(timezone) BETWEEN 1 AND 64`、`locale IN ('ja','en')`。`user_profiles` は T-102 以前にアプリが書き込んでおらず既存行は存在しない前提のため backfill 不要。万一既存行が制約違反の場合は migration が失敗するため、適用前確認が必要(Plan 参照)。
 - 遅延作成: 行が存在しない場合、`INSERT ... ON CONFLICT (user_id) DO NOTHING`(Prisma `createMany({ skipDuplicates: true })`)で既定値を作成し、並行アクセスでも重複・例外を生じさせない(PROF-INV-001)。T-101 の signup transaction は変更しない(UC-01「プロフィールが作成される」は初回アクセス時の遅延作成で満たす)。
-- Rollback/forward fix: CHECK 制約の DROP と `NOT NULL` 復元(`NULL` 行が存在する場合は事前に既定値で埋める)で戻せる。原則は forward fix。
+- ロールバック/前方修正: CHECK 制約の DROP と `NOT NULL` 復元(`NULL` 行が存在する場合は事前に既定値で埋める)で戻せる。原則は forward fix。
 - 保持期間: account が存在する限り保持し、account 削除時は FK cascade で削除される(T-404 の削除フローに従う)。
 
-## Failure and Edge Cases
+## 失敗・境界ケース
 
 - 初回 GET/PATCH の並行実行 → 行は 1 つのみ作成され、どちらも成功する(PROF-INV-001)。
 - 表示名の境界: 0 文字(空白のみ含む)、1 文字、50 文字、51 文字、サロゲートペア(絵文字)の code point 数え、NFC 正規化前後の長さ。
@@ -228,35 +228,35 @@ Admin による他ユーザーのプロフィール参照・変更は本 Spec �
 - session が期限切れ・失効 → `401`(AUTH-009)。
 - DB 障害 → `500`。内部エラー詳細は返さない。
 
-## Security and Privacy
+## セキュリティとプライバシー
 
-- Data collected: 表示名(自由記述に準ずる個人情報)、タイムゾーン、ロケール、週の開始曜日。
-- Data sent externally: なし。AI provider へは本 Spec の項目(特に表示名)を送らない(05-api-and-ai-design.md 入力最小化)。AI 用途にタイムゾーンが必要になった場合は別 Spec で最小化して扱う。
-- Data forbidden in logs: 表示名、リクエスト/レスポンス body、cookie、session token。Route Handler は例外時も入力値をログへ出さない。ログへ出してよいのは route、status、duration、errorCode、requestId のみ。
+- 収集データ: 表示名(自由記述に準ずる個人情報)、タイムゾーン、ロケール、週の開始曜日。
+- 外部送信データ: なし。AI provider へは本 Spec の項目(特に表示名)を送らない(05-api-and-ai-design.md 入力最小化)。AI 用途にタイムゾーンが必要になった場合は別 Spec で最小化して扱う。
+- ログ禁止データ: 表示名、リクエスト/レスポンス body、cookie、session token。Route Handler は例外時も入力値をログへ出さない。ログへ出してよいのは route、status、duration、errorCode、requestId のみ。
 - 保持期間・アクセス範囲: 本人のみ読み書き可。Admin による参照は T-403 で必要最小限を別途定義する。
-- Threats and controls:
+- 脅威と対策:
   - IDOR/BOLA → 対象指定手段がなく、actor ID を条件にした問い合わせのみ。Integration Test で他ユーザー行が不変であることを検証する。
   - 権限昇格 → 更新可能項目を 4 項目に限定し、未知キーは拒否(mass assignment 防止)。`status`、`email` 等は更新できない。
   - XSS(stored) → 表示名の制御文字・双方向制御文字を拒否。HTML として出力せず、出力時 escaping は React に委ねる。JSON 応答は `Content-Type: application/json`。
   - CSRF → session cookie は Auth.js 既定の `SameSite=Lax`。加えて `PATCH` は `Content-Type: application/json` を必須とし(単純リクエストを排除)、`Origin` ヘッダが存在し許可 Origin(`APP_BASE_URL`)と異なる場合は 403 とする。`Origin` ヘッダがない場合の扱い: ブラウザは `PATCH` で必ず付与するため、欠如は非ブラウザ client とみなして許可する(cookie を手で付与できる攻撃者は CSRF の前提を満たさない)。
   - Injection → Prisma のパラメータ化クエリのみを使用し、生 SQL を使わない。
-  - DoS/abuse → body 4096 byte・各項目長の上限をパース前/Domain 前に適用。Intl 検証は 64 文字以内のみ実行する。rate limit は P2(具体閾値)未決であり、本タスクでは実装しない。認証必須・冪等・低コストの endpoint であるため残存リスクを許容する(Accepted Risks)。
+  - DoS/abuse → body 4096 byte・各項目長の上限をパース前/Domain 前に適用。Intl 検証は 64 文字以内のみ実行する。rate limit は P2(具体閾値)未決であり、本タスクでは実装しない。認証必須・冪等・低コストの endpoint であるため残存リスクを許容する(受容リスク)。
 
-## AI Requirements
+## AI要件
 
 N/A(本 Spec は AI を扱わない。AI へプロフィールを送らない方針のみ Security 節に記載)。
 
-## Observability and Operations
+## 可観測性と運用
 
-- Logs: 構造化 JSON log の標準項目(route、method、status、duration、errorCode、requestId)のみ。user 識別が必要な場合は rotate 可能な pseudonymous ID を使い、生の user ID・表示名は出さない。
-- Metrics: `/api/v1/me` の request count/error/latency(status 別)。timezone 検証失敗数は件数のみ(入力値を label に含めない)。
-- Alerts: 専用 alarm は追加しない(既存の 5xx 比率 alarm に含まれる)。
+- ログ: 構造化 JSON log の標準項目(route、method、status、duration、errorCode、requestId)のみ。user 識別が必要な場合は rotate 可能な pseudonymous ID を使い、生の user ID・表示名は出さない。
+- メトリクス: `/api/v1/me` の request count/error/latency(status 別)。timezone 検証失敗数は件数のみ(入力値を label に含めない)。
+- アラート: 専用 alarm は追加しない(既存の 5xx 比率 alarm に含まれる)。
 - Runbook: 追加不要。障害時は 5xx 比率 alarm と DB 接続の既存 runbook に従う。
-- Rollout/rollback: 新規 endpoint と DB 制約の追加のみ。Feature Flag 不要(未使用の endpoint であり、既存機能への影響がない)。rollback はアプリを前 revision へ戻す(DB 制約は後方互換のため残してよい)。deploy 順序は migration 先行、アプリ後続。
+- 展開/ロールバック: 新規 endpoint と DB 制約の追加のみ。Feature Flag 不要(未使用の endpoint であり、既存機能への影響がない)。rollback はアプリを前 revision へ戻す(DB 制約は後方互換のため残してよい)。deploy 順序は migration 先行、アプリ後続。
 
-## Test Coverage Matrix
+## テスト対応表
 
-| Requirement          | Unit                                                                                          | Integration                                                         | E2E                       |
+| 要件                 | Unit                                                                                          | Integration                                                         | E2E                       |
 | -------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------- |
 | PROF-001             | `getMyProfile`(既定作成・既存取得・user 不存在 → NotFound)、Route Handler の 200/401/404 変換 | `ensure` の遅延作成、並行 `ensure` で 1 行                          | 対象外(Playwright 未導入) |
 | PROF-002             | `updateMyProfile`(partial update、同値、空更新拒否)、Route Handler の 422/413/415/403         | `update` が指定項目のみ更新し他項目・`updated_at` 以外を変更しない  | 対象外(Playwright 未導入) |
@@ -270,7 +270,7 @@ N/A(本 Spec は AI を扱わない。AI へプロフィールを送らない方
 
 契約(zod schema)の Unit Test も `packages/contracts` に追加する。外部サービスは使用しないため Fake は `ProfileRepositoryPort` のインメモリ実装のみ。fixture は架空データのみ(`example.com` の架空 email、架空の表示名)。
 
-## Open Questions
+## 未決事項
 
 実装を左右する未決事項はない。次は P1 の未決を暫定既定値で置き、確定時に定数と本 Spec を更新する(コード変更は定数のみ)。
 
@@ -278,7 +278,7 @@ N/A(本 Spec は AI を扱わない。AI へプロフィールを送らない方
 - **ロケール対応範囲**(P1): 暫定で `ja`/`en`。DB CHECK を持つため、言語追加には migration が必要。
 - **既定タイムゾーン**: 暫定で `Asia/Tokyo`。オンボーディングで必ず明示設定させる UI 方針(T-101 後の画面実装)で補完する。
 
-## Implementation Readiness
+## 実装準備状況
 
 Status: Ready
 Reviewed at: 2026-10-02
@@ -296,7 +296,7 @@ Reviewed by: —
 | Operations           | Pass   | Observability and Operations 節(log 禁止項目、metrics、rollout/rollback、Feature Flag 不要の判断)                                                                                                  |
 | Planning             | Pass   | [../plans/user-profile.md](../plans/user-profile.md)                                                                                                                                               |
 
-### Accepted Risks
+### 受容リスク
 
 - `/api/v1/me` に rate limit を実装しない(P2 閾値未決、認証必須・冪等・低コスト)。rate limit 基盤導入時に適用する。
 - E2E(onboarding profile)は Playwright 導入後に追加する。それまでは Route Handler 単体テストと Repository Integration Test で代替する。
@@ -304,6 +304,6 @@ Reviewed by: —
 - timezone の受理可否は実行環境の ICU/Node バージョンに依存する。Node のメジャー更新(`.nvmrc`)時は `parseTimezone` の Unit Test で差分を検知する。極端に新しい IANA ID は古い ICU で拒否されうる。
 - `Origin` ヘッダ欠如を許可する(非ブラウザ client)。
 
-### Open Questions
+### 未決事項
 
-なし(上記 P1 暫定既定値は Open Questions 節で管理)
+なし(上記 P1 暫定既定値は 未決事項節で管理)

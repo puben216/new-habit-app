@@ -60,6 +60,9 @@ export {
 } from "./check-in";
 export type { DailyCheckInResponse, UpsertDailyCheckInRequest } from "./check-in";
 
+export { dashboardResponseSchema, windowStatisticsSchema } from "./dashboard";
+export type { DashboardResponse, WindowStatisticsResponse } from "./dashboard";
+
 export { createProblemDetails } from "./problem-details";
 export type { ProblemDetails } from "./problem-details";
 
@@ -78,3 +81,33 @@ export type {
   NotificationSettingsResponse,
   UpsertNotificationSettingsRequest,
 } from "./notification-settings";
+
+export {
+  AI_FREE_TEXT_MAX_LENGTH,
+  AI_PURPOSES,
+  AI_SCHEMA_VERSION,
+  CONTENT_SAFETY_REASON_CODES,
+  CONTENT_SAFETY_STATUSES,
+  WEEKLY_CHANGE_TYPES,
+  WEEKLY_INPUT_MAX_HABITS,
+  WEEKLY_PLAN_MAX_OBSERVATIONS,
+  WEEKLY_PLAN_MAX_SUGGESTIONS,
+  aiPurposeSchema,
+  contentSafetyReasonCodeSchema,
+  contentSafetySchema,
+  contentSafetyStatusSchema,
+  habitDesignInputV1Schema,
+  habitDesignProposalV1Schema,
+  weeklyImprovementInputV1Schema,
+  weeklyImprovementPlanV1Schema,
+} from "./ai";
+export type {
+  AiPurpose,
+  ContentSafety,
+  ContentSafetyReasonCode,
+  ContentSafetyStatus,
+  HabitDesignInputV1,
+  HabitDesignProposalV1,
+  WeeklyImprovementInputV1,
+  WeeklyImprovementPlanV1,
+} from "./ai";

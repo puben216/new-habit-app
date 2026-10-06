@@ -51,7 +51,7 @@ export interface GetTodayScheduleInput {
 }
 
 /** active な習慣をすべて、作成が古い順に取得する(list は新しい順のため反転する)。 */
-async function listAllActiveHabits(
+export async function listAllActiveHabits(
   habitRepository: HabitRepositoryPort,
   actorUserId: string,
 ): Promise<readonly HabitRecord[]> {

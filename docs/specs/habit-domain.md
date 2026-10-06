@@ -1,22 +1,22 @@
 # Habit Domain Spec
 
 Status: Ready
-Owner: TBD
-Last updated: 2026-09-15
-Change classification: Standard
-Roadmap Task: T-103
+責任者: TBD
+最終更新: 2026-09-15
+変更区分: Standard
+ロードマップ項目: T-103
 
-## Goal
+## 目的
 
 `build`(身につけたい習慣)と `reduce`(減らしたい習慣)の中核業務ルールを、DB/HTTP/フレームワークに依存しない純粋な Domain モデル(`Habit`、`HabitKind`、`ScheduleVersion`)として定義する。これにより T-104(repository/use case/API)以降のすべての層が、同じ不変条件を再実装せず再利用できる。
 
-## Success Metrics
+## 成功指標
 
 - `Habit`/`HabitKind`/`ScheduleVersion` の不変条件がすべて Unit Test で検証されている(`pnpm test:unit` green)。
 - Domain が React/Next.js/Prisma/DB/HTTP のいずれにも依存しない(`pnpm lint:boundaries` green、`packages/domain` に該当パッケージへの import が存在しない)。
 - T-104 が repository/use case を実装する際、本 Spec に定義された関数・型をそのまま再利用できる(新たな業務ルールの再実装が不要)。
 
-## Scope
+## 範囲
 
 - `HabitKind`("build" | "reduce")の型と実行時ガード。
 - `ScheduleVersion` 値オブジェクトの生成・検証(`effectiveFrom`/`effectiveTo`/`daysOfWeek`/`targetCount`)。
@@ -24,7 +24,7 @@ Roadmap Task: T-103
 - 上記に付随する不変条件: kind 不変性、reduce の targetCount=1 固定、daysOfWeek の値域・非空・重複禁止、ScheduleVersion 有効期間の重複禁止、スケジュール編集時の既存有効開始日の保持。
 - build/reduce の日次成功判定の純粋関数(`isTargetMet`: `quantity >= targetCount`)。
 
-## Out of Scope
+## 対象外
 
 - Repository 実装、永続化、トランザクション、DB マッピング(T-104)。
 - `HabitEntry`(実施記録)エンティティそのもの、予定機会生成、ストリーク/成功率集計(T-201/T-202/T-204、`tracking` モジュール)。
@@ -32,7 +32,7 @@ Roadmap Task: T-103
 - API/HTTP 契約、認可、cursor pagination(T-104)。
 - 文字数上限等、値域が未決の入力検証(`docs/10-decisions-and-open-questions.md` P2)。
 
-## Actors and Preconditions
+## アクターと前提条件
 
 | Actor                     | Preconditions                                                       |
 | ------------------------- | ------------------------------------------------------------------- |
@@ -40,7 +40,7 @@ Roadmap Task: T-103
 
 Domain 自体はエンドユーザーやHTTPアクターを直接扱わない。
 
-## Functional Requirements
+## 機能要件
 
 ### HD-001 HabitKind の定義
 
@@ -85,7 +85,7 @@ Domain 自体はエンドユーザーやHTTPアクターを直接扱わない。
 
 - `isTargetMet(scheduleVersion, quantity)` は `quantity >= scheduleVersion.targetCount` を返す。
 
-## Business Rules and Invariants
+## 業務ルールと不変条件
 
 - 習慣は `build` または `reduce` であり、作成後に変更できない。
 - `build` は 1 日の目標回数(targetCount)を複数許容し、成功は `quantity >= targetCount`。
@@ -94,7 +94,7 @@ Domain 自体はエンドユーザーやHTTPアクターを直接扱わない。
 - 同一 Habit 内で ScheduleVersion の有効期間は重複しない。
 - スケジュール変更は既存版の `effectiveFrom` を書き換えず、新しい有効開始日から新版を追加する。
 
-## State Transitions
+## 状態遷移
 
 | Current  | Action             | Next     | Rejected when                                         |
 | -------- | ------------------ | -------- | ----------------------------------------------------- |
@@ -105,7 +105,7 @@ Domain 自体はエンドユーザーやHTTPアクターを直接扱わない。
 | archived | changeSchedule     | -        | 常に拒否(HabitArchivedError)                          |
 | active   | changeSchedule     | active   | 遡及編集、reduceでtargetCount≠1、有効期間重複、値域外 |
 
-## Acceptance Criteria
+## 受け入れ基準
 
 ```gherkin
 Scenario: buildの成功判定
@@ -151,21 +151,21 @@ Scenario: daysOfWeekの値域違反を拒否する
   Then InvalidScheduleVersionErrorが投げられる
 ```
 
-## Authorization Matrix
+## 認可マトリクス
 
 N/A。Domain はアクター/権限を扱わない。認可は Application 層(T-104)の責務。
 
-## API and Events
+## APIとイベント
 
 N/A。本 Spec は Domain のみを対象とし、API/イベント契約は T-104 で確定する。
 
-## Data and Migration
+## データとMigration
 
 - Migration なし。本 Spec は `packages/infrastructure/database/schema.prisma`(`Habit`/`HabitScheduleVersion`)に対応する概念モデルを Domain として定義するのみで、スキーマ自体は変更しない。
 - Domain の値域(daysOfWeekの範囲、targetCount>0)は、既存の T-004 CHECK 制約と整合させてある。
 - `reduce` の `targetCount=1` 固定は、04-database-design.md の「実装時の補足」ではDB trigger ではなく Application 層(T-104)での検証としているが、本 Spec では Domain の `Habit`/`ScheduleVersion` 集約内(`createScheduleVersion`/`changeSchedule`)で検証する设計とした。理由は Decisions 節を参照。DB 側に追加の CHECK/trigger は導入しない(既存方針を変更しない)。
 
-## Failure and Edge Cases
+## 失敗・境界ケース
 
 - `daysOfWeek` が空、範囲外、重複 → `InvalidScheduleVersionError`
 - `targetCount` が 0 以下または非整数 → `InvalidScheduleVersionError`
@@ -178,39 +178,39 @@ N/A。本 Spec は Domain のみを対象とし、API/イベント契約は T-10
 - 不正なkind → `InvalidHabitKindError`
 - name/purpose/cue/minimumAction が空文字 → `InvalidHabitDetailsError`
 
-## Security and Privacy
+## セキュリティとプライバシー
 
-- Data collected: なし(Domainは永続化・送信を行わない純粋関数/エンティティ)。
-- Data sent externally: なし。
-- Data forbidden in logs: N/A(Domain自体はログ出力を行わない)。
-- Threats and controls: N/A。IDOR/認可/Secretの扱いはApplication/Infrastructure層(T-104)の責務。
+- 収集データ: なし(Domainは永続化・送信を行わない純粋関数/エンティティ)。
+- 外部送信データ: なし。
+- ログ禁止データ: N/A(Domain自体はログ出力を行わない)。
+- 脅威と対策: N/A。IDOR/認可/Secretの扱いはApplication/Infrastructure層(T-104)の責務。
 
-## AI Requirements
+## AI要件
 
 N/A。本SpecはAIを利用しない。
 
-## Observability and Operations
+## 可観測性と運用
 
 - Logs/Metrics/Alerts: N/A(Domainはログ・メトリクスを持たない。呼び出し元のApplication層がエラーを監視する)。
 - Runbook: N/A。
-- Rollout/rollback: 新規パッケージ内モジュールの追加のみであり、既存機能への影響はない。ロールバックは当該コミットのrevertで完結する。
+- 展開/ロールバック: 新規パッケージ内モジュールの追加のみであり、既存機能への影響はない。ロールバックは当該コミットのrevertで完結する。
 
-## Test Coverage Matrix
+## テスト対応表
 
-| Requirement | Unit                                                                    | Integration | E2E |
-| ----------- | ----------------------------------------------------------------------- | ----------- | --- |
-| HD-001      | 有効/無効なkindの判定(`habit-kind.test.ts`)                             | N/A         | N/A |
-| HD-002      | build/reduce作成、必須項目の空文字拒否、id空文字拒否(`habit.test.ts`)   | N/A         | N/A |
-| HD-003      | 更新、kind更新不可(型/実行時)、archived時拒否(`habit.test.ts`)          | N/A         | N/A |
-| HD-004      | archive、冪等性(`habit.test.ts`)                                        | N/A         | N/A |
-| HD-005      | daysOfWeek/targetCount/暦日の正常系・異常系(`schedule-version.test.ts`) | N/A         | N/A |
-| HD-006      | 重複あり/なしの判定(`schedule-version.test.ts`)                         | N/A         | N/A |
-| HD-007      | 有効開始日保持、遡及編集拒否(`habit.test.ts`)                           | N/A         | N/A |
-| HD-008      | build/reduceの成功判定(`schedule-version.test.ts`)                      | N/A         | N/A |
+| 要件   | Unit                                                                    | Integration | E2E |
+| ------ | ----------------------------------------------------------------------- | ----------- | --- |
+| HD-001 | 有効/無効なkindの判定(`habit-kind.test.ts`)                             | N/A         | N/A |
+| HD-002 | build/reduce作成、必須項目の空文字拒否、id空文字拒否(`habit.test.ts`)   | N/A         | N/A |
+| HD-003 | 更新、kind更新不可(型/実行時)、archived時拒否(`habit.test.ts`)          | N/A         | N/A |
+| HD-004 | archive、冪等性(`habit.test.ts`)                                        | N/A         | N/A |
+| HD-005 | daysOfWeek/targetCount/暦日の正常系・異常系(`schedule-version.test.ts`) | N/A         | N/A |
+| HD-006 | 重複あり/なしの判定(`schedule-version.test.ts`)                         | N/A         | N/A |
+| HD-007 | 有効開始日保持、遡及編集拒否(`habit.test.ts`)                           | N/A         | N/A |
+| HD-008 | build/reduceの成功判定(`schedule-version.test.ts`)                      | N/A         | N/A |
 
 Integration/E2EはT-104(repository/use case/API)以降で、実際の永続化・HTTP経路と合わせて追加する。
 
-## Open Questions
+## 未決事項
 
 - **reduceのquantity意味論**: `docs/04-database-design.md`は「buildの当日成功はquantity>=target_count」と明記するが、reduceのquantityが「対象行動を回避できた回数(1=回避成功)」を表すのか、「対象行動が発生した回数」を表すのかが `01-product-requirements.md`/`04-database-design.md` に明記されていない。本Spec/実装では`isTargetMet`をkindによらず同一の`quantity >= targetCount`公式として実装し、reduceでも`quantity=1`を成功として扱う前提を置いた。この前提はHabitEntry(tracking, T-201/T-202)のUI入力仕様・保存方式の確定と合わせて再確認が必要。
   - **解決(T-202, 2026-10-03)**: reduceは`quantity`を持たず`status`のみで成否を表す([habit-entry.md](habit-entry.md) HENT-003、`docs/10` D-12)。`isTargetMet`はbuildの`quantity >= targetCount`判定として維持し、reduceの記録判定には使わない。
@@ -219,9 +219,9 @@ Integration/E2EはT-104(repository/use case/API)以降で、実際の永続化�
 
 これらはいずれも実装をブロックしない(値が未決でもDomainの型・関数として動作するため)と判断し、Draft Specとして実装を進めた。
 
-## Implementation Readiness
+## 実装準備状況
 
-Status: Ready(Open Questionsは実装をブロックしないため)
+Status: Ready(未決事項は実装をブロックしないため)
 Reviewed at: 2026-09-15
 Reviewed by: Habit Domain 実装者(セルフレビュー)
 
@@ -237,10 +237,10 @@ Reviewed by: Habit Domain 実装者(セルフレビュー)
 | Operations           | N/A    | Domainのみの変更でログ/メトリクス/Runbookの対象外                                      |
 | Planning             | Pass   | `docs/plans/habit-domain.md`                                                           |
 
-### Accepted Risks
+### 受容リスク
 
 - reduceのquantity意味論に関するOpen Questionが残る。T-104着手前に確認し、必要ならDomainのisTargetMetまたはHabitEntry設計を調整する。
 
-### Open Questions
+### 未決事項
 
-- 上記「Open Questions」節のとおり(reduceのquantity意味論、id型、文字数上限)。
+- 上記「未決事項」節のとおり(reduceのquantity意味論、id型、文字数上限)。

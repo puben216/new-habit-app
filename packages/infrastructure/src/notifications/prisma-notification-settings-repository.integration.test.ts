@@ -66,7 +66,7 @@ describe("PrismaNotificationSettingsRepository(T-401)", () => {
   afterAll(async () => {
     await prisma.$disconnect();
     await container.stop();
-  });
+  }, 60_000);
 
   it("未保存の GET は既定値(無効)を返し、行を作らない", async () => {
     const view = await getNotificationSettingsUseCase(deps(), { actorUserId: userA });

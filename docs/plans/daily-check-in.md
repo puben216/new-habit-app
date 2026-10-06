@@ -1,12 +1,12 @@
 # Daily Check-in Implementation Plan
 
 Status: Done
-Owner: TBD
-Last updated: 2026-10-03
+責任者: TBD
+最終更新: 2026-10-03
 Spec: [../specs/daily-check-in.md](../specs/daily-check-in.md)
-Change classification: Standard
+変更区分: Standard
 
-## Approach
+## 方針
 
 T-202 と同じ層構成で縦に薄く実装する。DB の変更はない。
 
@@ -19,9 +19,9 @@ T-202 と同じ層構成で縦に薄く実装する。DB の変更はない。
 5. **Presentation**(`apps/web`): `check-in-handlers.ts`(`habit-http.ts` の共通処理を再利用)、`check-in-container.ts`、`app/api/v1/daily-check-ins/[date]/route.ts`(GET/PUT)。
 6. **文書**: `docs/04`(実装時の補足)、`docs/05`(契約差分)、`docs/10`(P2 の暫定上限)、`docs/09`(roadmap)。
 
-## Impact Analysis
+## 影響分析
 
-| Area           | Change                                                                          | Risk                                           |
+| 領域           | 変更                                                                            | リスク                                         |
 | -------------- | ------------------------------------------------------------------------------- | ---------------------------------------------- |
 | Domain         | `tracking/` に関数とエラーを追加                                                | 低                                             |
 | Application    | `tracking/` に use case・port・error を追加。`resolveLocalToday` を切り出し共有 | 低(既存テストが回帰を検知)                     |
@@ -32,30 +32,30 @@ T-202 と同じ層構成で縦に薄く実装する。DB の変更はない。
 | AWS/Terraform  | 変更なし                                                                        | N/A                                            |
 | Observability  | 変更なし                                                                        | N/A                                            |
 
-## Interfaces and Contracts
+## インターフェースと契約
 
 - Domain: `resolveDailyCheckIn`、型 `DailyCheckInInput`、`ResolvedDailyCheckIn`、`DAILY_CHECK_IN_SCALE_MIN/MAX`(1/5)、エラー `InvalidDailyCheckInError`。
 - Application:
   - `DailyCheckInRepositoryPort`: `find({ actorUserId, date }): Promise<DailyCheckInRecord | null>`、`upsert({ actorUserId, date, mood, difficulty, note, now }): Promise<DailyCheckInRecord | null>`(user が存在しなければ `null`)。
   - `DailyCheckInRecord { date, mood, difficulty, note, createdAt, updatedAt }`。
   - use case: `getDailyCheckInUseCase(deps, { actorUserId, date })`、`upsertDailyCheckInUseCase(deps, { actorUserId, date, mood, difficulty, note })`。
-- Contracts / HTTP: Spec の API and Events 節のとおり。
+- Contracts / HTTP: Spec の APIとイベント節のとおり。
 
-## Data Migration
+## データMigration
 
 - Expand/Backfill/Switch/Contract: N/A。DB スキーマ変更なし(既存の制約・index で足りる)。
-- Rollback/forward fix: アプリの revert のみで完結する。
+- ロールバック/前方修正: アプリの revert のみで完結する。
 
-## Security Review
+## セキュリティレビュー
 
-- Authentication/authorization: session から actor を取得し、repository の全 query に actor user ID を渡す。path に user を含めない。
-- PII/secrets/logging: メモ・気分・難易度・body をログに出さない。route に独自ログを追加しない。fixture は架空データのみ。
-- Abuse controls: メモ 1000 文字、body 16 KiB、対象日の範囲。Rate limit は Accepted Risk。
+- 認証/認可: session から actor を取得し、repository の全 query に actor user ID を渡す。path に user を含めない。
+- 個人情報/Secret/ログ: メモ・気分・難易度・body をログに出さない。route に独自ログを追加しない。fixture は架空データのみ。
+- 悪用対策: メモ 1000 文字、body 16 KiB、対象日の範囲。Rate limit は Accepted Risk。
 - SQL: raw SQL はタグ付きテンプレートのバインド変数のみ。
 
-## Test Plan
+## テスト計画
 
-| Requirement | Test level  | Planned test                                                                                                                                                       |
+| 要件        | テスト種別  | 予定テスト                                                                                                                                                         |
 | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | DCI-002     | Unit        | `daily-check-in.test.ts`: mood/difficulty の 0/1/5/6・小数、メモの trim/空白のみ、全項目未設定、一部のみ設定                                                       |
 | DCI-001/003 | Unit        | `check-in.test.ts`: 作成/訂正(置換)/再送、範囲境界(今日・7 日前・8 日前・未来)、Asia/Tokyo の繰り上がり、DST 日、習慣なしでも可、user 不存在、actor が repo に渡る |
@@ -66,14 +66,14 @@ T-202 と同じ層構成で縦に薄く実装する。DB の変更はない。
 | DCI-INV-001 | Integration | 同日の他ユーザーのチェックインと混ざらない、user 不存在で `null`                                                                                                   |
 | DB 制約     | Integration | mood/difficulty の CHECK(0/6 を拒否)、一意制約                                                                                                                     |
 
-## Rollout and Operations
+## 展開と運用
 
 - Feature Flag: 不要(新規 route のみ)。
-- Deployment order: 制約なし(Migration なし)。
-- Metrics/alarms: 追加なし。
-- Rollback trigger and procedure: 不具合時はアプリを revert する。
+- デプロイ順序: 制約なし(Migration なし)。
+- メトリクス/アラーム: 追加なし。
+- ロールバック条件と手順: 不具合時はアプリを revert する。
 
-## Task Breakdown
+## タスク分解
 
 1. Feature Spec と Plan の作成、Readiness Gate 評価(本文書)
 2. Domain: `resolveDailyCheckIn` + Unit Test
@@ -86,26 +86,26 @@ T-202 と同じ層構成で縦に薄く実装する。DB の変更はない。
 
 各 task は「設計確認 → 実装 → テスト → セルフレビュー」を含む。
 
-## Dependencies
+## 依存関係
 
 - 先行 task: T-101(session)、T-102(timezone)、T-201(`localDateAt`。PR #12)、T-202(`resolveLocalToday`、共通 HTTP 処理。PR #13)。本ブランチは T-202 のブランチを起点にし、#12/#13 の merge 後に main へ付け替える。
 - ADR 依存、外部権限、provider: なし。
 
-## Risks
+## リスク
 
-| Risk                                                  | Mitigation                                                     | Owner |
-| ----------------------------------------------------- | -------------------------------------------------------------- | ----- |
-| `resolveLocalToday` の切り出しで T-202 の挙動が変わる | 既存の T-202 Unit/Integration Test を変更せず通す              | TBD   |
-| 積み上げた PR(#12→#13→本 PR)の merge 順序             | base を前段のブランチにし、前段の merge 後に main へ付け替える | TBD   |
-| メモの暫定上限(1000)が後で変わる                      | 契約 schema の定数のみに置き、DB には焼き込まない              | TBD   |
+| リスク                                                | 対策                                                           | 責任者 |
+| ----------------------------------------------------- | -------------------------------------------------------------- | ------ |
+| `resolveLocalToday` の切り出しで T-202 の挙動が変わる | 既存の T-202 Unit/Integration Test を変更せず通す              | TBD    |
+| 積み上げた PR(#12→#13→本 PR)の merge 順序             | base を前段のブランチにし、前段の merge 後に main へ付け替える | TBD    |
+| メモの暫定上限(1000)が後で変わる                      | 契約 schema の定数のみに置き、DB には焼き込まない              | TBD    |
 
-## Start Conditions
+## 着手条件
 
 - [x] Spec StatusがReady
 - [x] 必須ADRがAccepted(該当ADRなし)
-- [x] API/event契約がレビュー済み、またはN/A(Spec の API and Events 節)
+- [x] API/event契約がレビュー済み、またはN/A(Spec の APIとイベント節)
 - [x] Migration方針がレビュー済み、またはN/A(migrationなし)
-- [x] 認可・データ保護方針がレビュー済み(Security and Privacy 節)
+- [x] 認可・データ保護方針がレビュー済み(セキュリティとプライバシー節)
 - [x] テスト環境とFake/Stubを準備できる(Testcontainers、既存 fake)
 - [x] 依存taskが完了している(T-201/T-202 は PR review 待ちだがコードは本ブランチに含まれる)
 - [x] rollout/rollback方針が決定している

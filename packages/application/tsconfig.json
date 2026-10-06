@@ -8,5 +8,5 @@
     "types": ["node"]
   },
   "include": ["src"],
-  "references": [{ "path": "../domain" }]
+  "references": [{ "path": "../contracts" }, { "path": "../domain" }]
 }
