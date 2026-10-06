@@ -29,6 +29,7 @@
     "pg": "8.23.0"
   },
   "devDependencies": {
+    "@habit-app/contracts": "workspace:*",
     "@habit-app/test-support": "workspace:*",
     "@testcontainers/postgresql": "12.2.0",
     "@types/nodemailer": "8.0.2",

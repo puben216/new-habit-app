@@ -132,6 +132,8 @@ Scenario: ブランドを販促へ使用する提案
 - beta開始前のfalse positive率の許容閾値とgolden datasetのレビュー担当者
 - human review queueをMVP管理画面に含めるか、公開対象機能自体をfeature flagで停止するか
 
+T-302の範囲(contract層)は[ai-contracts.md](ai-contracts.md)でReadyとなっており、上記2点はT-302では決めずT-505限定beta判断へ送ると合意した(2026-10-04)。T-304/T-305の着手前にあらためてこのSpecのReadinessを確認する。
+
 ## 実装準備状況
 
 Status: Not Ready

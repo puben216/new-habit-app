@@ -115,6 +115,15 @@
 
 `AiCoachPort` は provider SDK を抽象化する。Application が渡すのは目的別 DTO のみで、provider 固有の response object を返さない。実装時点の公式仕様を再確認し、OpenAI 採用時は Responses API の Structured Outputs と function calling を Adapter 内に閉じ込める。
 
+### T-302 で確定した AI 契約
+
+正式な契約は [../specs/ai-contracts.md](specs/ai-contracts.md) と `packages/contracts/src/ai.ts`、`packages/application/src/ai` を正本とし、上記の案からの差分は次のとおり。
+
+- 出力は `schemaVersion: "1"` を持ち、`WeeklyImprovementPlanV1` に加えて習慣設計用の `HabitDesignProposalV1` を定義する。入力は `HabitDesignInputV1` / `WeeklyImprovementInputV1` で、AI 用 `subjectId`(UUID)のみを識別子とする。
+- `AiCoachPort.generate` は `completed`(`rawOutput: unknown`)または `refusal` を返し、失敗は分類した `AiCoachProviderError` で投げる。tool 呼び出しは許可しない。
+- 提案の唯一の入口は `generateSafeCoaching`。`source: "ai"` は validator が `pass` した本文のみで、それ以外は versioned fallback(`fallbackReason` つき)。`required_human_review` は本文を公開せず fallback を返す。
+- 再試行は `rate_limited`/`timeout`/`server_error`/`connection` のみ最大 3 attempt、validator 拒否後の再生成は最大 1 回。schema 不合格・refusal は再試行しない。
+
 ### 入力最小化
 
 - 表示名・メール・内部 ID を送らない

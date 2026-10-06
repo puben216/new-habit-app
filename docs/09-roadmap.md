@@ -134,6 +134,9 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 
 - versioned input/output schema、AiCoachPort、fake、safety/fallback、第三者コンテンツvalidator、権利資料allowlist契約
 - Unit: valid/invalid/refusal/oversize output、転載・翻訳・文体模倣・ブランド誤認・権利疑義fallback
+- 設計: Feature Spec([ai-contracts.md](specs/ai-contracts.md))と Implementation Plan([ai-contracts.md](plans/ai-contracts.md))を作成。範囲は contract 層のみ(DB・HTTP・実 provider・queue は対象外)、false positive 閾値・golden dataset の reviewer・human review queue は T-505 へ送り、AI 公開 feature flag の停止で代替すると決定
+- 実装: Contracts `ai.ts`(入出力 `V1` schema、`contentSafety`)、Domain `evaluateRightsUse`(deny by default の権利判定)、Application `AiCoachPort`・`validateGeneratedContent`(決定論的 validator)・`inspectGenerationRequest`(事前検査)・versioned fallback・`generateSafeCoaching`(flag → 事前検査 → provider(timeout、3 attempt の backoff + jitter)→ schema 検証 → validator → 再生成 1 回 → fail-closed fallback)・`admitCorpusSource`・`AiAuditSinkPort`(本文を持たない監査)、Infrastructure `createFakeAiCoach`・`createInMemoryRightsRegistry`。`@habit-app/application` が `@habit-app/contracts` に依存する
+- テスト: Unit(schema、権利判定、validator の各 reason code と adversarial/一般助言 fixture、pipeline 全経路、retry/timeout、監査に本文がないこと、fake adapter)を追加。DB・HTTP を追加しないため Integration/E2E は対象外
 
 ### T-303 AI queue pipeline
 
