@@ -104,6 +104,13 @@
 - 自然キー `(user, date)` で冪等であり `Idempotency-Key` は使わない。並行送信は後勝ちで 1 レコードに収束する。成功は常に `200`。状態変更の共通要件は `/habits` と同じ。rate limit は未対応。
 - 履歴・期間取得と削除は対象外。
 
+`/dashboard` の正式な契約は [../specs/statistics-dashboard.md](specs/statistics-dashboard.md) の API and Events 節と `packages/contracts/src/dashboard.ts` を正本とし、上記の一覧からの差分は次のとおり。
+
+- `GET /dashboard` は `from`/`to` を受け付けない。actor の「今日」を含む直近 7 日・30 日の成功率と、習慣ごとの現在・最長ストリークを固定で返す（任意期間は必要になった時点で別 Spec）。
+- 応答は `{ date, timezone, overall: { last7Days, last30Days }, habits: [{ habit: { id, kind, name }, currentStreak, longestStreak, last7Days, last30Days }] }`。期間の集計は `{ from, to, scheduled, success, missed, skipped, pending, successRate }` で、`successRate` は `success / (success + missed)`（0〜1）、分母 0 は `null`。
+- 対象は active な習慣のみ。今日の未記録は `pending`（分母外）、過去の未記録は `missed`。`skipped` は分母から除外し、ストリークを切らず数えない。全体の成功率は合計件数から求める（習慣ごとの率の平均ではない）。
+- 読み取り専用。認証は `401`、user が存在しなければ `404`（`user_not_found`）。`Idempotency-Key` と rate limit は不要/未対応。
+
 ## AI 境界
 
 `AiCoachPort` は provider SDK を抽象化する。Application が渡すのは目的別 DTO のみで、provider 固有の response object を返さない。実装時点の公式仕様を再確認し、OpenAI 採用時は Responses API の Structured Outputs と function calling を Adapter 内に閉じ込める。

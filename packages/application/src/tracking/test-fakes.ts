@@ -50,5 +50,15 @@ export function createFakeHabitEntryRepository(
         .filter(([k]) => k.startsWith(`${actorUserId}:`) && k.endsWith(`:${date}`))
         .map(([, record]) => record);
     },
+    async listByDateRange({ actorUserId, from, to }) {
+      calls.push({ method: "listByDateRange", actorUserId });
+      return [...store.entries()]
+        .filter(
+          ([k, record]) =>
+            k.startsWith(`${actorUserId}:`) && record.date >= from && record.date <= to,
+        )
+        .map(([, record]) => record)
+        .sort((a, b) => a.date.localeCompare(b.date));
+    },
   };
 }

@@ -60,6 +60,9 @@ export {
 } from "./check-in";
 export type { DailyCheckInResponse, UpsertDailyCheckInRequest } from "./check-in";
 
+export { dashboardResponseSchema, windowStatisticsSchema } from "./dashboard";
+export type { DashboardResponse, WindowStatisticsResponse } from "./dashboard";
+
 export { createProblemDetails } from "./problem-details";
 export type { ProblemDetails } from "./problem-details";
 
