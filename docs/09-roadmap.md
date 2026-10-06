@@ -122,6 +122,50 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 - 実装: Domain `calculateHabitStatistics`/`aggregateWindowStatistics`(予定機会ごとに success/missed/skipped/pending へ分類し、ストリークは success で加算・missed で 0・skipped/pending は中立、366 日まで遡る)、Application `getDashboardUseCase`(記録は習慣数に依らず 1 回の範囲取得。アーカイブ済み習慣は除外)、Infrastructure `HabitEntryRepository.listByDateRange`、`GET /api/v1/dashboard`。Migration なし
 - テスト: Unit(Domain の全集計定義とシード固定の性質テスト/Application/契約/handler)と Integration(実 PostgreSQL: 範囲取得の境界・他ユーザー分離、応答全体、アーカイブ除外、問い合わせ回数が習慣数に依らず記録取得は 1 回)を追加。E2E は Playwright 未導入のため対象外
 
+## Phase 2.5: Web UI と E2E
+
+T-101〜T-204 は API・Domain・Application までで、ブラウザで操作できる画面と Playwright E2E は未実装である（各タスクの「E2E: Playwright 未導入のため対象外」を本 Phase で回収する）。「手動で価値が成立する記録・振り返り」を人が画面で確認できる状態にするため、AI より先に本 Phase を行う。各タスクは Standard 変更として Feature Spec と Implementation Plan を作成する。UI は既存 API(`/api/v1/*`、`/api/auth/*`)の消費側とし、業務ロジックを Presentation に持たせない。
+
+共通事項: 第三者の書籍・アプリ・ブランドの文言、図表、配色、文章構成を複製・近似再現しない(AGENTS.md の Third-Party Content 規則)。画面文言と UI は独自に設計し、公開名称や販促表示に関わるものは human review の対象とする。
+
+### T-211 Web UI 基盤と E2E 基盤
+
+- 設計: UI スタック(スタイリング、コンポーネント方針、フォーム/データ取得の方式)を ADR で決定する。layout、ナビゲーション、認証済み/未認証の route 保護、エラー/空/読み込み状態の共通方針、アクセシビリティ基準(WCAG 2.2 AA を目標)を定める。ローカル用のメール受信ツールと env の扱いを定める
+- 実装: UI 基盤(layout、共通コンポーネント、共通 error boundary)、`apps/web`の env 読み込みと validation、Docker Compose への Mailpit 追加(SMTP キャプチャ。アプリの DB とは独立)、Playwright 導入と`pnpm test:e2e`、fixture(架空データのみ)、CI(`pr-quality.yml`)への E2E 追加の要否判断
+- テスト: 空のページ・認証ガードの E2E smoke、keyboard/focus の基本確認。Mailpit からのメール取得 helper の動作確認
+- レビュー: Secret や個人データが fixture・trace・screenshot に残らないか。CI で fork PR に secret を渡さないか。`AGENTS.md`の`pnpm test:e2e`の記述を更新する
+
+### T-212 認証画面
+
+- T-101 の API を利用: signup、メール確認、login、logout、password reset の画面
+- 設計: 失敗時の文言でアカウントの有無を漏らさない(enumeration 対策)、CSRF/Origin、session 切れの扱い
+- Unit: フォーム validation の表示。E2E: signup → verify(Mailpit から token 取得)→ login → logout、password reset の一連(T-101 の E2E を回収)
+
+### T-213 オンボーディングとプロフィール画面
+
+- T-102 の`GET/PATCH /me`を利用: 初回の timezone・表示名の設定、プロフィール編集
+- E2E: onboarding profile(T-102 の E2E を回収)。timezone の不正値、他ユーザーの情報が見えないこと
+
+### T-214 習慣管理画面
+
+- T-104 の`/api/v1/habits`を利用: 一覧、作成(build/reduce)、スケジュール編集、アーカイブ、更新競合(409)時の再読み込み導線
+- E2E: build/reduce の CRUD(T-104 の E2E を回収)
+
+### T-215 今日の記録とチェックイン画面
+
+- T-202/T-203 の`GET /schedule/today`、`PUT /habits/{habitId}/entries/{date}`、`GET/PUT /daily-check-ins/{date}`を利用: 今日の予定、成功/未実施/skip/訂正、過去 7 日の補正、mood/difficulty/note
+- E2E: 成功/未実施/skip/訂正、当日チェックイン(T-202、T-203 の E2E を回収)。再送・二重クリックで重複しないこと
+
+### T-216 ダッシュボード画面
+
+- T-204 の`GET /dashboard`を利用: ストリーク、7/30 日成功率、習慣ごとの内訳、空状態
+- E2E: 記録後の反映(T-204 の E2E を回収)。数値の表現は集計定義(D-13)に一致させ、色だけに依存しない
+
+### T-217 通知設定画面
+
+- T-401 の`/api/v1/notification-settings`を利用: 送信時刻、quiet hours、停止と再開
+- E2E: 設定と停止(T-401 の E2E を回収)。メール送信自体は T-402 のスコープ
+
 ## Phase 3: 週次レビューと AI
 
 ### T-301 Weekly review
@@ -209,4 +253,4 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 
 ## 推奨リリース順
 
-最初の縦切りは T-001〜T-005 → T-101〜T-104 → T-201〜T-204。AI より先に「手動で価値が成立する記録・振り返り」を完成させる。その後 T-301〜T-305 で AI の増分価値を測る。
+最初の縦切りは T-001〜T-005 → T-101〜T-104 → T-201〜T-204 → T-211〜T-217(Web UI と E2E)。AI より先に「手動で価値が成立する記録・振り返り」を、画面で操作できる状態まで完成させる。その後 T-301〜T-305 で AI の増分価値を測る。
