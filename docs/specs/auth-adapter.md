@@ -1,24 +1,24 @@
 # Auth Adapter and Session Spec
 
 Status: Ready
-Owner: TBD
-Last updated: 2026-09-17
-Change classification: Standard
-Roadmap Task: T-101
+責任者: TBD
+最終更新: 2026-09-17
+変更区分: Standard
+ロードマップ項目: T-101
 
-## Goal
+## 目的
 
 メールアドレス + パスワードによる登録・ログイン・ログアウト・パスワード再設定(01-product-requirements.md 機能要件 1)を提供する。技術選定(Auth.js、DB session、argon2id)は [ADR-001](../adr/ADR-001-authentication.md) で決定済みであり、本 Spec はその上で満たすべき振る舞いと不変条件を定義する。T-102 以降のすべての認可付き機能は、本 Spec が定義する session からの actor user ID 取得のみに依拠する。
 
-## Success Metrics
+## 成功指標
 
 - 登録ユーザーが email verification を経て自分のアカウントで継続的にログインできる(認証起因の問い合わせ・ロックアウトの誤検知が実運用で許容範囲に収まる)。
-- 認証情報の漏洩・総当たり攻撃・アカウント推測が本 Spec の Business Rules と Security and Privacy 節で定義した対策により防止されている。
-- 以降の全機能(T-102〜)が、本 Spec の Functional Requirements・API 契約をそのまま再利用でき、認証周りの再設計が不要である。
+- 認証情報の漏洩・総当たり攻撃・アカウント推測が本 Spec の Business Rules と セキュリティとプライバシー節で定義した対策により防止されている。
+- 以降の全機能(T-102〜)が、本 Spec の 機能要件・API 契約をそのまま再利用でき、認証周りの再設計が不要である。
 
-品質ゲート(`lint:boundaries`、E2E green 等)は [definition-of-done.md](../governance/definition-of-done.md) が担う達成条件であり、本 Success Metrics には含めない。
+品質ゲート(`lint:boundaries`、E2E green 等)は [definition-of-done.md](../governance/definition-of-done.md) が担う達成条件であり、本成功指標 には含めない。
 
-## Scope
+## 範囲
 
 - Credentials(email + password)によるログイン手段の提供。
 - signup、email verification、login、logout。
@@ -27,7 +27,7 @@ Roadmap Task: T-101
 - session の発行・rotation・revocation(外部から観測される挙動として定義。DB session である点は [ADR-001](../adr/ADR-001-authentication.md) の決定を参照)。
 - signup/verification/reset request 全般での account enumeration 対策。
 
-## Out of Scope
+## 対象外
 
 - Google/GitHub OAuth。当初「補助手段」として計画していたが、[ADR-001](../adr/ADR-001-authentication.md)(2026-09-16 改訂)により MVP スコープから外した。将来追加する場合は別途 Spec を起こす(email 重複判定などを再設計する必要がある)。
 - Admin role、admin 向け TOTP 2FA([ADR-001](../adr/ADR-001-authentication.md) は admin 向け管理画面自体が T-403 まで存在しないため、admin TOTP 2FA の実装は T-403 に含めると改訂済み)。
@@ -38,7 +38,7 @@ Roadmap Task: T-101
 - IP アドレス単位の rate limit(email 単位のみを MVP スコープとする。将来必要になれば別 Spec で扱う)。
 - 実装の内部構成(class、port、adapter、テーブル分割方式、transaction 境界)— [../plans/auth-adapter.md](../plans/auth-adapter.md) を参照。
 
-## Actors and Preconditions
+## アクターと前提条件
 
 | Actor                  | Preconditions                 |
 | ---------------------- | ----------------------------- |
@@ -46,14 +46,14 @@ Roadmap Task: T-101
 | Member(email 未確認)   | signup 成功済み、email 未確認 |
 | Member(email 確認済み) | verification 成功済み         |
 
-## Functional Requirements
+## 機能要件
 
 ### AUTH-001 Credentials signup
 
 - email と password で新規登録できる。
 - 同一 email での signup を繰り返しても、外部から見た応答(status/body/明白な処理時間差、AUTH-INV-002 参照)は初回と区別できない。
 - password は本 Spec の password policy(AUTH-002)を満たさない場合、フィールド単位のエラーで拒否する。
-- 成功時、verification のための通知が登録 email 宛に送られる(配送手段は Out of Scope)。
+- 成功時、verification のための通知が登録 email 宛に送られる(配送手段は 対象外)。
 
 ### AUTH-002 Password policy
 
@@ -111,7 +111,7 @@ Roadmap Task: T-101
 - 閾値超過時の外部挙動は、通常の失敗と区別できない generic error とする(lockout の存在自体を漏らさない)。
 - rate limit 判定に使う試行履歴は、判定ウィンドウ(15 分)を超えた分を保持し続けない。保存方式・削除の実装は Plan で定義するが、削除自体は本 Spec の対象範囲内で行う(別 Issue に先送りしない)。
 
-## Business Rules and Invariants
+## 業務ルールと不変条件
 
 - パスワードは AUTH-002 のポリシーを満たさない限り受け付けない。平文パスワードを DB・ログ・telemetry に残さない。password の先頭・末尾の空白は除去せず、そのままハッシュ化・照合に使う(文字数判定にのみ trim を用いる)。
 - verification token・reset token は常にハッシュ化して保存し、平文は発行直後の通知にのみ使う。
@@ -124,7 +124,7 @@ Roadmap Task: T-101
 - password の更新(reset confirm)が成功した時点で、その user の既存 session はすべて失効する。
 - 認証失敗のレスポンスは、失敗理由(アカウント不存在/password 不一致/email 未確認/lockout)によらず外部から区別不能な generic error にする。
 
-## State Transitions
+## 状態遷移
 
 | Current                       | Action                    | Next                                          | Rejected when                                         |
 | ----------------------------- | ------------------------- | --------------------------------------------- | ----------------------------------------------------- |
@@ -137,7 +137,7 @@ Roadmap Task: T-101
 | pending_verification/verified | request password reset    | reset token issued(外部応答は不変)            | rate limit 超過                                       |
 | reset token issued            | confirm password reset    | password updated, token used, 全 session 失効 | token 期限切れ/使用済み/不正、policy 違反             |
 
-## Acceptance Criteria
+## 受け入れ基準
 
 ```gherkin
 Scenario: Credentials signup and email verification
@@ -176,7 +176,7 @@ Scenario: ログイン失敗が閾値を超えると一時的にロックされ�
   Then 正しいパスワードであっても generic error で拒否される
 ```
 
-## Authorization Matrix
+## 認可マトリクス
 
 | Operation              | Guest | Member (unverified) | Member (verified) | Ownership rule               |
 | ---------------------- | ----: | ------------------: | ----------------: | ---------------------------- |
@@ -189,7 +189,7 @@ Scenario: ログイン失敗が閾値を超えると一時的にロックされ�
 
 Admin ロールは本 Spec の対象外(T-403)。
 
-## API and Events
+## APIとイベント
 
 Base path は [05-api-and-ai-design.md](../05-api-and-ai-design.md) の `/api/v1` 方針に従う。Auth.js 標準 route(`GET/POST /api/auth/[...nextauth]`)は、外部ライブラリが規定する標準 endpoint であるため `/api/v1` の例外とする([ADR-009](../adr/ADR-009-api-style.md) の decision に基づく)。契約境界: この route は Auth.js の session/CSRF/signin/signout 管理に閉じ、本 Spec が独自定義する `/api/v1/auth/*` 以下の endpoint(signup、email verification、password reset)とは責務を分離する。
 
@@ -248,7 +248,7 @@ Auth.js 標準 route(Credentials provider の signin/callback/signout/session)�
 | エラー   | token 無効/期限切れ/使用済み → `400`、`code: "invalid_or_expired_token"`。password policy 違反 → `422`、`fieldErrors` |
 | 入力上限 | token 512 文字、newPassword 128 文字                                                                                  |
 
-## Data and Migration
+## データとMigration
 
 本節は「どのデータを保持する必要があるか」という契約を示す。テーブル分割・index・保存方式などの実現方法は [../plans/auth-adapter.md](../plans/auth-adapter.md) を参照。
 
@@ -257,10 +257,10 @@ Auth.js 標準 route(Credentials provider の signin/callback/signout/session)�
 - session を DB に永続化する必要がある([ADR-001](../adr/ADR-001-authentication.md))。
 - email verification token、password reset token をそれぞれ単回使用・有効期限付きで保持する必要がある。トークンは平文でなくハッシュ化して保持する。
 - login/signup/verification-resend/password-reset-request の rate limit 判定に必要な試行履歴を保持する必要がある。判定ウィンドウ(15 分)を超えた履歴は保持し続けない(削除の実装は Plan で定義するが、本 Spec のスコープ内で行う)。
-- 平文の token・email 本文を本番相当の永続 store に保持しない(Security and Privacy 参照)。
+- 平文の token・email 本文を本番相当の永続 store に保持しない(セキュリティとプライバシー 参照)。
 - 既存 `04-database-design.md` にはこれらのテーブルが含まれていないため、実装時に同ドキュメントへ追記する(Plan Task)。
 
-## Failure and Edge Cases
+## 失敗・境界ケース
 
 - signup 時の重複 email → AUTH-INV-002 により情報を漏らさない。
 - 期限切れ/使用済み/不正な verification token・reset token → 同一エラー。
@@ -269,36 +269,36 @@ Auth.js 標準 route(Credentials provider の signin/callback/signout/session)�
 - session 期限切れ・改ざん → unauthenticated 扱い。
 - email 未確認のまま password reset を完了 → password は更新されるが、email 確認済みになるまで login は引き続き拒否される。
 
-## Security and Privacy
+## セキュリティとプライバシー
 
-- Data collected: email(正規化済み)、password hash。
-- Data sent externally: なし(email 送信は Out of Scope の配送実装に依存する)。
+- 収集データ: email(正規化済み)、password hash。
+- 外部送信データ: なし(email 送信は 対象外 の配送実装に依存する)。
 - 保持期間・アクセス範囲: password hash・token hash は account が存在する限り保持し、account 削除時に削除する(T-404 の削除フローに従う)。rate limit 用の試行履歴は判定ウィンドウ(15 分)経過後に破棄する。認証データへのアクセスは本人の認証処理と、運用上必要な最小限の管理操作(T-403 で定義)に限定する。
-- Data forbidden in logs: 平文パスワード、verification/reset token の平文、session token。rate limit は email 単位のみで判定するため IP を収集・保存しない(Out of Scope)。
+- ログ禁止データ: 平文パスワード、verification/reset token の平文、session token。rate limit は email 単位のみで判定するため IP を収集・保存しない(対象外)。
 - 平文 token・email 本文を保持する仕組み(開発/テスト用の擬似メール送信を含む)を本番相当の永続 store に置かない。詳細は Plan で定義する。
 - 入力サイズ上限: 各 API の「入力上限」表を参照。上限超過はハッシュ計算前に拒否する(AUTH-002)。
-- Threats and controls:
+- 脅威と対策:
   - credential stuffing/brute force → AUTH-010 の rate limit/lockout。
   - session theft → secure/HttpOnly cookie、DB session rotation(password reset 時に全 session 失効)。
   - CSRF → Auth.js 標準の CSRF token + origin validation。
   - account enumeration → AUTH-INV-002(signup/verification 再送/login/password reset request すべてで応答・処理時間を統一)。
   - token 二重使用・競合 → AUTH-INV-001 の不変条件。
 
-## AI Requirements
+## AI要件
 
 N/A(本 Spec は AI を扱わない)。
 
-## Observability and Operations
+## 可観測性と運用
 
-- Logs: login 成功/失敗(pseudonymous ID、生 email は残さない)、lockout 発動、password reset 発行/使用。
-- Metrics: login 失敗率、signup 数、email verification 完了率、lockout 発動回数、rate limit 拒否回数。
-- Alerts: 短時間での login 失敗急増(credential stuffing の兆候)。
-- Runbook: lockout の手動解除手順、reset token の不正発行が疑われる場合の対応手順(詳細は Plan の Rollout and Operations で定義)。
-- Rollout/rollback: 新規 route/データの追加のみで既存機能への影響なし。
+- ログ: login 成功/失敗(pseudonymous ID、生 email は残さない)、lockout 発動、password reset 発行/使用。
+- メトリクス: login 失敗率、signup 数、email verification 完了率、lockout 発動回数、rate limit 拒否回数。
+- アラート: 短時間での login 失敗急増(credential stuffing の兆候)。
+- Runbook: lockout の手動解除手順、reset token の不正発行が疑われる場合の対応手順(詳細は Plan の 展開と運用 で定義)。
+- 展開/ロールバック: 新規 route/データの追加のみで既存機能への影響なし。
 
-## Test Coverage Matrix
+## テスト対応表
 
-| Requirement  | Unit                                                        | Integration                                                                                                                         | E2E                           |
+| 要件         | Unit                                                        | Integration                                                                                                                         | E2E                           |
 | ------------ | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
 | AUTH-001     | -                                                           | 重複 email での応答統一、account 未作成の確認                                                                                       | signup フォーム送信           |
 | AUTH-002     | policy 判定(境界値: 7/8/128/129 文字、制御文字、空白は許容) | policy 違反時の 422、先頭・末尾空白ありパスワードでの登録・照合成功                                                                 | -                             |
@@ -313,7 +313,7 @@ N/A(本 Spec は AI を扱わない)。
 | AUTH-INV-001 | -                                                           | 同一 token への並行リクエストで成功が 1 件のみ                                                                                      | N/A                           |
 | AUTH-INV-002 | -                                                           | signup/verification 再送/login/password reset request の応答(status/body)が存在有無で差がないこと。login の dummy hash 検証実行確認 | N/A                           |
 
-## Open Questions
+## 未決事項
 
 次の事項は決定済み(2026-09-15/16 レビュー)。
 
@@ -323,11 +323,11 @@ N/A(本 Spec は AI を扱わない)。
 - **IP ベースの rate limit**: MVP には含めない(email 単位のみ)。
 - **Google/GitHub OAuth**: MVP スコープから除外([ADR-001](../adr/ADR-001-authentication.md) 2026-09-16 改訂)。将来追加する場合は別 Spec を起こす。
 - **Admin TOTP 2FA**: T-403 で扱う。本 Spec は一般ユーザー認証のみを対象とする。
-- **`/api/v1` と Auth.js 標準 route の整合**: 技術検証は不要と判明した。[ADR-009](../adr/ADR-009-api-style.md)(2026-09-16 accepted)が「外部ライブラリが規定する標準 endpoint は `/api/v1` の例外にできる」と一般則として決定済みのため、Auth.js 標準 route はこの例外規定に従う(API and Events 節に契約境界を記録済み)。
+- **`/api/v1` と Auth.js 標準 route の整合**: 技術検証は不要と判明した。[ADR-009](../adr/ADR-009-api-style.md)(2026-09-16 accepted)が「外部ライブラリが規定する標準 endpoint は `/api/v1` の例外にできる」と一般則として決定済みのため、Auth.js 標準 route はこの例外規定に従う(APIとイベント節に契約境界を記録済み)。
 
-残る Open Questions: なし。
+残る未決事項: なし。
 
-## Implementation Readiness
+## 実装準備状況
 
 Status: Ready
 Reviewed at: 2026-09-17
@@ -347,6 +347,6 @@ Reviewed by: —
 
 全 Gate が Pass または根拠付き N/A。2026-09-17 のレビューで Ready とした。
 
-### Accepted Risks
+### 受容リスク
 
 なし

@@ -114,5 +114,30 @@ export function createPrismaHabitEntryRepository(prisma: PrismaClient): HabitEnt
         updatedAt: row.updatedAt,
       }));
     },
+
+    async listByDateRange({ actorUserId, from, to }) {
+      const userId = parseUserId(actorUserId);
+      if (userId === null || !CALENDAR_DATE_PATTERN.test(from) || !CALENDAR_DATE_PATTERN.test(to)) {
+        return [];
+      }
+
+      // 既存 index (user_id, habit_date DESC, id DESC) の範囲 scan。習慣は include の JOIN で 1 回の取得にする。
+      const rows = await prisma.habitEntry.findMany({
+        where: {
+          userId,
+          habitDate: { gte: dateFromCalendarDate(from), lte: dateFromCalendarDate(to) },
+        },
+        include: { habit: { select: { publicId: true } } },
+        orderBy: [{ habitDate: "asc" }, { id: "asc" }],
+      });
+      return rows.map((row): HabitEntryRecord => ({
+        habitId: row.habit.publicId,
+        date: calendarDateFromDate(row.habitDate),
+        status: toStatus(row.status),
+        quantity: toQuantity(row.quantity),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      }));
+    },
   };
 }

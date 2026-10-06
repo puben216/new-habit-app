@@ -33,7 +33,7 @@
 
 ### 必須成果物
 
-- IssueまたはPRに問題、Scope、Acceptance Criteriaを記載
+- IssueまたはPRに問題、Scope、受け入れ基準を記載
 - 影響範囲の確認
 - bug fixの回帰テスト、またはテスト不要理由
 - lint/typecheck/test/buildのうち該当する品質ゲート

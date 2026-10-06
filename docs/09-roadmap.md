@@ -82,7 +82,7 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 - 設計: Feature Spec([habit-api.md](specs/habit-api.md))と Implementation Plan([habit-api.md](plans/habit-api.md))を作成し、Implementation Readiness Gate を通過
 - 実装: T-103 の Domain を再利用し、`HabitRepositoryPort`/use case 5 本(Application)、`PrismaHabitRepository`(Infrastructure、条件付き UPDATE による楽観ロック、`(created_at, id)` keyset の cursor pagination)、`/api/v1/habits` 5 endpoint(Presentation、session の actor、Origin 検証、Problem Details)を実装。Domain には DB 行の復元用 `reconstituteHabit` のみ追加。Migration なし
 - テスト: Unit(Domain/Application/Contracts/HTTP handler)と、実 PostgreSQL の Integration(constraint、IDOR、並行更新の 409、pagination)を追加
-- 未実装(Spec の Out of Scope/Accepted Risks): `Idempotency-Key`、rate limit、`localTime`、構造化ログ、OpenAPI 生成。文字数上限は P2 未決のため暫定値
+- 未実装(Spec の 対象外/受容リスク): `Idempotency-Key`、rate limit、`localTime`、構造化ログ、OpenAPI 生成。文字数上限は P2 未決のため暫定値
 - E2E: Playwright 未導入のため、導入後に build/reduce CRUD を追加
 
 ## Phase 2: Tracking と可視化
@@ -118,6 +118,9 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 - streak、7/30 日成功率、空状態
 - Unit: 全集計定義。Integration: query count/性能
 - E2E: 記録後の反映
+- 設計: Feature Spec([statistics-dashboard.md](specs/statistics-dashboard.md))と Implementation Plan([statistics-dashboard.md](plans/statistics-dashboard.md))を作成。今日の未記録は保留(分母外・ストリークを切らない)、期間は今日を含む直近 7/30 日、成功率・ストリークは習慣ごと+全体の成功率、`GET /dashboard`は`from`/`to`なしの固定集計、スコープは API+集計ロジックのみ(UI・E2E は対象外)と決定(D-13)
+- 実装: Domain `calculateHabitStatistics`/`aggregateWindowStatistics`(予定機会ごとに success/missed/skipped/pending へ分類し、ストリークは success で加算・missed で 0・skipped/pending は中立、366 日まで遡る)、Application `getDashboardUseCase`(記録は習慣数に依らず 1 回の範囲取得。アーカイブ済み習慣は除外)、Infrastructure `HabitEntryRepository.listByDateRange`、`GET /api/v1/dashboard`。Migration なし
+- テスト: Unit(Domain の全集計定義とシード固定の性質テスト/Application/契約/handler)と Integration(実 PostgreSQL: 範囲取得の境界・他ユーザー分離、応答全体、アーカイブ除外、問い合わせ回数が習慣数に依らず記録取得は 1 回)を追加。E2E は Playwright 未導入のため対象外
 
 ## Phase 3: 週次レビューと AI
 

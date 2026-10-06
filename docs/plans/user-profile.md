@@ -1,12 +1,12 @@
 # User Profile Implementation Plan
 
 Status: Ready
-Owner: TBD
-Last updated: 2026-10-02
+責任者: TBD
+最終更新: 2026-10-02
 Spec: [../specs/user-profile.md](../specs/user-profile.md)
-Change classification: Standard(分類理由: 新規公開 API、DB schema 変更(制約追加)、認証・認可と個人情報(表示名)を扱うため。[change-classification.md](../governance/change-classification.md) の判定表に該当)
+変更区分: Standard(分類理由: 新規公開 API、DB schema 変更(制約追加)、認証・認可と個人情報(表示名)を扱うため。[change-classification.md](../governance/change-classification.md) の判定表に該当)
 
-## Approach
+## 方針
 
 [auth-adapter.md](auth-adapter.md) が実装済みの session を前提に、`identity` module(アーキテクチャ 3 章)として Domain → Application → Infrastructure → Presentation の順で追加する。
 
@@ -22,9 +22,9 @@ Change classification: Standard(分類理由: 新規公開 API、DB schema 変�
 - `display_name` を nullable にして「未設定」を `NULL` で表す(空文字を意味のある値として扱わない)。
 - 楽観ロックは導入しない(Spec Business Rules 参照)。
 
-## Impact Analysis
+## 影響分析
 
-| Area           | Change                                                                                                                                                                                                         | Risk                                                        |
+| 領域           | 変更                                                                                                                                                                                                           | リスク                                                      |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | Domain         | `identity/` を追加。`index.ts` に export 1 行追加                                                                                                                                                              | 低。Intl の受理可否が ICU 依存                              |
 | Application    | `identity/` を追加。`index.ts` に export 1 行追加                                                                                                                                                              | 低                                                          |
@@ -35,30 +35,30 @@ Change classification: Standard(分類理由: 新規公開 API、DB schema 変�
 | AWS/Terraform  | なし                                                                                                                                                                                                           | なし                                                        |
 | Observability  | 標準 log 項目のみ。表示名・body をログへ出さない                                                                                                                                                               | 低                                                          |
 
-## Interfaces and Contracts
+## インターフェースと契約
 
 - Domain: `UserProfile = { displayName: string | null; timezone: string; locale: Locale; weekStartsOn: WeekStartsOn }`、`ProfileChanges`(各項目 optional)、`validateProfileChanges(input: unknown-shaped fields): ProfileChanges`(違反時 `InvalidProfileError`、`violations: { field, message }[]`)、`createDefaultProfile()`。
 - Application: `ProfileRepositoryPort { ensure(userId, defaults): Promise<StoredProfile | null>; update(userId, changes): Promise<StoredProfile | null> }`(`null` は user 不存在)。`StoredProfile = UserProfile & { userId: string; updatedAt: Date }`。`getMyProfile(deps, actor)`、`updateMyProfile(deps, actor, input)`。
-- API: Spec API and Events 節。Problem Details は `@habit-app/contracts` の `createProblemDetails` を再利用する。
+- API: Spec APIとイベント節。Problem Details は `@habit-app/contracts` の `createProblemDetails` を再利用する。
 - Contracts: `UpdateProfileRequest`、`ProfileResponse`。
 
-## Data Migration
+## データMigration
 
 - Expand: `20261002000000_t102_user_profile_constraints`。`ALTER TABLE user_profiles ALTER COLUMN display_name DROP NOT NULL`、CHECK 制約 4 本(`week_starts_on`、`display_name` 長さ、`timezone` 長さ、`locale`)。
 - Backfill: 不要(T-102 以前に書き込みコードが存在せず既存行なし)。適用前に `SELECT count(*) FROM user_profiles` で 0 または制約適合であることを確認する。
 - Switch/Contract: 不要(互換性を壊さない loosening + 追加 CHECK)。
-- Rollback/forward fix: 原則 forward fix。戻す場合は CHECK を DROP し、`NULL` 行を既定値で埋めてから `NOT NULL` を復元する。
+- ロールバック/前方修正: 原則 forward fix。戻す場合は CHECK を DROP し、`NULL` 行を既定値で埋めてから `NOT NULL` を復元する。
 - 検証: fresh DB への全 migration 適用(Integration Test)、および T-101 時点の schema(`20260918002810`)までを適用した DB に本 migration を適用する upgrade 検証を Integration Test に含める。
 
-## Security Review
+## セキュリティレビュー
 
-- Authentication/authorization: actor は session からのみ取得(`/api/v1/me` は対象 ID を受けない)。Repository の全 query は actor user ID を条件にする。Application の policy が取得結果の `userId` と actor の一致を再確認する(多層防御)。他ユーザー/不存在は 404。
-- PII/secrets/logging: 表示名・body・cookie をログに出さない。エラー応答に入力値を含めない。fixture は架空データのみ。
-- Abuse controls: body 4096 byte、各項目長上限、未知キー拒否、`Origin` 検証、`Content-Type` 検証。rate limit は Accepted Risk(Spec 参照)。
+- 認証/認可: actor は session からのみ取得(`/api/v1/me` は対象 ID を受けない)。Repository の全 query は actor user ID を条件にする。Application の policy が取得結果の `userId` と actor の一致を再確認する(多層防御)。他ユーザー/不存在は 404。
+- 個人情報/Secret/ログ: 表示名・body・cookie をログに出さない。エラー応答に入力値を含めない。fixture は架空データのみ。
+- 悪用対策: body 4096 byte、各項目長上限、未知キー拒否、`Origin` 検証、`Content-Type` 検証。rate limit は Accepted Risk(Spec 参照)。
 
-## Test Plan
+## テスト計画
 
-| Requirement          | Test level  | Planned test                                                                                                                            |
+| 要件                 | テスト種別  | 予定テスト                                                                                                                              |
 | -------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | PROF-003             | Unit        | `display-name.test.ts`: 境界値、制御文字、bidi、サロゲートペア、NFC、trim                                                               |
 | PROF-004             | Unit        | `timezone.test.ts`: 正規/別名/大文字小文字誤記/オフセット/略称/未知/長さ/DST・45 分・30 分オフセット地域                                |
@@ -71,14 +71,14 @@ Change classification: Standard(分類理由: 新規公開 API、DB schema 変�
 | PROF-INV-003/004     | Integration | CHECK 制約違反(長さ 0/51、week_starts_on -1/7、locale `fr`、timezone 長さ)の直接 SQL 拒否、migration の fresh/upgrade                   |
 | E2E                  | 対象外      | Playwright 未導入(AGENTS.md)。導入後に onboarding profile シナリオを追加                                                                |
 
-## Rollout and Operations
+## 展開と運用
 
 - Feature Flag: 不要(新規 endpoint、既存機能に影響なし)。
-- Deployment order: migration(後方互換)→ アプリ。
-- Metrics/alarms: 既存の 5xx 比率 alarm に含める。専用 alarm なし。
-- Rollback trigger and procedure: `/api/v1/me` の 5xx 急増時はアプリを直前 revision へ戻す。DB 制約はそのまま残す。
+- デプロイ順序: migration(後方互換)→ アプリ。
+- メトリクス/アラーム: 既存の 5xx 比率 alarm に含める。専用 alarm なし。
+- ロールバック条件と手順: `/api/v1/me` の 5xx 急増時はアプリを直前 revision へ戻す。DB 制約はそのまま残す。
 
-## Task Breakdown
+## タスク分解
 
 1. Domain: 値オブジェクト・検証・既定プロフィール・エラー + Unit Test(設計確認 → 実装 → テスト → セルフレビュー)。
 2. Contracts: request/response schema + Unit Test。
@@ -88,28 +88,28 @@ Change classification: Standard(分類理由: 新規公開 API、DB schema 変�
 6. Presentation: session-actor、handler factory + Unit Test、`profile-container.ts`、`/api/v1/me` route、`auth-container.ts` への `auth`/`prisma` 公開。
 7. 文書: `04-database-design.md`、`09-roadmap.md`(T-102 の完了状況と E2E 対象外)。品質コマンド全実行、diff セルフレビュー。
 
-## Dependencies
+## 依存関係
 
 - 先行 task: T-101(session/Auth.js、完了済み)、T-004(DB baseline、完了済み)。
 - 並行 task: T-104(Habit API)。共有ファイル(各 package の `index.ts`、`auth-container.ts`、`schema.prisma`、migration ディレクトリ)への変更は追加のみ・最小限とする。
 - 外部アカウント・権限・provider: 不要。Docker(Testcontainers)がローカルで必要。
 
-## Risks
+## リスク
 
-| Risk                                                                                       | Mitigation                                                                                                               | Owner |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ | ----- |
-| `auth()` を Route Handler で呼ぶ際の Next.js/Auth.js の context 要件                       | handler factory は `getActorUserId` を注入し、`profile-container.ts` に `auth()` 利用を隔離。`build` で型・bundle を確認 | TBD   |
-| Intl の受理可否が Node/ICU により差異                                                      | Unit Test は一般的な現行 ID と明確な不正値を中心にする。Node 更新時に検知                                                | TBD   |
-| T-104 との共有ファイル衝突(`index.ts`、`auth-container.ts`、`schema.prisma`)               | 追加のみ・1 行単位の変更とし、衝突箇所を完了報告に明記                                                                   | TBD   |
-| `displayName` の nullable 化で Prisma 型が変わり T-101 の schema integration test が壊れる | Task 4 で影響テストを確認し追従                                                                                          | TBD   |
+| リスク                                                                                     | 対策                                                                                                                     | 責任者 |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ | ------ |
+| `auth()` を Route Handler で呼ぶ際の Next.js/Auth.js の context 要件                       | handler factory は `getActorUserId` を注入し、`profile-container.ts` に `auth()` 利用を隔離。`build` で型・bundle を確認 | TBD    |
+| Intl の受理可否が Node/ICU により差異                                                      | Unit Test は一般的な現行 ID と明確な不正値を中心にする。Node 更新時に検知                                                | TBD    |
+| T-104 との共有ファイル衝突(`index.ts`、`auth-container.ts`、`schema.prisma`)               | 追加のみ・1 行単位の変更とし、衝突箇所を完了報告に明記                                                                   | TBD    |
+| `displayName` の nullable 化で Prisma 型が変わり T-101 の schema integration test が壊れる | Task 4 で影響テストを確認し追従                                                                                          | TBD    |
 
-## Start Conditions
+## 着手条件
 
 - [x] Spec StatusがReady
 - [x] 必須ADRがAccepted(ADR-001、ADR-002、ADR-009)
-- [x] API/event契約がレビュー済み(Spec API and Events 節、event は N/A)
-- [x] Migration方針がレビュー済み(Data Migration 節)
-- [x] 認可・データ保護方針がレビュー済み(Security Review 節)
+- [x] API/event契約がレビュー済み(Spec APIとイベント節、event は N/A)
+- [x] Migration方針がレビュー済み(データMigration 節)
+- [x] 認可・データ保護方針がレビュー済み(セキュリティレビュー 節)
 - [x] テスト環境とFake/Stubを準備できる(Docker 稼働確認済み、`ProfileRepositoryPort` の Fake)
 - [x] 依存taskが完了している(T-101、T-004)
 - [x] rollout/rollback方針が決定している

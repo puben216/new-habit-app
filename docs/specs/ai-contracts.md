@@ -1,23 +1,23 @@
 # AI Contracts / Fake Adapter Spec
 
 Status: Ready
-Owner: TBD
-Last updated: 2026-10-04
-Change classification: Standard
-Roadmap Task: T-302
+責任者: TBD
+最終更新: 2026-10-04
+変更区分: Standard
+ロードマップ項目: T-302
 
-## Goal
+## 目的
 
 AI coaching(T-304 習慣設計、T-305 週次改善)が共通で使う「型と境界」を、実 provider・queue・DB より前に確定する。provider-neutral な `AiCoachPort`、versioned な入出力 schema、第三者コンテンツ保護の決定論的 validator と fail-closed pipeline、定型 fallback、権利資料 allowlist の契約を、fake adapter とともに実装する。第三者コンテンツ保護の要件は [third-party-content-safety.md](third-party-content-safety.md)(IPG-001〜006)を正本とし、本 Spec は T-302 で実装する範囲を定める。
 
-## Success Metrics
+## 成功指標
 
 - `pass` 以外の AI 本文が、pipeline の戻り値(＝表示・永続化の唯一の入口)に現れない(Unit Test で全 reason code・全失敗経路を確認)。
 - validator・parser・provider の例外、timeout、設定欠損のいずれでも、未検証本文を返さず fallback を返す(fail closed)。
 - 転載・翻訳・文体模倣・ブランド誤認・権利疑義の adversarial fixture が、すべて `pass` にならない。一般的な習慣助言の fixture は `pass` になる。
 - 監査 sink に渡る値が version・status・reason code だけで、入力・生成本文を含まない(Unit Test で確認)。
 
-## Scope
+## 範囲
 
 - Contracts(`packages/contracts`): `HabitDesignInputV1` / `WeeklyImprovementInputV1`(入力)、`HabitDesignProposalV1` / `WeeklyImprovementPlanV1`(出力)、`contentSafety` の runtime schema(zod、`.strict()`)。
 - Domain(`packages/domain/src/ai`): 権利資料 record と利用可否の純粋な判定(期限・用途・必須項目)。
@@ -25,7 +25,7 @@ AI coaching(T-304 習慣設計、T-305 週次改善)が共通で使う「型と�
 - Infrastructure(`packages/infrastructure/src/ai`): `FakeAiCoach`(台本化された成功・refusal・各種失敗)、`InMemoryRightsRegistry`。
 - 文書: `docs/05`、`docs/09`、`docs/10`、third-party-content-safety の Open Questions 追記。
 
-## Out of Scope
+## 対象外
 
 - DB・Migration・HTTP endpoint・queue/Lambda(T-303)・実 provider adapter(T-304/T-305、ADR-003)・UI。
 - rights registry の永続化(T-302 では in-memory。永続化は運用開始前に別途 Spec 化する)。
@@ -33,7 +33,7 @@ AI coaching(T-304 習慣設計、T-305 週次改善)が共通で使う「型と�
 - false positive 率の閾値と golden dataset の reviewer の決定(beta 前の T-505 判断。IPG Spec の Open Questions に残す)。
 - prompt 本文の最適化(adapter 側。T-302 は守るべき制約を `COACHING_SYSTEM_POLICY_V1` として固定するのみ)。
 
-## Functional Requirements
+## 機能要件
 
 ### AIC-001 Versioned 入出力 schema
 
@@ -87,7 +87,7 @@ AI coaching(T-304 習慣設計、T-305 週次改善)が共通で使う「型と�
 
 - `AiAuditSinkPort.record` に渡す値は `purpose`、`schemaVersion`、`promptVersion`、`validatorVersion`、`fallbackVersion`、`status`、`reasonCodes`、`fallbackReason`、attempt 数だけ。入力・生成本文・subject ID を含まない。
 
-## Business Rules and Invariants
+## 業務ルールと不変条件
 
 - AIC-INV-001 `pass` でない AI 本文は、戻り値にも監査にも出さない。
 - AIC-INV-002 AI は設定を変更しない。pipeline は提案を返すだけで、書き込み port を持たない。
@@ -96,7 +96,7 @@ AI coaching(T-304 習慣設計、T-305 週次改善)が共通で使う「型と�
 - AIC-INV-005 rights 判定は deny by default(不明・期限切れ・用途外・必須項目欠落)。
 - AIC-INV-006 reason code・status・fallback reason の追加は exhaustive check でコンパイル時に取りこぼしを検知する。
 
-## Acceptance Criteria
+## 受け入れ基準
 
 ```gherkin
 Scenario: 一般的な習慣助言
@@ -142,14 +142,14 @@ Scenario: 権利根拠がない資料
   Then admitted は false で reason code が返り、監査 sink には本文なしで記録される
 ```
 
-## API and Events
+## APIとイベント
 
 - HTTP endpoint・event・DB は追加しない。契約は `packages/contracts/src/ai.ts` の zod schema と `packages/application/src/ai` の port を正本とする。
 - `contentSafety` は `{ status, reasonCodes, validatorVersion, fallbackVersion }`。`fallbackVersion` は fallback のとき非 null。
 - schema は `schemaVersion: "1"`。非互換変更は新 version を追加し、古い version を書き換えない。
 - DB 変更なし(Migration N/A。永続化は T-303 以降が本契約の戻り値を保存する)。
 
-## Security and Privacy
+## セキュリティとプライバシー
 
 - Data collected: なし(T-302 は永続化しない)。監査には version・status・reason code のみ。
 - Data sent externally: T-302 では外部送信なし(fake のみ)。入力 schema は最小化済みで、email・表示名・内部 ID を持たない。
@@ -158,7 +158,7 @@ Scenario: 権利根拠がない資料
 - IDOR/BOLA: 対象外(resource を扱わない)。Injection: 自由記述は data として扱い、制御文字を拒否する。prompt injection への耐性は validator と fail-closed で補う。
 - abuse: 入力長上限、再試行 3 回、再生成 1 回で provider 呼び出しを有限化する。ユーザー単位 rate limit・コスト上限は T-303。
 
-## AI Requirements
+## AI要件
 
 - AI を使う理由と決定論に任せない判断: [01-product-requirements.md](../01-product-requirements.md) と ADR-003 に従う。T-302 は provider を呼ばない基盤のみ。
 - AI に任せる判断: 提案文の生成のみ。任せない判断: 公開可否(validator)、設定変更(ユーザー明示承認後に決定論的 use case)。
@@ -166,14 +166,14 @@ Scenario: 権利根拠がない資料
 - tool は許可しない(allowlist は空)。T-304 以降で追加する場合は Spec を更新する。
 - 評価: adversarial fixture と一般助言 fixture を Unit Test に含める(golden dataset の閾値決定は T-505)。
 
-## Observability and Operations
+## 可観測性と運用
 
 - `AiAuditSinkPort` が status/reason code/version を記録する。metrics の集計と alarm は T-303 の consumer で接続する。
 - Feature flag: pipeline 入力の `publicationEnabled`。停止時は常に fallback。
 - rollback: flag 停止＋ fallback 固定。データ変更がないため回復不要。
 - 費用: T-302 は provider を呼ばない。T-303 以降で試行回数上限を維持する。
 
-## Test Coverage Matrix
+## テスト対応表
 
 | Requirement             | Unit                                                       | Integration | E2E           |
 | ----------------------- | ---------------------------------------------------------- | ----------- | ------------- |
@@ -188,11 +188,11 @@ Scenario: 権利根拠がない資料
 
 DB・HTTP・外部 I/O を追加しないため Integration/E2E は N/A。fake provider と in-memory registry で境界を検証する。
 
-## Open Questions
+## 未決事項
 
 なし(T-302 の実装を左右する未決事項はない)。次は T-302 では決めず後続へ送ると合意済み: false positive 率の閾値と golden dataset の reviewer(T-505)、human review queue の要否(AI 公開 feature flag 停止で代替)、rights registry の永続化。
 
-## Implementation Readiness
+## 実装準備状況
 
 Status: Ready
 Reviewed at: 2026-10-04
@@ -210,12 +210,12 @@ Reviewed by: —
 | Operations           | Pass   | Observability 節(flag 停止で代替)。queue/管理画面は Out of Scope として明示    |
 | Planning             | Pass   | [../plans/ai-contracts.md](../plans/ai-contracts.md)                           |
 
-### Accepted Risks
+### 受容リスク
 
 - 決定論的 validator は文字列規則であり、言い換えや翻訳された転載の検知漏れが残る。多層防御(system policy、human review、feature flag 停止)と T-505 前の golden dataset 評価で補う。
 - 過剰拒否(fail closed)により一般助言が fallback になる場合がある。false positive 率は T-505 前に計測・閾値化する。
 - rights registry は in-memory で再起動すると失われる。永続化までは本番で RAG/few-shot を使わない。
 
-### Open Questions
+### 未決事項
 
 なし

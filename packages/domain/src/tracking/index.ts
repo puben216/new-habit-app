@@ -7,3 +7,17 @@ export {
 } from "./daily-check-in";
 export type { DailyCheckInInput, ResolvedDailyCheckIn } from "./daily-check-in";
 export { InvalidDailyCheckInError, InvalidHabitEntryError } from "./errors";
+export {
+  STATISTICS_WINDOW_DAYS,
+  STREAK_LOOKBACK_DAYS,
+  aggregateWindowStatistics,
+  calculateHabitStatistics,
+} from "./statistics";
+export type {
+  CalculateHabitStatisticsInput,
+  HabitStatistics,
+  OccurrenceOutcome,
+  OutcomeCounts,
+  StatisticsEntry,
+  WindowStatistics,
+} from "./statistics";

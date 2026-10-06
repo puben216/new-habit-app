@@ -1,50 +1,50 @@
 # <Feature Name> Spec
 
 Status: Draft
-Owner: TBD
-Last updated: YYYY-MM-DD
-Change classification: Standard
-Roadmap Task: <T-XXX、または該当なしの理由>
+責任者: TBD
+最終更新: YYYY-MM-DD
+変更区分: Standard
+ロードマップ項目: <T-XXX、または該当なしの理由>
 
-## Goal
+## 目的
 
 <解決するユーザー課題と提供価値>
 
-## Success Metrics
+## 成功指標
 
 - <測定可能な指標と成功基準>
 
-## Scope
+## 範囲
 
 - <含めるもの>
 
-## Out of Scope
+## 対象外
 
 - <含めないもの>
 
-## Actors and Preconditions
+## アクターと前提条件
 
-| Actor   | Preconditions |
-| ------- | ------------- |
-| <actor> | <condition>   |
+| アクター   | 前提条件 |
+| ---------- | -------- |
+| <アクター> | <条件>   |
 
-## Functional Requirements
+## 機能要件
 
-### <PREFIX>-001 <Requirement title>
+### <PREFIX>-001 <要件名>
 
 - <外部から観測可能な振る舞い>
 
-## Business Rules and Invariants
+## 業務ルールと不変条件
 
 - <常に成立すべき規則>
 
-## State Transitions
+## 状態遷移
 
-| Current | Action   | Next    | Rejected when |
-| ------- | -------- | ------- | ------------- |
-| <state> | <action> | <state> | <condition>   |
+| 現在の状態 | 操作   | 次の状態 | 拒否される条件 |
+| ---------- | ------ | -------- | -------------- |
+| <状態>     | <操作> | <状態>   | <条件>         |
 
-## Acceptance Criteria
+## 受け入れ基準
 
 ```gherkin
 Scenario: <name>
@@ -53,54 +53,54 @@ Scenario: <name>
   Then <observable result>
 ```
 
-## Authorization Matrix
+## 認可マトリクス
 
-| Operation   | Guest | Member | Admin | Ownership rule    |
-| ----------- | ----: | -----: | ----: | ----------------- |
-| <operation> |    No |    Yes |    No | Own resource only |
+| 操作   | Guest | Member | Admin | 所有権ルール       |
+| ------ | ----: | -----: | ----: | ------------------ |
+| <操作> |    No |    Yes |    No | 自分のリソースのみ |
 
-## API and Events
+## APIとイベント
 
 - <OpenAPI/event schemaへのリンク、またはN/A理由>
 
-## Data and Migration
+## データとMigration
 
 - <table、constraint、index、retention、migration、またはN/A理由>
 
-## Failure and Edge Cases
+## 失敗・境界ケース
 
 - <timeout、競合、重複、空状態、境界値>
 
-## Security and Privacy
+## セキュリティとプライバシー
 
-- Data collected:
-- Data sent externally:
-- Data forbidden in logs:
-- Threats and controls:
+- 収集データ:
+- 外部送信データ:
+- ログ禁止データ:
+- 脅威と対策:
 
-## AI Requirements
+## AI要件
 
 - <入力、出力schema、tool、validation、fallback、eval、またはN/A理由>
 
-## Observability and Operations
+## 可観測性と運用
 
-- Logs:
-- Metrics:
-- Alerts:
+- ログ:
+- メトリクス:
+- アラート:
 - Runbook:
-- Rollout/rollback:
+- 展開/ロールバック:
 
-## Test Coverage Matrix
+## テスト対応表
 
-| Requirement  | Unit       | Integration | E2E        |
+| 要件         | Unit       | Integration | E2E        |
 | ------------ | ---------- | ----------- | ---------- |
 | <PREFIX>-001 | <case/N/A> | <case/N/A>  | <case/N/A> |
 
-## Open Questions
+## 未決事項
 
 - <実装前に解決する問い。なければ「なし」>
 
-## Implementation Readiness
+## 実装準備状況
 
 Status: Not Ready
 Reviewed at: —
@@ -118,6 +118,6 @@ Reviewed by: —
 | Operations           | Fail   |          |
 | Planning             | Fail   |          |
 
-### Accepted Risks
+### 受容リスク
 
 なし

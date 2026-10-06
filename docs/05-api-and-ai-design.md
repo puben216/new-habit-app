@@ -78,7 +78,7 @@
 
 ### T-104 で確定した Habit API の契約差分
 
-`/habits` 系の正式な契約は [../specs/habit-api.md](specs/habit-api.md) の API and Events 節と `packages/contracts/src/habits.ts` を正本とし、上記の例からの差分は次のとおり。
+`/habits` 系の正式な契約は [../specs/habit-api.md](specs/habit-api.md) の APIとイベント節と `packages/contracts/src/habits.ts` を正本とし、上記の例からの差分は次のとおり。
 
 - `schedule.effectiveFrom`（`YYYY-MM-DD`）を必須とする（サーバーがユーザーのローカル日付を推測しない）。`schedule.localTime` は受け付けない（T-401 で扱う）。
 - 楽観ロックの `version` は `If-Match` ではなく PATCH/archive の request body で受け取る。不一致は `409`（`version_conflict`）、アーカイブ済みの更新は `409`（`habit_archived`）。
@@ -87,7 +87,7 @@
 
 `PUT /habits/{habitId}/entries/{date}` は `status` に加えて `quantity`（当日の実施回数、`build` の target_count が複数の場合に使用）を受け付ける。
 
-`/schedule/today` と `/habits/{habitId}/entries/{date}` の正式な契約は [../specs/habit-entry.md](specs/habit-entry.md) の API and Events 節と `packages/contracts/src/tracking.ts` を正本とし、上記の例からの差分は次のとおり。
+`/schedule/today` と `/habits/{habitId}/entries/{date}` の正式な契約は [../specs/habit-entry.md](specs/habit-entry.md) の APIとイベント節と `packages/contracts/src/tracking.ts` を正本とし、上記の例からの差分は次のとおり。
 
 - `GET /schedule/today` は actor の timezone のローカル日に予定された active な習慣と当日の記録を `{ date, timezone, items }` で返す。クライアントは `date` を `PUT` の日付に使う。
 - `PUT` の body は `{ status, quantity? }`。`note` は受け付けない（文字数上限が P2 で未決のため）。`build` の `success` は `quantity >= target_count`（省略時は target_count）、`missed` は `quantity < target_count`（省略時は 0）、`skipped` と `reduce` は `quantity` を指定できない。`reduce` は `status` のみで成否を表す。
@@ -96,13 +96,20 @@
 - 状態変更の共通要件（`Origin` 検証、`Content-Type: application/json`、body 上限）は `/habits` と同じ。rate limit は未対応。
 - `GET /habit-entries`（履歴）は T-202 の対象外。
 
-`/daily-check-ins/{date}` の正式な契約は [../specs/daily-check-in.md](specs/daily-check-in.md) の API and Events 節と `packages/contracts/src/check-in.ts` を正本とし、上記の例からの差分は次のとおり。
+`/daily-check-ins/{date}` の正式な契約は [../specs/daily-check-in.md](specs/daily-check-in.md) の APIとイベント節と `packages/contracts/src/check-in.ts` を正本とし、上記の例からの差分は次のとおり。
 
 - `GET /daily-check-ins/{date}` を追加する（自分のその日のチェックインを返す。なければ `404`、`check_in_not_found`）。対象日の範囲制限はない。
 - `PUT` の body は `{ mood?, difficulty?, note? }`（`mood`/`difficulty` は 1〜5 の整数、`note` は 1000 文字以内で改行・タブのみ許可）。`PUT` は対象日のチェックイン全体の置き換えで、省略した項目は未設定（`null`）になる。3 項目がすべて未設定の入力は `422`（`invalid_check_in`）。
 - `PUT` の対象日は actor の「今日」から過去 7 日まで。範囲外は `422`（`check_in_date_out_of_range`）。習慣の有無・予定の有無は問わない。
 - 自然キー `(user, date)` で冪等であり `Idempotency-Key` は使わない。並行送信は後勝ちで 1 レコードに収束する。成功は常に `200`。状態変更の共通要件は `/habits` と同じ。rate limit は未対応。
 - 履歴・期間取得と削除は対象外。
+
+`/dashboard` の正式な契約は [../specs/statistics-dashboard.md](specs/statistics-dashboard.md) の API and Events 節と `packages/contracts/src/dashboard.ts` を正本とし、上記の一覧からの差分は次のとおり。
+
+- `GET /dashboard` は `from`/`to` を受け付けない。actor の「今日」を含む直近 7 日・30 日の成功率と、習慣ごとの現在・最長ストリークを固定で返す（任意期間は必要になった時点で別 Spec）。
+- 応答は `{ date, timezone, overall: { last7Days, last30Days }, habits: [{ habit: { id, kind, name }, currentStreak, longestStreak, last7Days, last30Days }] }`。期間の集計は `{ from, to, scheduled, success, missed, skipped, pending, successRate }` で、`successRate` は `success / (success + missed)`（0〜1）、分母 0 は `null`。
+- 対象は active な習慣のみ。今日の未記録は `pending`（分母外）、過去の未記録は `missed`。`skipped` は分母から除外し、ストリークを切らず数えない。全体の成功率は合計件数から求める（習慣ごとの率の平均ではない）。
+- 読み取り専用。認証は `401`、user が存在しなければ `404`（`user_not_found`）。`Idempotency-Key` と rate limit は不要/未対応。
 
 ## AI 境界
 

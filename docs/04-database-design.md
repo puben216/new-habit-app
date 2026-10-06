@@ -137,6 +137,8 @@ Index:
 - 成功率: `success / (scheduled - skipped)`。分母 0 は null。`build` の当日成功は `quantity >= target_count`
 - 現在ストリーク: 直近の確定済み予定機会から遡った連続 success 数
 - 最長ストリーク: 対象期間内の連続 success 最大値
+- 確定済み: 記録がある予定機会、または日付が今日より前の予定機会（記録がなければ `missed`）。記録がなく日付が今日の予定機会は `pending`（今日が終わるまで分母にも入れず、ストリークも切らない）。T-204 で確定（[specs/statistics-dashboard.md](specs/statistics-dashboard.md) STAT-002〜004、D-13）。
+- 上の成功率の分母は、実装上 `success + missed`（`pending` と `skipped` を除く）。`skipped` はストリークを切らず数えない。
 
 これらは Domain の純粋関数を唯一の定義とし、SQL 集計を追加する場合も同じ契約テストを通す。
 
@@ -160,7 +162,7 @@ Auth adapter（[../specs/auth-adapter.md](specs/auth-adapter.md)、[../plans/aut
 - `password_hash` は MVP が Credentials のみのため `NOT NULL` とした。将来 OAuth を追加する際は `nullable` へ変更する migration が別途必要になる（Plan Risks 参照）。
 - `sessions`/`password_reset_tokens`/`login_attempts` の内部 PK は本設計の既存方針（bigint identity、Prisma の `autoincrement()`）に合わせた。Auth.js 標準の Prisma adapter スキーマは `id` に `cuid()` の `String` を用いるが、本プロジェクトは `users.id` が既に `bigint` であるため、標準 `@auth/prisma-adapter` をそのまま使わずカスタム adapter 実装で吸収する前提とする（Plan の Risks・Task 4/5 で対応）。
 - `verification_tokens` のみ Auth.js 標準スキーマ（`identifier`/`token`/`expires`、`id` 列なし）にそのまま準拠した。`token` 列には平文ではなく sha256 hash を保存する（Business Rules 準拠）。
-- OAuth 用の `accounts` テーブルは Spec の Out of Scope（Google/GitHub OAuth 除外）のため作成していない。
+- OAuth 用の `accounts` テーブルは Spec の 対象外（Google/GitHub OAuth 除外）のため作成していない。
 - `login_attempts.purpose` の CHECK 制約値、rate limit 閾値（直近 15 分 5 回失敗 → 15 分 lockout）は `packages/config` の設定値として外出しする予定（Task 6 で実装、コード変更なしで調整可能にする）。
 
 ## 実装時の補足（T-102）
@@ -200,3 +202,11 @@ Daily check-in（[../specs/daily-check-in.md](specs/daily-check-in.md)、[../pla
 - 記録は `INSERT ... SELECT ... FROM users ... ON CONFLICT (user_id, check_in_date) DO UPDATE` の単一文で冪等に upsert する。user が存在しない場合は 0 行になり、FK 違反を起こさず「見つからない」として扱う。更新は全項目の置換（部分更新ではない）。
 - `created_at` は新規作成時のみ Application の Clock、更新時の `updated_at` は DB の `set_updated_at` trigger が上書きする。
 - `note` の文字数上限の DB CHECK は追加していない（P2 未決の暫定値を DB に焼き込まないため。契約 schema の定数が上限）。
+
+## 実装時の補足（T-204）
+
+Statistics dashboard（[../specs/statistics-dashboard.md](specs/statistics-dashboard.md)、[../plans/statistics-dashboard.md](plans/statistics-dashboard.md)）の実装時の追加決定。schema/migration の変更はない。
+
+- 既存の `habit_entries` を読むのみ。期間取得（`WHERE user_id = ? AND habit_date BETWEEN ? AND ?`）は `(user_id, habit_date desc, id desc)` index に一致する。習慣の `public_id` は JOIN（Prisma の `include`）で 1 回の取得にまとめる。
+- ストリークを遡る範囲は今日までの 366 日（`STREAK_LOOKBACK_DAYS`。`generateOccurrences` の範囲上限と同値）。取得量は最大「active 習慣数 × 366 件」。
+- 集計は SQL ではなく Domain の `calculateHabitStatistics` で行う（上記「集計定義」の方針どおり）。SQL 集計を追加する場合は同じ契約テストを通す。

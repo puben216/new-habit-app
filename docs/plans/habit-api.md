@@ -1,12 +1,12 @@
 # Habit Repository, Use Cases and API Implementation Plan
 
 Status: Done
-Owner: TBD
-Last updated: 2026-10-02
+責任者: TBD
+最終更新: 2026-10-02
 Spec: [../specs/habit-api.md](../specs/habit-api.md)
-Change classification: Standard(新しい公開 API、認可、永続化を追加するため。[change-classification.md](../governance/change-classification.md) の判定表で「API/DB/auth を変えるか」に該当)
+変更区分: Standard(新しい公開 API、認可、永続化を追加するため。[change-classification.md](../governance/change-classification.md) の判定表で「API/DB/auth を変えるか」に該当)
 
-## Approach
+## 方針
 
 T-103 の Domain(`Habit`、`createHabit`/`updateHabitDetails`/`archiveHabit`/`changeSchedule`)を業務ルールの唯一の定義として使い、その外側に薄い層を追加する。
 
@@ -17,9 +17,9 @@ T-103 の Domain(`Habit`、`createHabit`/`updateHabitDetails`/`archiveHabit`/`ch
 - **Presentation(`apps/web`)**: route handler は `createHabitHandlers(deps)` が返す関数へ委譲するだけの薄い adapter にする。handler は依存(actor 解決、use case、許可 origin)を注入できるため、実 DB や Auth.js なしで HTTP 契約(401/403/404/409/413/415/422)を Unit Test できる。実 DB への接続・actor 解決(`auth()`)は composition root(`habit-container.ts`)に閉じ込める。
 - **共有ファイルへの影響を最小化する**: 既存ファイルへの変更は、追加のみ(export の追加、`auth-container.ts` への `auth` 関数の公開)に限定する。
 
-## Impact Analysis
+## 影響分析
 
-| Area           | Change                                                                                                                | Risk                                                  |
+| 領域           | 変更                                                                                                                  | リスク                                                |
 | -------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | Domain         | `habit.ts` に `reconstituteHabit` を追加、`habits/index.ts` から export                                               | 低(既存関数は不変)                                    |
 | Application    | `src/habits/*` を新規追加、`src/index.ts` に `export * from "./habits"` を追加                                        | 低                                                    |
@@ -32,7 +32,7 @@ T-103 の Domain(`Habit`、`createHabit`/`updateHabitDetails`/`archiveHabit`/`ch
 | Observability  | 追加なし(Spec 参照)                                                                                                   | 低                                                    |
 | Docs           | `docs/04`(実装時の補足 T-104)、`docs/05`(契約差分)、`docs/09`(T-104 記録)、`docs/10`(P2 暫定値)を追記                 | 低                                                    |
 
-## Interfaces and Contracts
+## インターフェースと契約
 
 Application(`@habit-app/application` から export):
 
@@ -55,24 +55,24 @@ Infrastructure: `createPrismaHabitRepository(prisma)`、`createUuidGenerator()`�
 
 Contracts: `createHabitRequestSchema`、`updateHabitRequestSchema`、`archiveHabitRequestSchema`、`listHabitsQuerySchema`、`habitResponseSchema`、`habitListResponseSchema` と、それぞれの型。上限定数 `HABIT_NAME_MAX_LENGTH` 等。
 
-HTTP 契約は Spec の API and Events 節を正本とする。
+HTTP 契約は Spec の APIとイベント節を正本とする。
 
-## Data Migration
+## データMigration
 
 - Expand/Backfill/Switch/Contract: N/A(スキーマ変更なし)。
-- Rollback/forward fix: コードの revert のみ。既に作成された habit 行は既存スキーマの範囲内であり、revert 後も整合する。
+- ロールバック/前方修正: コードの revert のみ。既に作成された habit 行は既存スキーマの範囲内であり、revert 後も整合する。
 
-## Security Review
+## セキュリティレビュー
 
-- Authentication/authorization: 認証は Presentation で `auth()` の session から actor を取得(未取得なら 401)。認可は全 port メソッドの `actorUserId` 必須化と、全クエリへの `user_id` 条件で行う(取得後チェックに依存しない)。他ユーザーの habit/cursor は 404/422。
-- PII/secrets/logging: 習慣の自由記述・body・cookie をログに出さない。route handler にログ出力を追加しない。test fixture は架空データのみ。
-- Abuse controls: 入力上限(契約 schema)、body 16 KiB、`limit` 最大 100、未知キー拒否、制御文字拒否。Rate limit/Idempotency-Key は Spec の Accepted Risks。
+- 認証/認可: 認証は Presentation で `auth()` の session から actor を取得(未取得なら 401)。認可は全 port メソッドの `actorUserId` 必須化と、全クエリへの `user_id` 条件で行う(取得後チェックに依存しない)。他ユーザーの habit/cursor は 404/422。
+- 個人情報/Secret/ログ: 習慣の自由記述・body・cookie をログに出さない。route handler にログ出力を追加しない。test fixture は架空データのみ。
+- 悪用対策: 入力上限(契約 schema)、body 16 KiB、`limit` 最大 100、未知キー拒否、制御文字拒否。Rate limit/Idempotency-Key は Spec の 受容リスク。
 - CSRF: Origin 検証と `Content-Type: application/json` 必須。
 - Injection: Prisma のパラメータ化クエリのみ。
 
-## Test Plan
+## テスト計画
 
-| Requirement      | Test level  | Planned test                                                                                                                                                   |
+| 要件             | テスト種別  | 予定テスト                                                                                                                                                     |
 | ---------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Domain 追加      | Unit        | `habit.test.ts`: `reconstituteHabit` の正常復元(active/archived、複数版)、不変条件違反(重複期間、reduce の targetCount≠1、空の name)の拒否                     |
 | HAPI-001〜005    | Unit        | `packages/application/src/habits/*.test.ts`: in-memory fake repository での各 use case(作成、version 不一致、archived、冪等アーカイブ、詳細+schedule 同時更新) |
@@ -87,14 +87,14 @@ HTTP 契約は Spec の API and Events 節を正本とする。
 
 Application の use case を実 repository と組み合わせた経路(`createHabitUseCase` → 実 DB)も同 Integration Test で 1 本確認する。E2E は基盤未導入のため対象外。
 
-## Rollout and Operations
+## 展開と運用
 
 - Feature Flag: 不要(新規 route の追加のみ、UI からの導線は T-104 の範囲外)。
-- Deployment order: Migration なしのため制約なし。T-102 とは独立にマージ可能(共有ファイルの追加のみの変更は衝突解消のみ)。
-- Metrics/alarms: 追加なし(Spec 参照)。
-- Rollback trigger and procedure: 問題発生時は本 PR を revert する。DB に作成済みの習慣データは revert 後も有効。
+- デプロイ順序: Migration なしのため制約なし。T-102 とは独立にマージ可能(共有ファイルの追加のみの変更は衝突解消のみ)。
+- メトリクス/アラーム: 追加なし(Spec 参照)。
+- ロールバック条件と手順: 問題発生時は本 PR を revert する。DB に作成済みの習慣データは revert 後も有効。
 
-## Task Breakdown
+## タスク分解
 
 1. Spec/Plan 作成、Implementation Readiness Gate(本書)
 2. Domain: `reconstituteHabit` + Unit Test
@@ -107,29 +107,29 @@ Application の use case を実 repository と組み合わせた経路(`createHa
 
 各 task は「設計確認 → 実装 → テスト → セルフレビュー」を含む。
 
-## Dependencies
+## 依存関係
 
 - 先行 task: T-103(Domain)、T-101(session から actor 取得)、T-004(DB baseline)。いずれも main に取り込み済み。
 - 並行 task: T-102(User/Profile)。共有ファイル(`packages/*/src/index.ts`、`packages/contracts/src/index.ts`、`apps/web/src/server/auth-container.ts`)への変更を追加のみに限定する。
 - 外部権限/provider: 不要。Integration Test に Docker が必要。
 
-## Risks
+## リスク
 
-| Risk                                                                                         | Mitigation                                                                                             | Owner |
-| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----- |
-| `auth-container.ts` の変更が T-102 と衝突する                                                | 変更を `auth` の公開(2 行)に限定し、報告で明示する。衝突時はどちらも「追加」なので両方残して解決できる | TBD   |
-| 暫定の文字数上限が後で変更される                                                             | 定数を契約 schema の 1 か所に集約。Domain/DB には置かない                                              | TBD   |
-| `created_at` をアプリ側で設定するため、他 module が `now()` で挿入した行と時刻の精度が異なる | habits の挿入経路は本 repository のみ。keyset の比較は同一 table 内で完結する                          | TBD   |
-| 永続化済みデータが Domain 不変条件に違反する場合に復元で失敗する                             | 復元失敗は 500 とし内容を出さない。DB 制約(CHECK/exclusion)で大半は防止済み                            | TBD   |
-| Origin 検証で正当な非ブラウザ client を弾く                                                  | MVP の client は同一 origin の Web のみ。外部 client 対応時に認証方式とあわせて再設計する              | TBD   |
+| リスク                                                                                       | 対策                                                                                                   | 責任者 |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------ |
+| `auth-container.ts` の変更が T-102 と衝突する                                                | 変更を `auth` の公開(2 行)に限定し、報告で明示する。衝突時はどちらも「追加」なので両方残して解決できる | TBD    |
+| 暫定の文字数上限が後で変更される                                                             | 定数を契約 schema の 1 か所に集約。Domain/DB には置かない                                              | TBD    |
+| `created_at` をアプリ側で設定するため、他 module が `now()` で挿入した行と時刻の精度が異なる | habits の挿入経路は本 repository のみ。keyset の比較は同一 table 内で完結する                          | TBD    |
+| 永続化済みデータが Domain 不変条件に違反する場合に復元で失敗する                             | 復元失敗は 500 とし内容を出さない。DB 制約(CHECK/exclusion)で大半は防止済み                            | TBD    |
+| Origin 検証で正当な非ブラウザ client を弾く                                                  | MVP の client は同一 origin の Web のみ。外部 client 対応時に認証方式とあわせて再設計する              | TBD    |
 
-## Start Conditions
+## 着手条件
 
 - [x] Spec Status が Ready
 - [x] 必須 ADR が Accepted(ADR-002 Prisma、ADR-009 REST、ADR-001 Auth。新規 ADR は不要)
-- [x] API/event 契約がレビュー済み(Spec の API and Events 節)
+- [x] API/event 契約がレビュー済み(Spec の APIとイベント節)
 - [x] Migration 方針がレビュー済み(Migration なし)
-- [x] 認可・データ保護方針がレビュー済み(Spec の Security and Privacy 節)
+- [x] 認可・データ保護方針がレビュー済み(Spec の セキュリティとプライバシー節)
 - [x] テスト環境と Fake/Stub を準備できる(Testcontainers、in-memory fake)
 - [x] 依存 task が完了している(T-001〜T-004、T-101、T-103)
 - [x] rollout/rollback 方針が決定している(revert のみ)

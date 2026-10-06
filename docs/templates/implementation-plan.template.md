@@ -1,79 +1,79 @@
 # <Feature Name> Implementation Plan
 
 Status: Draft
-Owner: TBD
-Last updated: YYYY-MM-DD
+責任者: TBD
+最終更新: YYYY-MM-DD
 Spec: <relative link>
-Change classification: Standard
+変更区分: Standard
 
-## Approach
+## 方針
 
 <Specを実現する実装方針。要件を繰り返さず、変更方法を書く>
 
-## Impact Analysis
+## 影響分析
 
-| Area           | Change | Risk |
-| -------------- | ------ | ---- |
-| Domain         |        |      |
-| Application    |        |      |
-| Infrastructure |        |      |
-| Presentation   |        |      |
-| Database       |        |      |
-| API/Event      |        |      |
-| AWS/Terraform  |        |      |
-| Observability  |        |      |
+| 領域           | 変更 | リスク |
+| -------------- | ---- | ------ |
+| Domain         |      |        |
+| Application    |      |        |
+| Infrastructure |      |        |
+| Presentation   |      |        |
+| Database       |      |        |
+| API/Event      |      |        |
+| AWS/Terraform  |      |        |
+| Observability  |      |        |
 
-## Interfaces and Contracts
+## インターフェースと契約
 
 - <追加・変更するport、DTO、API、event、AI schema>
 
-## Data Migration
+## データMigration
 
 - Expand:
 - Backfill:
 - Switch:
 - Contract:
-- Rollback/forward fix:
+- ロールバック/前方修正:
 
 N/Aの場合は理由を記載する。
 
-## Security Review
+## セキュリティレビュー
 
-- Authentication/authorization:
-- PII/secrets/logging:
-- Abuse controls:
+- 認証/認可:
+- 個人情報/Secret/ログ:
+- 悪用対策:
 
-## Test Plan
+## テスト計画
 
-| Requirement | Test level           | Planned test |
-| ----------- | -------------------- | ------------ |
-| <ID>        | Unit/Integration/E2E | <case>       |
+| 要件 | テスト種別           | 予定テスト |
+| ---- | -------------------- | ---------- |
+| <ID> | Unit/Integration/E2E | <case>     |
 
-## Rollout and Operations
+## 展開と運用
 
 - Feature Flag:
-- Deployment order:
-- Metrics/alarms:
-- Rollback trigger and procedure:
+- デプロイ順序:
+- メトリクス/アラーム:
+- ロールバック条件と手順:
 
-## Task Breakdown
+## タスク分解
 
 1. <独立してレビュー・検証できるtask>
 2. <task>
 
 各taskは「設計確認 → 実装 → テスト → セルフレビュー」を含む。
 
-## Dependencies
+## 依存関係
 
 - <先行task、外部権限、provider、ADR>
 
-## Risks
+## リスク
 
-| Risk | Mitigation | Owner |
-| ---- | ---------- | ----- |
-|      |            |       |
+| リスク | 対策 | 責任者 |
+| ------ | ---- | ------ |
+|        |      |        |
 
-## Start Conditions
+## 着手条件
 
 - [ ] Spec StatusがReady
 - [ ] 必須ADRがAccepted
