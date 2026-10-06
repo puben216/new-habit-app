@@ -47,6 +47,7 @@ P0-03（AI provider）と P0-05（メールの region/ドメイン確定）は A
 
 - Rate limit の具体的な閾値（endpoint / actor / IP 別のリクエスト数と時間窓）
 - 通知の quiet hours のデフォルト値（開始・終了時刻、タイムゾーン基準）
+  - T-401 の暫定既定値: quiet hours `22:00`〜`07:00`（ユーザーの通知 timezone のローカル時刻、区間は `[開始, 終了)`）、既定の送信時刻 `20:00`（Domain の定数 `DEFAULT_QUIET_HOURS`/`DEFAULT_REMINDER_LOCAL_TIME` のみ。DB には焼き込まない。[notification-preferences.md](specs/notification-preferences.md) NPF-INV-007）
 - `habit_entries.note` 等、自由記述系フィールドの文字数上限
   - T-104 の暫定既定値: 習慣の `name` 100 文字、`purpose`/`cue`/`minimumAction`/`replacementAction` 各 500 文字、制御文字不可（契約 schema の定数のみ。確定時に更新する。[habit-api.md](specs/habit-api.md) HAPI-INV-005）
   - T-203 の暫定既定値: デイリーチェックインの `note` 1000 文字、改行・タブ以外の制御文字不可（契約 schema の定数 `CHECK_IN_NOTE_MAX_LENGTH` のみ。DB には焼き込まない。[daily-check-in.md](specs/daily-check-in.md) DCI-INV-004）

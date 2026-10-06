@@ -74,6 +74,15 @@ export {
 export type { ProfileResponse, UpdateProfileRequest } from "./profile";
 
 export {
+  notificationSettingsResponseSchema,
+  upsertNotificationSettingsRequestSchema,
+} from "./notification-settings";
+export type {
+  NotificationSettingsResponse,
+  UpsertNotificationSettingsRequest,
+} from "./notification-settings";
+
+export {
   AI_FREE_TEXT_MAX_LENGTH,
   AI_PURPOSES,
   AI_SCHEMA_VERSION,

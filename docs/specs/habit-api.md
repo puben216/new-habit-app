@@ -31,7 +31,7 @@ Status: Ready
 - `HabitEntry`(記録)、`GET /schedule/today` 等の tracking(T-201 以降)。
 - `Idempotency-Key`(POST の二重送信対策)。`idempotency_keys` テーブルと共通処理は別タスクで扱う。二重送信時は習慣が重複作成されうる(受容リスク 参照)。
 - Rate limit(具体的閾値が `docs/10` P2 で未決、かつ共通基盤が未実装)。
-- `localTime`(リマインド用の実施予定時刻)。Domain の `ScheduleVersion` が `localTime` を持たず、用途は通知(T-401)であるため、本タスクの API は受け付けない(未知キーとして 422)。DB 列 `habit_schedule_versions.local_time` は変更しない。
+- `localTime`(リマインド用の実施予定時刻)。Domain の `ScheduleVersion` が `localTime` を持たず、用途は習慣ごとの通知であり、T-401 はユーザー単位の設定のみを扱うため、本タスクの API は受け付けない(未知キーとして 422)。DB 列 `habit_schedule_versions.local_time` は変更しない。
 - 習慣の物理削除、ユーザー削除に伴う削除フロー(T-404)。
 - Playwright E2E(本リポジトリは未導入。`AGENTS.md` の方針どおり導入後に追加する)。
 - OpenAPI 文書の生成。本リポジトリには OpenAPI 生成基盤が未導入のため、runtime schema(`packages/contracts/src/habits.ts`)と本 Spec の API 節を契約の正本とする。生成基盤導入時にこの schema から導出する(ADR-009)。
@@ -266,7 +266,7 @@ Fake/Stub 方針: Application の unit test は in-memory fake repository を使
 実装をブロックしない事項(既定値を置いて進める):
 
 - **自由記述の文字数上限**(`docs/10` P2 で未決): HAPI-INV-005 の暫定値(name 100、他 500)を契約 schema にのみ置く。確定後に定数を更新し、必要なら Domain へ移す。
-- **`localTime`**: 本タスクでは受け付けない(対象外)。T-401(通知)着手時に Domain `ScheduleVersion` への追加とあわせて設計する。
+- **`localTime`**: 本タスクでは受け付けない(対象外)。習慣ごとの通知時刻は T-401 の対象外（T-401 はユーザー単位の設定のみ）であり、必要になった時点で別タスクとして Domain `ScheduleVersion` への追加とあわせて設計する。
 - **`effectiveFrom` の既定値**: クライアント指定を必須とした。T-102(timezone)完了後に「ユーザーのローカル今日」を既定にするかを再検討できる。
 - **過去日への `effectiveFrom`**: Domain は「既存のどの版よりも後」のみを許可する。「今日より前を拒否する」ポリシーは timezone と Clock が必要なため本タスクでは課さない(Domain の `changeSchedule` コメントが示す Application 層の将来課題)。
 - **reduce の `quantity` 意味論**(`docs/specs/habit-domain.md` の Open Question): 本タスクは `HabitEntry` を扱わないため影響しない。T-202 で解決済み(reduce は `quantity` を持たず `status` のみで判定。[habit-entry.md](habit-entry.md)、`docs/10` D-12)。

@@ -80,7 +80,7 @@
 
 `/habits` 系の正式な契約は [../specs/habit-api.md](specs/habit-api.md) の APIとイベント節と `packages/contracts/src/habits.ts` を正本とし、上記の例からの差分は次のとおり。
 
-- `schedule.effectiveFrom`（`YYYY-MM-DD`）を必須とする（サーバーがユーザーのローカル日付を推測しない）。`schedule.localTime` は受け付けない（T-401 で扱う）。
+- `schedule.effectiveFrom`（`YYYY-MM-DD`）を必須とする（サーバーがユーザーのローカル日付を推測しない）。`schedule.localTime` は受け付けない（習慣ごとの通知時刻は T-401 の対象外で、別タスクで扱う）。
 - 楽観ロックの `version` は `If-Match` ではなく PATCH/archive の request body で受け取る。不一致は `409`（`version_conflict`）、アーカイブ済みの更新は `409`（`habit_archived`）。
 - `GET /habits` は `status`（`active|archived`、既定 `active`）、`limit`（1〜100、既定 20）、`cursor` を受け付け、`{ items, nextCursor }` を返す。
 - 状態変更メソッドは `Origin` 検証と `Content-Type: application/json` を必須とする。`Idempotency-Key` と rate limit は未対応。
@@ -110,6 +110,14 @@
 - 応答は `{ date, timezone, overall: { last7Days, last30Days }, habits: [{ habit: { id, kind, name }, currentStreak, longestStreak, last7Days, last30Days }] }`。期間の集計は `{ from, to, scheduled, success, missed, skipped, pending, successRate }` で、`successRate` は `success / (success + missed)`（0〜1）、分母 0 は `null`。
 - 対象は active な習慣のみ。今日の未記録は `pending`（分母外）、過去の未記録は `missed`。`skipped` は分母から除外し、ストリークを切らず数えない。全体の成功率は合計件数から求める（習慣ごとの率の平均ではない）。
 - 読み取り専用。認証は `401`、user が存在しなければ `404`（`user_not_found`）。`Idempotency-Key` と rate limit は不要/未対応。
+
+`/notification-settings` の正式な契約は [../specs/notification-preferences.md](specs/notification-preferences.md) の API and Events 節と `packages/contracts/src/notification-settings.ts` を正本とし、上記の表からの差分は次のとおり。
+
+- ユーザー単位の設定のみ（習慣ごとの通知は対象外）。`GET` は未保存でも `200` で無効の既定値（`updatedAt: null`）を返す。
+- `PUT` の body は `{ enabled, localTime, quietHours?, timezone? }`。`enabled` と `localTime`（`HH:mm`）は必須。`quietHours` は省略で既定の `22:00`〜`07:00`、`null` で quiet hours なし、`timezone` は省略でプロフィールの timezone。`PUT` は全体の置換で、`enabled: false` が配信停止。
+- 有効（`enabled: true`）で送信時刻が quiet hours 内の場合は `422`（`reminder_time_in_quiet_hours`）。時刻・timezone・quiet hours の内容違反は `422`（`invalid_notification_setting`）。
+- 自然な冪等な置換のため `Idempotency-Key` は使わない。成功は常に `200`。状態変更の共通要件は `/habits` と同じ。rate limit は未対応。
+- メール内のワンクリック unsubscribe は T-402 で設計する。
 
 ## AI 境界
 

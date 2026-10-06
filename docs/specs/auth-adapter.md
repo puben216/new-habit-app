@@ -32,7 +32,7 @@ Status: Ready
 - Google/GitHub OAuth。当初「補助手段」として計画していたが、[ADR-001](../adr/ADR-001-authentication.md)(2026-09-16 改訂)により MVP スコープから外した。将来追加する場合は別途 Spec を起こす(email 重複判定などを再設計する必要がある)。
 - Admin role、admin 向け TOTP 2FA([ADR-001](../adr/ADR-001-authentication.md) は admin 向け管理画面自体が T-403 まで存在しないため、admin TOTP 2FA の実装は T-403 に含めると改訂済み)。
 - User/Profile の表示名・タイムゾーン・通知設定管理(T-102)。
-- 実 SES 送信統合、送信ドメイン確定(T-401、[ADR-005](../adr/ADR-005-email.md) follow-up)。本 Spec は「メールで届く」という振る舞いのみを要求し、配送実装は Plan/T-401 に委ねる。
+- 実 SES 送信統合、送信ドメイン確定(T-402。T-401 はメールを送らず設定の保存のみ。[ADR-005](../adr/ADR-005-email.md) follow-up)。本 Spec は「メールで届く」という振る舞いのみを要求し、配送実装は Plan/T-401 に委ねる。
 - Habit 等の業務リソースへの認可適用(T-104 以降が個別に `actor user ID` を用いて実装する)。
 - パスワード以外の認証要素(passkey 等)。
 - IP アドレス単位の rate limit(email 単位のみを MVP スコープとする。将来必要になれば別 Spec で扱う)。

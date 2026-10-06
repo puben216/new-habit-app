@@ -28,7 +28,7 @@ Status: Ready
 
 - `HabitEntry`(実施記録)の保存、today query、upsert、冪等性(T-202)。
 - reduce の `quantity` 意味論の確定。本 Spec の関数は `quantity` を扱わない(目標回数 `targetCount` を返すのみ)ため影響しない。T-202 着手前に確認する。
-- `local_time`(実行時刻)を伴う通知の時刻計算、DST の存在しない時刻・重複時刻の解決(T-401)。
+- `local_time`(実行時刻)を伴う通知の時刻計算、DST の存在しない時刻・重複時刻の解決(T-402。T-401 は時刻をローカル時刻のまま保存するだけ)。
 - ストリーク/成功率などの集計(T-204)。
 - Application 層の Clock port、ユーザー timezone の取得、API/DB。
 - ユーザーが timezone を変更した場合の過去記録の再解釈(下記「失敗・境界ケース」の方針のみ定める)。

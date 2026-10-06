@@ -151,7 +151,7 @@ Prisma（[ADR-002](adr/ADR-002-orm.md)）で初期 migration を実装した際�
 - 同一 `habit_id` のスケジュール有効期間重複は、`btree_gist` 拡張を用いた PostgreSQL の exclusion constraint（GiST）で DB レベルに強制した（本文の「exclusion constraint、またはトランザクション内検査」の前者を採用）。
 - `reduce` 習慣の `target_count = 1` 固定は `habits.kind` を跨ぐ検証が必要なため、DB constraint/trigger ではなく Application 層（T-104）で検証する。
 - `updated_at` は Prisma Client の `@updatedAt` に加え、DB 側にも `DEFAULT CURRENT_TIMESTAMP` と `BEFORE UPDATE` trigger を追加した。生 SQL や管理ツール経由の書き込みでも一貫させるため。
-- `notification_settings` / `notification_deliveries` は本文の記述が簡潔なため、T-004 では実装者判断で最小限の列（`habit_id` は nullable、`channel` は `email` 既定など）とした。詳細は T-401 着手時に見直す。
+- `notification_settings` / `notification_deliveries` は本文の記述が簡潔なため、T-004 では実装者判断で最小限の列（`habit_id` は nullable、`channel` は `email` 既定など）とした。`notification_settings` は T-401 で見直した（「実装時の補足（T-401）」参照）。`notification_deliveries` は T-402 で見直す。
 - ER 概要にある `coaching_suggestions` はテーブル定義が未記載のため、本 baseline には含めていない。T-304/T-305 で設計する。
 - `habit_entries.note` 等の自由記述の文字数上限は未決（[10-decisions-and-open-questions.md](10-decisions-and-open-questions.md) の P2 参照）のため、DB 側の CHECK は追加していない。
 
@@ -182,7 +182,7 @@ Habit repository/use case/API（[../specs/habit-api.md](specs/habit-api.md)、[.
 - 一覧の keyset は `(created_at desc, id desc)`（既存 index `habits_user_id_status_created_at_id_idx` に一致）。`habits.created_at` は DB の `now()`（マイクロ秒）ではなく Application の Clock（ミリ秒精度）を明示して書き込む。Prisma の `Date`（ミリ秒）との丸め差で keyset の比較がずれないようにするため。他 module が `habits` へ別経路で挿入する場合も同じ前提を守ること。
 - cursor は直前ページ最後の習慣の `public_id` と `status` のみを持ち、repository が actor 条件付きで `(created_at, id)` を引き直す。内部 PK・`user_id` を cursor に含めない。
 - `public_id` は Application が UUID を採番して明示的に挿入する（DB 既定の `gen_random_uuid()` は使用しない）。
-- `habit_schedule_versions` の更新は「既存行の `effective_to` 更新 → 新規行の insert」の順で行い、有効期間の exclusion constraint を一時的にも破らない。`local_time` 列は T-104 では読み書きしない（Domain が未対応。T-401 で扱う）。
+- `habit_schedule_versions` の更新は「既存行の `effective_to` 更新 → 新規行の insert」の順で行い、有効期間の exclusion constraint を一時的にも破らない。`local_time` 列は T-104 では読み書きしない（Domain が未対応。習慣ごとの通知時刻は T-401 の対象外で、別タスクで扱う）。
 
 ## 実装時の補足（T-202）
 
@@ -210,3 +210,14 @@ Statistics dashboard（[../specs/statistics-dashboard.md](specs/statistics-dashb
 - 既存の `habit_entries` を読むのみ。期間取得（`WHERE user_id = ? AND habit_date BETWEEN ? AND ?`）は `(user_id, habit_date desc, id desc)` index に一致する。習慣の `public_id` は JOIN（Prisma の `include`）で 1 回の取得にまとめる。
 - ストリークを遡る範囲は今日までの 366 日（`STREAK_LOOKBACK_DAYS`。`generateOccurrences` の範囲上限と同値）。取得量は最大「active 習慣数 × 366 件」。
 - 集計は SQL ではなく Domain の `calculateHabitStatistics` で行う（上記「集計定義」の方針どおり）。SQL 集計を追加する場合は同じ契約テストを通す。
+
+## 実装時の補足（T-401）
+
+Notification preferences（[../specs/notification-preferences.md](specs/notification-preferences.md)、[../plans/notification-preferences.md](plans/notification-preferences.md)）の実装時の追加決定。Migration は `20261004000000_t401_notification_settings_constraints`（expand のみ）。
+
+- 本タスクが扱うのはユーザー単位の設定（`habit_id IS NULL`）のみ。部分 unique index `notification_settings_user_default_uidx (user_id) WHERE habit_id IS NULL` で 1 ユーザー 1 行を保証し、upsert の `ON CONFLICT (user_id) WHERE habit_id IS NULL` の arbiter にもする。習慣ごとの行（`habit_id` 付き）はこの index の対象外で、本 API は読み書きしない。
+- CHECK を追加した: `channel = 'email'`、`(quiet_hours_start IS NULL) = (quiet_hours_end IS NULL)`、`quiet_hours_start <> quiet_hours_end`、`char_length(timezone) BETWEEN 1 AND 64`。Prisma DSL では部分 index・CHECK を表現できないため `schema.prisma` にはコメントのみを置く。
+- `local_time`・`quiet_hours_*` は `time`（timezone なし）で、`timezone` 列の IANA ID のローカル時刻として解釈する。UTC へ変換して保存しない（DST で意味が変わらないようにするため）。repository は `to_char(..., 'HH24:MI')` で文字列として読み書きし、Prisma の Date 変換を介さない。
+- 行がないユーザーは「通知無効」として扱い、`GET` は既定値を返すだけで行を作らない。`enabled` は DB 既定（`true`）に依存せず、upsert で常に明示して書く。配信停止も行を残したまま `enabled = false` にする（`local_time` 等を保持）。
+- 既定の送信時刻（20:00）と quiet hours（22:00〜07:00）は Domain の定数であり、DB には焼き込まない（P2 の暫定値）。
+- T-402 向けの走査用 index（`enabled = true` の設定を引く等）と `notification_deliveries` の見直しは T-402 で行う。

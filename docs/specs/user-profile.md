@@ -28,7 +28,7 @@ Status: Ready
 
 ## 対象外
 
-- 通知設定(`notification_settings`、UC-14)。機能要件 2 の「通知設定」は別 endpoint `/notification-settings` で扱い、T-401 系で設計する。
+- 通知設定(`notification_settings`、UC-14)。機能要件 2 の「通知設定」は別 endpoint `/notification-settings` で扱い、T-401 で設計・実装した（[notification-preferences.md](notification-preferences.md)）。
 - `DELETE /me`、`GET /me/export`(T-404)。
 - email 変更・表示、パスワード変更(再認証を伴う sensitive action。別 Spec)。
 - 週の開始曜日の既定値の最終決定(10-decisions-and-open-questions.md P1)。本 Spec は暫定既定値を置く(未決事項 参照)。
