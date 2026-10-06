@@ -134,6 +134,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 - 実装: UI 基盤(layout、共通コンポーネント、共通 error boundary)、`apps/web`の env 読み込みと validation、Docker Compose への Mailpit 追加(SMTP キャプチャ。アプリの DB とは独立)、Playwright 導入と`pnpm test:e2e`、fixture(架空データのみ)、CI(`pr-quality.yml`)への E2E 追加の要否判断
 - テスト: 空のページ・認証ガードの E2E smoke、keyboard/focus の基本確認。Mailpit からのメール取得 helper の動作確認
 - レビュー: Secret や個人データが fixture・trace・screenshot に残らないか。CI で fork PR に secret を渡さないか。`AGENTS.md`の`pnpm test:e2e`の記述を更新する
+- 設計: Feature Spec([web-ui-foundation.md](specs/web-ui-foundation.md))と Implementation Plan([web-ui-foundation.md](plans/web-ui-foundation.md))、[ADR-010](adr/ADR-010-web-ui-stack.md)を作成。CSS Modules + 自前の最小コンポーネント、型付き API client + TanStack Query、保護画面は`(app)` layout で DB session を検証(`middleware`/`proxy`は DB session を検証できないため不採用)、E2E は Playwright + Mailpit、CI は secret なしの独立 job と決定(D-14)
+- 実装: `apps/web`に UI 基盤(design token、Button/StateMessage/PageHeader/AppNav/SkipLink、`(public)`/`(app)` route group、`error.tsx`/`global-error.tsx`/`not-found.tsx`、`getServerEnv`)、型付き API client(path 検証、Problem Details 解釈、timeout/abort、`401`→`/login`)、Docker Compose の Mailpit、Playwright(`pnpm test:e2e`、E2E 専用 database の作り直し、`signUpAndSignIn`/Mailpit helper)、`pr-quality.yml`の`e2e` job を追加。`/login`と`/today`は暫定表示(T-212、T-215 が置き換える)。Migration・API 変更なし
+- テスト: Unit(API client、path 検証と retry 判定と token 抽出の性質テスト(fast-check)、ガード、コンポーネント、env、Mailpit helper)と E2E smoke(未認証 redirect、認証済み描画、skip link と Tab 順序/focus、404、landmark/`h1`)。変異テストは Stryker 未導入のため 23 件の手動変異で確認し、生存した 2 件(再試行ボタン未接続、空 token)に対するテストを追加して全件検出。敵対的審査で error/not-found に`h1`がない欠陥を発見し修正
 
 ### T-212 認証画面
 

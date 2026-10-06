@@ -22,6 +22,18 @@
 - [機能 Spec テンプレート](docs/templates/feature-spec.template.md)
 - [実装 Plan テンプレート](docs/templates/implementation-plan.template.md)
 
+## ローカル開発
+
+```text
+pnpm install
+pnpm db:up        # Postgres
+pnpm mail:up      # Mailpit(メール確認用。Web UI: http://localhost:8025)
+pnpm db:migrate:deploy
+pnpm --filter web dev
+```
+
+環境変数は`.env.example`を参考にリポジトリルートへ設定します。E2E(Playwright)は初回に`pnpm --filter web exec playwright install chromium`でブラウザを取得し、`pnpm test:e2e`で実行します。E2E専用database(`habit_app_e2e`)を作り直して実行するため、開発用databaseには影響しません。方式は[ADR-010](docs/adr/ADR-010-web-ui-stack.md)を参照してください。
+
 ## 設計原則
 
 - Domain / Application / Infrastructure / Presentation の依存方向を守る。

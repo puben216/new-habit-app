@@ -39,3 +39,7 @@ pnpm-debug.log*
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
+
+# Playwright
+test-results/
+playwright-report/
