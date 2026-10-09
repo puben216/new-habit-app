@@ -1,0 +1,7 @@
+# 値の例(実際の値は環境ごとに別ファイルで渡す。このファイルは例であり、実在の値や secret を書かない)。
+domain              = "mail.example.test"
+email_from          = "no-reply@mail.example.test"
+app_base_url        = "https://app.example.test"
+lambda_s3_bucket    = "example-artifacts-bucket"
+lambda_s3_key       = "notifications/example.zip"
+database_secret_arn = "arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:example-AbCdEf"

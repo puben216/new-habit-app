@@ -1,6 +1,6 @@
 # 通知のスケジュールと配送 Implementation Plan
 
-Status: In Progress
+Status: Done
 責任者: TBD
 最終更新: 2026-10-09
 Spec: [../specs/notification-delivery.md](../specs/notification-delivery.md)
