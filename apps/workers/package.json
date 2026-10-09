@@ -4,12 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --build tsconfig.json",
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@habit-app/domain": "workspace:*",
     "@habit-app/application": "workspace:*",
-    "@habit-app/infrastructure": "workspace:*"
+    "@habit-app/infrastructure": "workspace:*",
+    "@habit-app/config": "workspace:*",
+    "@habit-app/contracts": "workspace:*"
   }
 }

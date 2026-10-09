@@ -263,6 +263,12 @@ importers:
       '@habit-app/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@habit-app/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@habit-app/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@habit-app/domain':
         specifier: workspace:*
         version: link:../../packages/domain

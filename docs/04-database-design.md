@@ -230,3 +230,14 @@ Weekly review（[../specs/weekly-review.md](specs/weekly-review.md)、[../plans/
 - `week_start` は、作成時のプロフィールの `week_starts_on` に一致する週の開始日（ローカル `date`）。`UNIQUE(user_id, week_start)` が冪等作成の arbiter（`INSERT ... ON CONFLICT DO NOTHING`）で、一覧（`WHERE user_id = ? ORDER BY week_start DESC`）の index も兼ねる。`week_starts_on` を変更しても既存の行は変更しない。
 - `summary_json` は作成時に 1 回だけ書き込み、更新しない。`schemaVersion: 1` の形（`overall`、習慣ごとの件数、`checkIn`）で、読み出し時に契約 schema で検証する。形を変える場合は新しい `schemaVersion` を追加し、過去の version は書き換えない。自由記述（習慣の `purpose`/`cue`、チェックインのメモ）は含めない。
 - 確定・更新は `UPDATE ... WHERE public_id = ? AND user_id = ? AND status = 'draft'` の単一文で行い、`completed` を上書きしない（並行する確定は 1 件のみ成功する）。`timezone_snapshot` は作成時の timezone で、週の終了判定（「今日」）に使った値の記録。
+
+## 実装時の補足（T-303）
+
+AI queue pipeline（[../specs/ai-queue-pipeline.md](specs/ai-queue-pipeline.md)、[../plans/ai-queue-pipeline.md](plans/ai-queue-pipeline.md)）の実装時の追加決定。Migration は `20261009000000_t303_ai_job_constraints`（expand のみ。`ai_jobs`/`ai_job_attempts` は T-303 以前に書き込みがなく backfill 不要）。
+
+- 冪等キーの unique index `ai_jobs_idempotency_uidx (user_id, kind, subject_public_id, prompt_version, input_fingerprint)` を追加した。作成は `INSERT ... ON CONFLICT DO NOTHING` の単一文で、同じ入力の job は 1 件に収束する。`input_fingerprint` は `subjectId`（job ごとの AI 用 ID）を除いた入力の canonical JSON の SHA-256（hex）。
+- CHECK を追加した: `kind IN ('weekly_improvement','habit_design')`、`(status IN ('succeeded','fallback')) = (result_json IS NOT NULL)` かつ `result_json` は object、`status <> 'failed' OR failure_code IS NOT NULL`。`ai_job_attempts` は `attempt_no >= 1`、`outcome IN ('succeeded','fallback','failed','error')`、`latency_ms IS NULL OR latency_ms >= 0`。
+- `ai_jobs.status` の遷移は `queued → running → succeeded|fallback|failed` と、worker 失敗時の `running → queued`。claim は `UPDATE ... WHERE status = 'queued' OR (status = 'running' AND updated_at < now() - lease)` の単一文で、lease の判定は DB の時刻（`updated_at` は `set_updated_at` trigger が更新時に設定）。専用の lease 列は持たない。確定・解放は `WHERE status = 'running'` 付きで、終端状態を上書きしない。
+- `ai_job_attempts` は worker の 1 回の実行（claim 後の確定または解放）につき 1 行（`attempt_no` は job ごとの連番）。provider 内の再試行は `generateSafeCoaching` が行い、行にしない。`outcome`・`latency_ms`・`error_category`（fallbackReason / failureCode / `worker_error`）のみ記録し、prompt・入力・出力本文は記録しない。`input_tokens`/`output_tokens`/`estimated_cost`/`provider_request_id` は実 provider の導入時（ADR-003）に記録する。
+- `result_json` は `schemaVersion: 1` の構造化出力のみ（`source`、`output`、`contentSafety`、`fallbackReason`）。入力は保存しない。読み出し時に契約 schema で検証する。形を変える場合は新しい `schemaVersion` を追加する。
+- 保存期間・ユーザーによる削除は `docs/10` の P1 が未決のため未実装（`user_id` の `ON DELETE CASCADE` に従う）。

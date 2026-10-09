@@ -94,6 +94,7 @@ OIDC で GitHub Actions から AWS role を引き受け、長期 AWS key を保�
 - AI の権利保護 metric は reason code ごとの拒否・human review・fallback 件数だけを記録し、問題となった入力文・出力文そのものはログへ記録しない
 - Tracing: Next.js → DB/queue、Lambda → provider。OpenTelemetry は相関が不足した段階で導入し、まず requestId を一貫伝播
 - Alarm: 5xx 比率、認証異常、DLQ > 0、oldest message age、AI fallback 急増、DB CPU/storage/connections、synthetic login failure
+- AI queue の配備要件（T-303 → T-501、[specs/ai-queue-pipeline.md](specs/ai-queue-pipeline.md)）: SQS visibility timeout は Lambda timeout の 6 倍以上かつ `AI_JOB_LEASE_SECONDS`（300 秒）以下、`maxReceiveCount` は `AI_JOB_MAX_RECEIVE`（3）と一致、ReportBatchItemFailures 有効、reserved concurrency で DB 接続と provider を保護。DLQ に入るのは解釈できない message のみ（処理失敗は worker が `worker_exhausted` の fallback で確定して ack する）。`worker_exhausted` の急増と、`queued`/`running` のまま古い job の件数を alarm 対象にする。
 - Runbook: AI 障害、メール停止、DB 接続枯渇、migration failure、認証障害、削除要求失敗
 
 ## リリース・運用

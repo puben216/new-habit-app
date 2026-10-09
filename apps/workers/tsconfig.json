@@ -4,12 +4,25 @@
     "composite": true,
     "outDir": "dist",
     "rootDir": "src",
-    "declaration": true
+    "declaration": true,
+    "types": ["node"]
   },
   "include": ["src"],
   "references": [
-    { "path": "../../packages/domain" },
-    { "path": "../../packages/application" },
-    { "path": "../../packages/infrastructure" }
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../packages/contracts"
+    },
+    {
+      "path": "../../packages/domain"
+    },
+    {
+      "path": "../../packages/application"
+    },
+    {
+      "path": "../../packages/infrastructure"
+    }
   ]
 }
