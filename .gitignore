@@ -38,7 +38,10 @@ pnpm-debug.log*
 **/.terraform/*
 *.tfstate
 *.tfstate.*
-.terraform.lock.hcl
+# 機密を含みうる変数ファイルは commit しない(例は terraform.tfvars.example)。
+*.tfvars
+!*.tfvars.example
+# .terraform.lock.hcl は provider の版とハッシュを固定するため commit する(docs/07-infrastructure.md)。
 
 # Playwright
 test-results/

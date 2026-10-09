@@ -1,7 +1,8 @@
 name: PR Quality Gate
 
 # T-005 (docs/09-roadmap.md): PRのquality gate。
-# Standard/staging deploy、Terraformはまだ存在しないため対象外(T-501以降で追加)。
+# staging deployは存在しないため対象外(T-501以降で追加)。Terraformはfmt/validateのみ(T-402)。
+# plan/policy as code/tflintは認証情報と共通基盤が必要なためT-501で追加する。
 # E2E(T-211、ADR-010)はsecretを使わない独立jobで実行する。fork PRにもsecretを渡さない
 # (pull_requestイベントのみ。pull_request_targetは使わない)。
 on:
@@ -62,6 +63,32 @@ jobs:
       # 追加の `services:` Postgresブロックは不要(ローカルで動作確認済み)。
       - name: test:integration
         run: pnpm test:integration
+
+  # T-402: Terraform(infra/)のfmtとvalidate。AWS認証情報は使わず、backendにも接続しない
+  # (`init -backend=false`)。providerのダウンロードのみ外部通信が発生する。plan/applyはしない。
+  terraform:
+    name: terraform (fmt / validate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "1.15.8"
+          terraform_wrapper: false
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive infra
+
+      - name: terraform init (backend なし)
+        working-directory: infra/environments/dev
+        run: terraform init -backend=false -input=false
+
+      - name: terraform validate
+        working-directory: infra/environments/dev
+        run: terraform validate
 
   # T-211(ADR-010): Playwright E2E。quality jobとは独立させ、E2Eの不安定さがquality gateに影響しないようにする。
   # AUTH_SECRET等はapps/web/e2e/support/e2e-env.tsの公開してよいダミー値で、secretは参照しない。

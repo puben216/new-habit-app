@@ -273,6 +273,7 @@ Migration `t402_notification_delivery`(expand のみ。`notification_deliveries`
   - 誤送信: 宛先は送信直前にユーザー ID から取得し、設定から指定できない。opt-in を毎回再確認する。
   - queue の replay・重複: 終端状態の不変と claim で冪等。message に機微情報を載せない。
   - IAM: scheduler は queue 送信と DB のみ、worker は SES `SendEmail` と DB と Secrets 読み取りのみ、feedback は DB のみ。SES の `FromAddress`/identity を条件で絞る。
+- SES の bounce/complaint イベント(SNS → SQS `feedback` と DLQ)には宛先のメールアドレスが含まれる。consumer は message ID と種別だけを読み、ログに出さない。queue は SQS マネージドの暗号化(SSE)を有効にし、保持は通常 4 日・DLQ 14 日。
 - 個人情報の影響: 通知の送信と bounce の記録は個人データの処理。T-404 のエクスポート/削除の対象に配送行と suppression を含める(CASCADE)。
 
 ## AI要件
@@ -319,7 +320,8 @@ Fake/Stub 方針: Application の unit test は in-memory fake、固定 Clock、
 - **アドレス単位の suppression**: email 変更・再登録が実装された時点で、ユーザー単位からアドレス(ハッシュ)単位への拡張を検討する。SES の account-level suppression list は Terraform で有効にして backstop とする。
 - **配送行の保持期間・パージ**: 運用実績を見て決める(T-404 の削除フローには含まれる)。
 - **走査の効率化**: 有効な設定の全件走査。ユーザー数が増えたら timezone 別の絞り込みを検討する。
-- **Terraform の plan / policy-as-code / tflint**: 実行環境と AWS 認証情報がないため未実施。T-501 で CI に統合する。
+- **Terraform の plan / policy-as-code / tflint**: 実行環境と AWS 認証情報がないため未実施(`fmt` と `validate` は CI で実施)。T-501 で CI に統合する。
+- **SNS トピック(SES の通知先)の暗号化**: SES から発行するトピックには AWS マネージドキーを使えず CMK が必要なため、KMS を導入する共通基盤(T-501)で追加する。それまでは未暗号化(通知の内容は message ID と bounce の種別で、メールアドレスを含みうる点に注意)。
 
 ## 実装準備状況
 
