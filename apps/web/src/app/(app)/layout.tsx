@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 
 import { AppNav } from "@/components/app-nav";
+import { HeaderActions } from "@/components/header-actions";
+import { LogoutButton } from "@/components/logout-button";
 import { MainContent } from "@/components/main-content";
 import { SiteHeader } from "@/components/site-header";
 import { requireSession } from "@/server/require-session";
@@ -18,7 +20,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <SiteHeader>
-        <AppNav />
+        <HeaderActions>
+          <AppNav />
+          <LogoutButton />
+        </HeaderActions>
       </SiteHeader>
       <MainContent>{children}</MainContent>
     </>

@@ -1,9 +1,12 @@
 import { randomBytes, randomUUID } from "node:crypto";
 
-import { expect, type BrowserContext } from "@playwright/test";
+import { expect, type APIRequestContext, type BrowserContext } from "@playwright/test";
 
 import { E2E_BASE_URL } from "./e2e-env";
 import { extractTokenFromEmail, waitForEmail } from "./mailpit";
+
+export const VERIFY_EMAIL_SUBJECT = "メールアドレスの確認";
+export const PASSWORD_RESET_SUBJECT = "パスワードの再設定";
 
 export interface E2eUser {
   readonly email: string;
@@ -20,26 +23,33 @@ export function createFakeUser(): E2eUser {
 }
 
 /**
- * 本物の認証フロー(T-101)で session cookie を得る: signup → Mailpit から確認 token を取得 →
- * verify-email → Auth.js の credentials callback。DB への直接 insert や認証の迂回はしない。
- * cookie は `context` に保存され、以後その context の page が認証済みになる。
+ * 本物の認証フロー(T-101)で確認済みユーザーを作る: signup → Mailpit から確認 token を取得 → verify-email。
+ * DB への直接 insert や認証の迂回はしない。
  */
-export async function signUpAndSignIn(
-  context: BrowserContext,
+export async function registerVerifiedUser(
+  api: APIRequestContext,
   user: E2eUser = createFakeUser(),
 ): Promise<E2eUser> {
-  const api = context.request;
-
   const signup = await api.post(`${E2E_BASE_URL}/api/v1/auth/signup`, {
     data: { email: user.email, password: user.password },
   });
   expect(signup.status(), "signup").toBe(202);
 
-  const message = await waitForEmail({ to: user.email, subject: "メールアドレスの確認" });
+  const message = await waitForEmail({ to: user.email, subject: VERIFY_EMAIL_SUBJECT });
   const verify = await api.post(`${E2E_BASE_URL}/api/v1/auth/verify-email`, {
     data: { token: extractTokenFromEmail(message.text) },
   });
   expect(verify.status(), "verify-email").toBe(200);
+  return user;
+}
+
+/** signup と確認を終え、さらに Auth.js の credentials callback で session cookie を得る。 */
+export async function signUpAndSignIn(
+  context: BrowserContext,
+  user: E2eUser = createFakeUser(),
+): Promise<E2eUser> {
+  const api = context.request;
+  await registerVerifiedUser(api, user);
 
   const csrf = (await (await api.get(`${E2E_BASE_URL}/api/auth/csrf`)).json()) as {
     csrfToken: string;

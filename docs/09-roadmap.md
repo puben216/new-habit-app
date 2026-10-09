@@ -143,6 +143,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 - T-101 の API を利用: signup、メール確認、login、logout、password reset の画面
 - 設計: 失敗時の文言でアカウントの有無を漏らさない(enumeration 対策)、CSRF/Origin、session 切れの扱い
 - Unit: フォーム validation の表示。E2E: signup → verify(Mailpit から token 取得)→ login → logout、password reset の一連(T-101 の E2E を回収)
+- 設計: Feature Spec([auth-screens.md](specs/auth-screens.md))と Implementation Plan([auth-screens.md](plans/auth-screens.md))を作成。遷移元への復帰は`next`クエリ(許可リスト方式の`sanitizeNextPath`、現在の path は proxy が`x-pathname` header で渡す。proxy は認証判定をしない)、認証済みユーザーの`/login`等は`/today`へ redirect、メール確認はリンクを開くだけでは token を消費せずボタンで確認、login の失敗文言は 1 種類に統一、と決定
+- 実装: `/signup`・`/login`・`/verify-email`(確認/再送)・`/password-reset`・`/password-reset/confirm`、ログアウト、フォーム部品(`TextField`/`ErrorSummary`)、Auth.js 標準 endpoint の client(`lib/auth/auth-client.ts`。成否は DB session 由来の session 応答で判定)、全 route へのセキュリティヘッダー(`frame-ancestors`、`Referrer-Policy: no-referrer`)、session 失効時の`next`+案内。Migration・API 変更なし。`docker-compose.yml`に`POSTGRES_PORT`、E2E に`E2E_POSTGRES_PORT`を追加(5432 を他のプロジェクトが使っている環境向け)
+- テスト: Unit(`next-path`・`validation`・`auth-client`・`pathname-header`・ガード・フォーム部品。性質テストは fast-check)と E2E 16 件(一連の流れ、login 失敗 3 種の本文一致、登録済み email の signup、reset の一連とリンク再利用拒否、`next`/不正な`next`、認証済みの redirect、logout 後の旧 cookie 無効、入力エラーのフォーカスと`aria-*`、二重クリック、通信失敗、ヘッダー)。変異テストは Stryker 未導入のため手動 38 件で確認し、生存した変異は等価(後段の検査が同じ入力を拒否する多層防御、または型で到達不能)で、境界入力と`reason`の無視のテストを追加。敵対的審査は実装後の差分で実施
 
 ### T-213 オンボーディングとプロフィール画面
 
