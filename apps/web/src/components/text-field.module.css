@@ -34,3 +34,8 @@
   font-weight: 600;
   color: var(--color-danger);
 }
+
+.textarea {
+  padding: var(--space-2) var(--space-3);
+  resize: vertical;
+}
