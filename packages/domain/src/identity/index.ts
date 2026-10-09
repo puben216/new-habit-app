@@ -10,6 +10,7 @@ export {
   DEFAULT_TIMEZONE,
   DEFAULT_WEEK_STARTS_ON,
   createDefaultProfile,
+  hasCompletedOnboarding,
   validateProfileChanges,
 } from "./profile";
 export type { ProfileChanges, ProfileChangesInput, UserProfile } from "./profile";
