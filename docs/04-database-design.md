@@ -230,3 +230,15 @@ Weekly review（[../specs/weekly-review.md](specs/weekly-review.md)、[../plans/
 - `week_start` は、作成時のプロフィールの `week_starts_on` に一致する週の開始日（ローカル `date`）。`UNIQUE(user_id, week_start)` が冪等作成の arbiter（`INSERT ... ON CONFLICT DO NOTHING`）で、一覧（`WHERE user_id = ? ORDER BY week_start DESC`）の index も兼ねる。`week_starts_on` を変更しても既存の行は変更しない。
 - `summary_json` は作成時に 1 回だけ書き込み、更新しない。`schemaVersion: 1` の形（`overall`、習慣ごとの件数、`checkIn`）で、読み出し時に契約 schema で検証する。形を変える場合は新しい `schemaVersion` を追加し、過去の version は書き換えない。自由記述（習慣の `purpose`/`cue`、チェックインのメモ）は含めない。
 - 確定・更新は `UPDATE ... WHERE public_id = ? AND user_id = ? AND status = 'draft'` の単一文で行い、`completed` を上書きしない（並行する確定は 1 件のみ成功する）。`timezone_snapshot` は作成時の timezone で、週の終了判定（「今日」）に使った値の記録。
+
+## 実装時の補足（T-402）
+
+Notification scheduler/delivery（[../specs/notification-delivery.md](specs/notification-delivery.md)、[../plans/notification-delivery.md](plans/notification-delivery.md)）の実装時の追加決定。Migration は `20261009000000_t402_notification_delivery`（expand のみ）。
+
+- `notification_deliveries` に `user_id`（FK `ON DELETE CASCADE`）、`local_date`、`next_attempt_at`、`enqueued_at`、`locked_until` を追加した。T-402 以前にアプリが書いておらず既存行がない前提のため、NOT NULL 列を既定値なしで追加している。
+- 状態は `pending | sent | skipped | expired | suppressed | failed`（CHECK）。`attempt_count` は 0〜5（CHECK）。再試行は `pending` のまま `next_attempt_at` を進めることで表し、終端状態の行は更新しない（`UPDATE ... WHERE status = 'pending'`）。
+- 重複排除は既存の `deduplication_key` の UNIQUE（`reminder:{notification_settings.id}:{ローカル日}`）。作成は `INSERT ... SELECT FROM notification_settings ... ON CONFLICT (deduplication_key) DO NOTHING`。
+- claim は `status = 'pending'` かつ `next_attempt_at <= now` かつ lease 切れの行だけを対象に `attempt_count + 1` と `locked_until` を設定する単一 `UPDATE ... RETURNING`。並行ワーカーは排他される。
+- index: `(user_id)`（FK）、`(next_attempt_at) WHERE status = 'pending'`（再投入の走査）、`UNIQUE (provider_message_id) WHERE provider_message_id IS NOT NULL`（bounce/complaint の引き当て）、`notification_settings (id) WHERE enabled AND habit_id IS NULL AND channel = 'email'`（スケジューラの走査）。
+- `email_suppressions`（新設）: `user_id` UNIQUE（FK CASCADE）、`reason` は `bounce | complaint`（CHECK）。ユーザー単位で、アドレス単位への拡張は email 変更・再登録の実装時に検討する。
+- `scheduled_at` は送信枠の UTC の瞬間、`local_date` は枠のローカル日。保存値に email・習慣名は含めない。

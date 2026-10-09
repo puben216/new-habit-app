@@ -219,6 +219,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - window scan、dedupe、SES、bounce/complaint
 - Integration: 重複/期限切れ/retry/DLQ
+- 設計: Feature Spec([notification-delivery.md](specs/notification-delivery.md))と Implementation Plan([notification-delivery.md](plans/notification-delivery.md))を作成。5 分間隔のスケジューラが有効な設定を走査して配送を `pending` で作り(`(設定, ローカル日)` の dedupe)、SQS 経由のワーカーが claim・判定・送信する。許容遅延 60 分、再試行は DB 上の状態(最大 5 回、exponential backoff + full jitter)、予期しない例外は SQS の redrive で DLQ へ。当日の予定がすべて記録済みなら送らず、本文は個人情報を含まない定型文。メール内の署名付きリンク(RFC 8058)でワンクリック配信停止、Permanent bounce/complaint は `email_suppressions` で永久停止と決定。差分が大きいため 2 本の PR(PR-A: コア、PR-B: AWS 接続・Lambda・Terraform)に分ける
+- 実装(PR-A): Domain `resolveReminderSlot`(DST の gap/fall-back を解決)・配送の定数と判定、Application `scheduleDueRemindersUseCase`/`deliverReminderUseCase`/`handleEmailFeedbackUseCase`/`unsubscribeUseCase` と各 port、tracking の公開 API `hasUnrecordedScheduledHabitsUseCase`、Infrastructure の Prisma repository 群と HMAC 署名 token、`GET/POST /api/v1/notification-unsubscribe`。Migration は列・CHECK・index・`email_suppressions` の追加のみ(expand)
+- テスト(PR-A): Unit(スロット変換の DST 遷移日を全分で検証するプロパティテスト、判定順序、再試行、token の改ざん検知)と Integration(実 PostgreSQL: dedupe、並行 claim 6 件で 1 回、終端の不変、CHECK、CASCADE、fresh と upgrade の Migration)を追加。E2E は Playwright 未導入のため対象外。SES/SQS adapter・Lambda・Terraform は PR-B
 
 ### T-403 Minimal admin
 
