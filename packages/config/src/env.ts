@@ -6,7 +6,7 @@ const envSchema = z
     DATABASE_URL: z.string().url(),
     // Auth.js JWT署名鍵(docs/plans/auth-adapter.md Rollout and Operations、2026-09-22改訂)。
     AUTH_SECRET: z.string().min(32),
-    // EmailSenderPortの実装選択。本番でsmtpは許可しない(認証メールのSES送信は未実装。T-402はリマインド通知のSES送信のみで、認証メールは別タスク)。
+    // EmailSenderPortの実装選択。本番でsmtpは許可しない(認証メールのSES送信は未実装。T-402はリマインド通知のSES送信のみで、認証メールはT-405)。
     AUTH_EMAIL_SENDER: z.enum(["smtp", "ses"]).default("smtp"),
     SMTP_HOST: z.string().default("localhost"),
     SMTP_PORT: z.coerce.number().int().positive().default(1025),

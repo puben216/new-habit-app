@@ -72,7 +72,7 @@ DB に実体を持つ点は当初方針(ADR-001 の「DB session」要求)と変
 - `EmailSenderPort` の実装は環境ごとに差し替える(詳細は 展開と運用 節):
   - `InMemoryEmailSender`(Unit/Integration Test 用の fake。プロセス内メモリに保持し、テストコードから直接参照する。DB・ログのいずれにも書き込まない)。
   - `SmtpEmailSender`(dev/E2E 用。ローカルの Mailpit(SMTP キャプチャツール)へ実際に SMTP 送信する)。
-  - `SesEmailSender`(本番用。未実装。T-402 はリマインド通知の SES 送信のみで、認証メール(確認・パスワード再設定)の SES 送信は別タスクで扱う)。
+  - `SesEmailSender`(本番用。未実装。T-402 はリマインド通知の SES 送信のみで、認証メール(確認・パスワード再設定)の SES 送信は [T-405](../09-roadmap.md) で扱う)。
 - Auth.js `authOptions`(Credentials provider 設定、`session: { strategy: "jwt" }`、`jwt`/`session` callback と `events.signOut` による自前 DB session 管理。詳細は Approach 節参照)。
 
 `apps/web`(追加):

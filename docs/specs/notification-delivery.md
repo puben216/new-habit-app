@@ -36,7 +36,7 @@ T-401 で保存された通知設定(opt-in、送信時刻、quiet hours、timez
 - network/RDS/ECS/KMS 等の共通基盤(T-501)、本番環境(T-502)、デプロイ pipeline・Lambda の成果物ビルド/昇格(T-503)、`terraform apply`、実際の SES 送信ドメインの取得・検証(別途。ADR-005)。
 - SES の account-level suppression list の運用手順、soft bounce の統計、送信量の上限制御、Rate limit(P2 未決)。
 - Admin 画面での配送失敗確認(T-403)。本タスクは配送結果を DB に残すところまで。
-- 認証メール(email 確認・パスワード再設定)の SES 送信。`EmailSenderPort`(auth)の SES 実装は本 Spec の対象外で、本番で認証メールを送るには別タスクが必要(未割当。Open Questions 参照)。
+- 認証メール(email 確認・パスワード再設定)の SES 送信。`EmailSenderPort`(auth)の SES 実装は本 Spec の対象外で、本番で認証メールを送るには [T-405](../09-roadmap.md) が必要(Open Questions 参照)。
 - アドレス単位の suppression(メールアドレス変更・再登録が存在しないため user 単位。未決事項参照)。
 
 ## アクターと前提条件
@@ -315,7 +315,7 @@ Fake/Stub 方針: Application の unit test は in-memory fake、固定 Clock、
 
 - **許容遅延 60 分、lease 5 分、再投入 10 分、スケジューラ間隔 5 分、最大試行 5 回、backoff 上限 15 分**: 暫定値。運用実績で調整する(定数のみ)。
 - **SES の送信ドメイン・region・sandbox 解除**: [ADR-005](../adr/ADR-005-email.md) の follow-up。コードは設定(`EMAIL_FROM`、region)で切り替え、検証は sandbox の verified address で行う。ドメイン確定まで本番送信はしない。
-- **認証メールの SES 実装**: T-101 は本番で `AUTH_EMAIL_SENDER=smtp` を禁止しているため、本番公開前に認証メール用の SES adapter が必要。T-402 の SES adapter と設定(identity、configuration set)を再利用できるが、担当タスクが未割当（ロードマップへの追加を提案する）。
+- **認証メールの SES 実装**: T-101 は本番で `AUTH_EMAIL_SENDER=smtp` を禁止しているため、本番公開前に認証メール用の SES adapter が必要。T-402 の SES adapter と設定(identity、configuration set)を再利用できるが、[T-405](../09-roadmap.md) で扱う（T-502 の前提）。
 - **署名鍵のローテーション**: token に版数 `v1` を持つ。複数鍵の同時許容は鍵を替える必要が出たときに設計する。
 - **アドレス単位の suppression**: email 変更・再登録が実装された時点で、ユーザー単位からアドレス(ハッシュ)単位への拡張を検討する。SES の account-level suppression list は Terraform で有効にして backstop とする。
 - **配送行の保持期間・パージ**: 運用実績を見て決める(T-404 の削除フローには含まれる)。

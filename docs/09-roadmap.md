@@ -244,6 +244,14 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 - 再認証、async export、猶予期間、cascade/provider cleanup
 - Integration/E2E: 他人 export 拒否、削除完了
 
+### T-405 Auth email via SES
+
+- 認証メール(email 確認・パスワード再設定)の本番送信。`EmailSenderPort`(auth)の SES 実装 `SesAuthEmailSender` を追加し、`AUTH_EMAIL_SENDER=ses` を本番で使えるようにする(T-101 は本番で `smtp` を禁止している)
+- T-402 の SES adapter・identity・configuration set・Terraform モジュールを再利用する。差分は、認証メールが取引メールであること(通知の suppression/配信停止の対象にするか、bounce/complaint の扱い、`List-Unsubscribe` を付けないこと)、web(ECS)側の送信権限と署名、token を URL に含むメールのログ・保持の扱い
+- Unit/Integration: fake HTTP server で timeout/429/5xx/永続エラー、本文に token が含まれてもログに出ない、enumeration を起こさない応答の維持(AUTH-INV-002)。E2E: ローカルは Mailpit のまま(本番は SES)
+- 依存: T-402(SES 基盤)、ADR-005(送信ドメインの確定)、T-501(ECS task role への SES 権限)。T-502(本番基盤)・T-505(限定 beta)の前提
+- Exit: 本番相当の環境(staging、SES sandbox の verified address)で signup → email 確認 → password reset が通る
+
 ## Phase 5: Production readiness
 
 ### T-501 Terraform dev/staging
@@ -255,6 +263,7 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - account separation、Multi-AZ、backup/PITR、WAF、alarms
 - Test: restore drill、failover/runbook rehearsal
+- 前提: T-405(認証メールの SES 送信)。これが無いと本番で signup の確認メールが送れない
 
 ### T-503 Deployment pipeline
 
