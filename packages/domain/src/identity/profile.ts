@@ -28,6 +28,14 @@ export const DEFAULT_TIMEZONE = "Asia/Tokyo";
 export const DEFAULT_LOCALE: Locale = "ja";
 export const DEFAULT_WEEK_STARTS_ON: WeekStartsOn = 1;
 
+/**
+ * オンボーディング完了の判定(docs/specs/profile-screens.md PFS-001、PROF-006)。
+ * 表示名が設定済み(null でない)ことを完了とする。判定の定義はここ 1 箇所に置く。
+ */
+export function hasCompletedOnboarding(profile: Pick<UserProfile, "displayName">): boolean {
+  return profile.displayName !== null;
+}
+
 export function createDefaultProfile(): UserProfile {
   return {
     displayName: null,

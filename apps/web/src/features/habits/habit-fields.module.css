@@ -1,0 +1,39 @@
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.legend,
+.subLegend {
+  padding: 0 var(--space-2);
+  font-weight: 700;
+}
+
+.subLegend {
+  margin: 0;
+  padding: 0;
+}
+
+.days {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target-size);
+}
+
+.error {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-danger);
+}

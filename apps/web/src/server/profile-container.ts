@@ -1,5 +1,5 @@
 import { getServerEnv } from "./env";
-import { getMyProfile, updateMyProfile } from "@habit-app/application";
+import { getMyProfile, updateMyProfile, type ProfileView } from "@habit-app/application";
 import { createPrismaProfileRepository } from "@habit-app/infrastructure";
 
 import { getAuthContainer } from "./auth-container";
@@ -28,4 +28,14 @@ let handlersPromise: Promise<ProfileHandlers> | undefined;
 export function getProfileHandlers(): Promise<ProfileHandlers> {
   handlersPromise ??= buildProfileHandlers();
   return handlersPromise;
+}
+
+/**
+ * Server Component 用。actor 自身のプロフィールを取得する(未作成なら既定値で遅延作成。PROF-001)。
+ * オンボーディング完了の判定(layout)に使う。
+ */
+export async function getProfileForActor(userId: string): Promise<ProfileView> {
+  const { prisma } = await getAuthContainer();
+  const profileRepository = createPrismaProfileRepository(prisma);
+  return getMyProfile({ profileRepository }, { userId });
 }

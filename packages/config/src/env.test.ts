@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseEnv, parseWorkerEnv } from "./env";
+import { parseEnv } from "./env";
 
 const AUTH_SECRET = "a".repeat(32);
 
@@ -198,40 +198,5 @@ describe("parseEnv", () => {
       const env = parseEnv({ ...base, NODE_ENV: "development", AI_PUBLICATION_ENABLED: "true" });
       expect(env.AI_PUBLICATION_ENABLED).toBe(true);
     });
-  });
-});
-
-describe("parseWorkerEnv(T-303)", () => {
-  const base = { DATABASE_URL: "postgresql://user:pass@localhost:5432/db" };
-
-  it("DATABASE_URL だけで起動でき、認証・メールの Secret を要求しない(既定は公開無効)", () => {
-    expect(parseWorkerEnv({ ...base, NODE_ENV: "test" })).toEqual({
-      NODE_ENV: "test",
-      DATABASE_URL: base.DATABASE_URL,
-      AI_PROVIDER: "fake",
-      AI_PUBLICATION_ENABLED: false,
-    });
-  });
-
-  it("DATABASE_URL の欠落・不正は拒否する", () => {
-    expect(() => parseWorkerEnv({ NODE_ENV: "test" })).toThrow(/DATABASE_URL/);
-    expect(() => parseWorkerEnv({ NODE_ENV: "test", DATABASE_URL: "x" })).toThrow(/DATABASE_URL/);
-  });
-
-  it("AI_PUBLICATION_ENABLED は true / false のみ", () => {
-    expect(
-      parseWorkerEnv({ ...base, NODE_ENV: "test", AI_PUBLICATION_ENABLED: "true" })
-        .AI_PUBLICATION_ENABLED,
-    ).toBe(true);
-    expect(() => parseWorkerEnv({ ...base, AI_PUBLICATION_ENABLED: "1" })).toThrow(
-      /AI_PUBLICATION_ENABLED/,
-    );
-  });
-
-  it("本番で fake provider のまま公開を有効にすることは拒否し、公開無効なら許可する", () => {
-    expect(() =>
-      parseWorkerEnv({ ...base, NODE_ENV: "production", AI_PUBLICATION_ENABLED: "true" }),
-    ).toThrow(/AI_PROVIDER/);
-    expect(parseWorkerEnv({ ...base, NODE_ENV: "production" }).AI_PUBLICATION_ENABLED).toBe(false);
   });
 });

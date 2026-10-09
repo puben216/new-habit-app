@@ -151,11 +151,17 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - T-102 の`GET/PATCH /me`を利用: 初回の timezone・表示名の設定、プロフィール編集
 - E2E: onboarding profile(T-102 の E2E を回収)。timezone の不正値、他ユーザーの情報が見えないこと
+- 設計: Feature Spec([profile-screens.md](specs/profile-screens.md))と Implementation Plan([profile-screens.md](plans/profile-screens.md))を作成。オンボーディング完了は`displayName`が`null`でないこと(Application の`hasCompletedOnboarding`に一元化)、未完了は`(app)/(onboarded)` layout が`/onboarding`へ誘導、`locale`は UI が日本語のみのため編集 UI を出さない、と決定
+- 実装: `/onboarding`・`/profile`(表示名、タイムゾーン選択、週の開始曜日)、`SelectField`、ブラウザのタイムゾーンを初期提案、ナビゲーションにプロフィール追加。Migration・API 変更なし。`/today`は`(onboarded)`配下へ移動(URL は不変)
+- テスト: Unit(判定関数、ガード、選択肢構築・表示名検証の性質テスト、固定文言)と E2E 8 件(誘導、未完了/完了済みの redirect、編集の永続化、入力エラー、server 拒否の固定文言、HTML 文字列、2 ユーザーの分離、未認証)。手動変異 13 件を全件検出。E2E helper は既定でオンボーディングまで済ませる
 
 ### T-214 習慣管理画面
 
 - T-104 の`/api/v1/habits`を利用: 一覧、作成(build/reduce)、スケジュール編集、アーカイブ、更新競合(409)時の再読み込み導線
 - E2E: build/reduce の CRUD(T-104 の E2E を回収)
+- 設計: Feature Spec([habit-screens.md](specs/habit-screens.md))と Implementation Plan([habit-screens.md](plans/habit-screens.md))を作成。「今日」(適用開始日の既定)はプロフィールの timezone から client が算出、スケジュール変更は適用開始日を指定して新しい版を追加(遡及は server の`422`を固定文言で表示)、競合(409)は入力を保持したまま「最新の内容を読み込む」で最新へ置換、`version`は取得時点の値を必ず送る、と決定
+- 実装: `/habits`(進行中/アーカイブ済み、さらに表示)・`/habits/new`・`/habits/[habitId]`(編集、スケジュール履歴、2 段階のアーカイブ)、型付き client(`lib/habits`)、nav に「習慣」。reduce は回数欄を出さず(1 固定)代わりの行動を入力。Migration・API 変更なし
+- テスト: Unit(日付算出・フォーム検証・update body・エラー分類。fast-check の性質テスト)と E2E 12 件(build/reduce 作成、入力エラー、編集、遡及拒否と翌日開始の追加、2 タブの競合、アーカイブ、他ユーザーの分離と UUID でない ID、HTML 文字列、二重クリック、ページング、未認証)。手動変異 18 件を全件検出(生存 1 件にテストを追加)
 
 ### T-215 今日の記録とチェックイン画面
 
@@ -228,6 +234,8 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 - 設計: Feature Spec([notification-delivery.md](specs/notification-delivery.md))と Implementation Plan([notification-delivery.md](plans/notification-delivery.md))を作成。5 分間隔のスケジューラが有効な設定を走査して配送を `pending` で作り(`(設定, ローカル日)` の dedupe)、SQS 経由のワーカーが claim・判定・送信する。許容遅延 60 分、再試行は DB 上の状態(最大 5 回、exponential backoff + full jitter)、予期しない例外は SQS の redrive で DLQ へ。当日の予定がすべて記録済みなら送らず、本文は個人情報を含まない定型文。メール内の署名付きリンク(RFC 8058)でワンクリック配信停止、Permanent bounce/complaint は `email_suppressions` で永久停止と決定。差分が大きいため 2 本の PR(PR-A: コア、PR-B: AWS 接続・Lambda・Terraform)に分ける
 - 実装(PR-A): Domain `resolveReminderSlot`(DST の gap/fall-back を解決)・配送の定数と判定、Application `scheduleDueRemindersUseCase`/`deliverReminderUseCase`/`handleEmailFeedbackUseCase`/`unsubscribeUseCase` と各 port、tracking の公開 API `hasUnrecordedScheduledHabitsUseCase`、Infrastructure の Prisma repository 群と HMAC 署名 token、`GET/POST /api/v1/notification-unsubscribe`。Migration は列・CHECK・index・`email_suppressions` の追加のみ(expand)
 - テスト(PR-A): Unit(スロット変換の DST 遷移日を全分で検証するプロパティテスト、判定順序、再試行、token の改ざん検知)と Integration(実 PostgreSQL: dedupe、並行 claim 6 件で 1 回、終端の不変、CHECK、CASCADE、fresh と upgrade の Migration)を追加。E2E は Playwright 未導入のため対象外。SES/SQS adapter・Lambda・Terraform は PR-B
+- 実装(PR-B): Infrastructure の SES adapter(`SesReminderSender`。エラーを transient/permanent に分類、timeout は `AbortSignal`、SDK の再試行は無効)・SQS producer(10 件ごとに batch、部分失敗は未投入として返す)・Secrets Manager reader(キャッシュ、値・ARN をエラーに含めない)、`@habit-app/infrastructure/worker`(Auth.js を含まない Lambda 用の入口)、`packages/config` の `parseWorkerEnv`、`apps/workers` の Lambda handler 3 本(scheduler / delivery / feedback。SQS の `batchItemFailures`、不正 message は破棄、件数のみのログ、Lambda ごとに必要な設定・権限だけを構築)。Terraform は `infra/modules/email`(SES identity・DKIM・configuration set・bounce/complaint 用 SNS)、`infra/modules/queue-worker`(SQS + DLQ、Lambda、最小権限 IAM、EventBridge Scheduler、アラーム、署名鍵 secret の器)、`infra/environments/dev`(最小構成)。`.terraform.lock.hcl` を commit 対象にし、CI に `terraform fmt -check`/`validate` の job を追加。ADR-011 と Runbook(`docs/runbooks/notification-delivery.md`)を追加
+- テスト(PR-B): fake HTTP server(SES: 200/429/5xx/4xx/timeout/切断/ID なし応答とヘッダー・本文、SQS: batch 分割/部分失敗/障害、Secrets: キャッシュ/失敗/timeout)、Lambda handler(部分失敗、不正 message の破棄、Feature Flag、ログに個人情報を出さない)、composition root の結合(実 PostgreSQL + fake の SES/SQS で scheduler → delivery → feedback、重複しない)。Terraform は `fmt`/`validate` のみ。`plan`・policy as code・tflint は認証情報と共通基盤が必要なため T-501 で実施
 
 ### T-403 Minimal admin
 
@@ -238,6 +246,14 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - 再認証、async export、猶予期間、cascade/provider cleanup
 - Integration/E2E: 他人 export 拒否、削除完了
+
+### T-405 Auth email via SES
+
+- 認証メール(email 確認・パスワード再設定)の本番送信。`EmailSenderPort`(auth)の SES 実装 `SesAuthEmailSender` を追加し、`AUTH_EMAIL_SENDER=ses` を本番で使えるようにする(T-101 は本番で `smtp` を禁止している)
+- T-402 の SES adapter・identity・configuration set・Terraform モジュールを再利用する。差分は、認証メールが取引メールであること(通知の suppression/配信停止の対象にするか、bounce/complaint の扱い、`List-Unsubscribe` を付けないこと)、web(ECS)側の送信権限と署名、token を URL に含むメールのログ・保持の扱い
+- Unit/Integration: fake HTTP server で timeout/429/5xx/永続エラー、本文に token が含まれてもログに出ない、enumeration を起こさない応答の維持(AUTH-INV-002)。E2E: ローカルは Mailpit のまま(本番は SES)
+- 依存: T-402(SES 基盤)、ADR-005(送信ドメインの確定)、T-501(ECS task role への SES 権限)。T-502(本番基盤)・T-505(限定 beta)の前提
+- Exit: 本番相当の環境(staging、SES sandbox の verified address)で signup → email 確認 → password reset が通る
 
 ## Phase 5: Production readiness
 
@@ -250,6 +266,7 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - account separation、Multi-AZ、backup/PITR、WAF、alarms
 - Test: restore drill、failover/runbook rehearsal
+- 前提: T-405(認証メールの SES 送信)。これが無いと本番で signup の確認メールが送れない
 
 ### T-503 Deployment pipeline
 

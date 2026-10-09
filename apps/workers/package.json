@@ -8,10 +8,14 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@habit-app/domain": "workspace:*",
     "@habit-app/application": "workspace:*",
-    "@habit-app/infrastructure": "workspace:*",
     "@habit-app/config": "workspace:*",
-    "@habit-app/contracts": "workspace:*"
+    "@habit-app/contracts": "workspace:*",
+    "@habit-app/domain": "workspace:*",
+    "@habit-app/infrastructure": "workspace:*"
+  },
+  "devDependencies": {
+    "@habit-app/test-support": "workspace:*",
+    "@testcontainers/postgresql": "12.2.0"
   }
 }
