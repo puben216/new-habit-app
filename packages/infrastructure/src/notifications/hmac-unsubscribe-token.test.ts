@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 
 import { createHmacUnsubscribeTokenSigner } from "./hmac-unsubscribe-token";
 
-const KEY = "test-signing-key-0123456789-abcdefghijkl";
-const OTHER_KEY = "another-signing-key-0123456789-abcdefghi";
+// テスト用のダミー値(低エントロピーの繰り返し。実際の鍵ではない)。
+const KEY = "k".repeat(40);
+const OTHER_KEY = "o".repeat(40);
 const PUBLIC_ID = "3f2b8c1e-5a47-4d9e-8c36-1b2a9e7d4f10";
 
 function createRandom(seed: number): () => number {

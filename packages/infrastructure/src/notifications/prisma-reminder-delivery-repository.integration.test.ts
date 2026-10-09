@@ -32,7 +32,8 @@ const T402_MIGRATION = "20261009000000_t402_notification_delivery";
 // 東京 2026-01-15 08:02(送信枠 08:00 の 2 分後)
 const NOW = new Date("2026-01-14T23:02:00.000Z");
 const SLOT = new Date("2026-01-14T23:00:00.000Z");
-const SIGNING_KEY = "integration-signing-key-0123456789-abcdef";
+// テスト用のダミー値(低エントロピーの繰り返し。実際の鍵ではない)。
+const SIGNING_KEY = "s".repeat(40);
 
 describe("通知の配送 repository 群(T-402)", () => {
   let container: StartedPostgreSqlContainer;
