@@ -1,0 +1,17 @@
+.summary {
+  padding: var(--space-4);
+  border: 2px solid var(--color-danger);
+  border-radius: var(--radius);
+  background: var(--color-danger-bg);
+}
+
+.title {
+  margin: 0 0 var(--space-2);
+  font-weight: 700;
+  color: var(--color-danger);
+}
+
+.list {
+  margin: 0;
+  padding-left: var(--space-6);
+}
