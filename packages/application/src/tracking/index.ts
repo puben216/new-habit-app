@@ -2,11 +2,16 @@ export type { HabitEntryRecord, HabitEntryRepositoryPort } from "./ports";
 export type { DailyCheckInRecord, DailyCheckInRepositoryPort } from "./check-in-ports";
 export {
   CheckInDateOutOfRangeError,
+  CorruptedWeeklyReviewError,
   DailyCheckInNotFoundError,
   EntryDateOutOfRangeError,
   HabitNotScheduledError,
+  InvalidWeeklyReviewCursorError,
+  ReviewWeekNotAllowedError,
   TrackingApplicationError,
   UserNotFoundError,
+  WeeklyReviewAlreadyCompletedError,
+  WeeklyReviewNotFoundError,
 } from "./errors";
 export {
   ENTRY_BACKDATE_LIMIT_DAYS,
@@ -39,3 +44,27 @@ export type {
   GetDashboardDeps,
   GetDashboardInput,
 } from "./dashboard-use-cases";
+export type {
+  UpdateWeeklyReviewResult,
+  WeeklyReviewRecord,
+  WeeklyReviewRepositoryPort,
+  WeeklyReviewStatus,
+} from "./weekly-review-ports";
+export {
+  createWeeklyReviewUseCase,
+  getWeeklyReviewUseCase,
+  listWeeklyReviewsUseCase,
+  updateWeeklyReviewUseCase,
+} from "./weekly-review-use-cases";
+export type {
+  CreateWeeklyReviewDeps,
+  CreateWeeklyReviewInput,
+  CreateWeeklyReviewResult,
+  GetWeeklyReviewDeps,
+  GetWeeklyReviewInput,
+  ListWeeklyReviewsInput,
+  ListWeeklyReviewsResult,
+  UpdateWeeklyReviewDeps,
+  UpdateWeeklyReviewInput,
+  WeeklyReview,
+} from "./weekly-review-use-cases";

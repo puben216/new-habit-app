@@ -221,3 +221,12 @@ Notification preferences（[../specs/notification-preferences.md](specs/notifica
 - 行がないユーザーは「通知無効」として扱い、`GET` は既定値を返すだけで行を作らない。`enabled` は DB 既定（`true`）に依存せず、upsert で常に明示して書く。配信停止も行を残したまま `enabled = false` にする（`local_time` 等を保持）。
 - 既定の送信時刻（20:00）と quiet hours（22:00〜07:00）は Domain の定数であり、DB には焼き込まない（P2 の暫定値）。
 - T-402 向けの走査用 index（`enabled = true` の設定を引く等）と `notification_deliveries` の見直しは T-402 で行う。
+
+## 実装時の補足（T-301）
+
+Weekly review（[../specs/weekly-review.md](specs/weekly-review.md)、[../plans/weekly-review.md](plans/weekly-review.md)）の実装時の追加決定。Migration は `20261005000000_t301_weekly_review_constraints`（expand のみ。`weekly_reviews` は T-301 以前に書き込みがなく backfill 不要）。
+
+- CHECK を追加した: `(status = 'completed') = (completed_at IS NOT NULL)`、`reflection IS NULL OR char_length(reflection) BETWEEN 1 AND 1000`（空文字は保存せず `NULL`）、`char_length(timezone_snapshot) BETWEEN 1 AND 64`、`jsonb_typeof(summary_json) = 'object'`。Prisma DSL では表現できないため `schema.prisma` には追記していない（既存コメントのとおり CHECK は migration で管理）。
+- `week_start` は、作成時のプロフィールの `week_starts_on` に一致する週の開始日（ローカル `date`）。`UNIQUE(user_id, week_start)` が冪等作成の arbiter（`INSERT ... ON CONFLICT DO NOTHING`）で、一覧（`WHERE user_id = ? ORDER BY week_start DESC`）の index も兼ねる。`week_starts_on` を変更しても既存の行は変更しない。
+- `summary_json` は作成時に 1 回だけ書き込み、更新しない。`schemaVersion: 1` の形（`overall`、習慣ごとの件数、`checkIn`）で、読み出し時に契約 schema で検証する。形を変える場合は新しい `schemaVersion` を追加し、過去の version は書き換えない。自由記述（習慣の `purpose`/`cue`、チェックインのメモ）は含めない。
+- 確定・更新は `UPDATE ... WHERE public_id = ? AND user_id = ? AND status = 'draft'` の単一文で行い、`completed` を上書きしない（並行する確定は 1 件のみ成功する）。`timezone_snapshot` は作成時の timezone で、週の終了判定（「今日」）に使った値の記録。
