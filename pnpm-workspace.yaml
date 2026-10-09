@@ -32,6 +32,8 @@ overrides:
   "@grpc/grpc-js": "1.14.5"
   # GHSA-68fv-2mgg-jv7q: next/vite が使う postcss 経由の source-map-js を修正版へ固定(2026-10-06)。
   source-map-js: "1.2.2"
+  # GHSA-wq5f-xc86-pv6w: next が同梱する sharp(<0.35.5、librsvg の脆弱性)を修正版へ固定(2026-10-09)。
+  sharp: "0.35.5"
 minimumReleaseAgeExclude:
   - zod@4.6.5
   - "@next/env@16.3.8"
