@@ -14,6 +14,8 @@ export interface FakeNotificationSettingsRepository extends NotificationSettings
 
 export function createFakeNotificationSettingsRepository(
   existingUserIds: readonly string[],
+  /** 公開 ID → 内部 user ID(配信停止リンクの検証用)。 */
+  publicIds: Readonly<Record<string, string>> = {},
 ): FakeNotificationSettingsRepository {
   const users = new Set(existingUserIds);
   const store = new Map<string, NotificationSettingsRecord>();
@@ -41,6 +43,13 @@ export function createFakeNotificationSettingsRepository(
       };
       store.set(actorUserId, record);
       return record;
+    },
+    async disableByUserPublicId({ userPublicId, now }) {
+      const userId = publicIds[userPublicId];
+      calls.push({ method: "disableByUserPublicId", actorUserId: userId ?? "" });
+      const existing = userId === undefined ? undefined : store.get(userId);
+      if (userId === undefined || existing === undefined || !existing.enabled) return;
+      store.set(userId, { ...existing, enabled: false, updatedAt: now });
     },
   };
 }

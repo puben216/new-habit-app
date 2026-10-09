@@ -221,3 +221,15 @@ Notification preferences（[../specs/notification-preferences.md](specs/notifica
 - 行がないユーザーは「通知無効」として扱い、`GET` は既定値を返すだけで行を作らない。`enabled` は DB 既定（`true`）に依存せず、upsert で常に明示して書く。配信停止も行を残したまま `enabled = false` にする（`local_time` 等を保持）。
 - 既定の送信時刻（20:00）と quiet hours（22:00〜07:00）は Domain の定数であり、DB には焼き込まない（P2 の暫定値）。
 - T-402 向けの走査用 index（`enabled = true` の設定を引く等）と `notification_deliveries` の見直しは T-402 で行う。
+
+## 実装時の補足（T-402）
+
+Notification scheduler/delivery（[../specs/notification-delivery.md](specs/notification-delivery.md)、[../plans/notification-delivery.md](plans/notification-delivery.md)）の実装時の追加決定。Migration は `20261009000000_t402_notification_delivery`（expand のみ）。
+
+- `notification_deliveries` に `user_id`（FK `ON DELETE CASCADE`）、`local_date`、`next_attempt_at`、`enqueued_at`、`locked_until` を追加した。T-402 以前にアプリが書いておらず既存行がない前提のため、NOT NULL 列を既定値なしで追加している。
+- 状態は `pending | sent | skipped | expired | suppressed | failed`（CHECK）。`attempt_count` は 0〜5（CHECK）。再試行は `pending` のまま `next_attempt_at` を進めることで表し、終端状態の行は更新しない（`UPDATE ... WHERE status = 'pending'`）。
+- 重複排除は既存の `deduplication_key` の UNIQUE（`reminder:{notification_settings.id}:{ローカル日}`）。作成は `INSERT ... SELECT FROM notification_settings ... ON CONFLICT (deduplication_key) DO NOTHING`。
+- claim は `status = 'pending'` かつ `next_attempt_at <= now` かつ lease 切れの行だけを対象に `attempt_count + 1` と `locked_until` を設定する単一 `UPDATE ... RETURNING`。並行ワーカーは排他される。
+- index: `(user_id)`（FK）、`(next_attempt_at) WHERE status = 'pending'`（再投入の走査）、`UNIQUE (provider_message_id) WHERE provider_message_id IS NOT NULL`（bounce/complaint の引き当て）、`notification_settings (id) WHERE enabled AND habit_id IS NULL AND channel = 'email'`（スケジューラの走査）。
+- `email_suppressions`（新設）: `user_id` UNIQUE（FK CASCADE）、`reason` は `bounce | complaint`（CHECK）。ユーザー単位で、アドレス単位への拡張は email 変更・再登録の実装時に検討する。
+- `scheduled_at` は送信枠の UTC の瞬間、`local_date` は枠のローカル日。保存値に email・習慣名は含めない。

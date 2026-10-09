@@ -165,3 +165,28 @@ export async function upsertHabitEntryUseCase(
   if (saved === null) throw new HabitNotFoundError();
   return saved;
 }
+
+export interface HasUnrecordedScheduledHabitsDeps {
+  readonly habitRepository: HabitRepositoryPort;
+  readonly entryRepository: HabitEntryRepositoryPort;
+}
+
+/**
+ * 指定した日に予定された active な習慣のうち、記録(`success`/`missed`/`skipped` のいずれか)が
+ * まだない習慣があるか。通知(T-402)が「記録済みなら送らない」を判定するための公開 API。
+ * 予定された習慣がなければ `false`。
+ */
+export async function hasUnrecordedScheduledHabitsUseCase(
+  deps: HasUnrecordedScheduledHabitsDeps,
+  input: { readonly actorUserId: string; readonly date: string },
+): Promise<boolean> {
+  const [habits, entries] = await Promise.all([
+    listAllActiveHabits(deps.habitRepository, input.actorUserId),
+    deps.entryRepository.listByDate({ actorUserId: input.actorUserId, date: input.date }),
+  ]);
+  const recorded = new Set(entries.map((entry) => entry.habitId));
+  return habits.some(
+    ({ habit }) =>
+      scheduledOccurrenceOn(habit.scheduleVersions, input.date) !== null && !recorded.has(habit.id),
+  );
+}

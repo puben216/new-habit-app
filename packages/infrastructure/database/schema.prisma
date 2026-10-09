@@ -21,16 +21,18 @@ model User {
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  profile              UserProfile?
-  habits               Habit[]
-  habitEntries         HabitEntry[]
-  dailyCheckIns        DailyCheckIn[]
-  weeklyReviews        WeeklyReview[]
-  aiJobs               AiJob[]
-  notificationSettings NotificationSetting[]
-  idempotencyKeys      IdempotencyKey[]
-  sessions             Session[]
-  passwordResetTokens  PasswordResetToken[]
+  profile                UserProfile?
+  habits                 Habit[]
+  habitEntries           HabitEntry[]
+  dailyCheckIns          DailyCheckIn[]
+  weeklyReviews          WeeklyReview[]
+  aiJobs                 AiJob[]
+  notificationSettings   NotificationSetting[]
+  notificationDeliveries NotificationDelivery[]
+  emailSuppression       EmailSuppression?
+  idempotencyKeys        IdempotencyKey[]
+  sessions               Session[]
+  passwordResetTokens    PasswordResetToken[]
 
   @@map("users")
 }
@@ -285,9 +287,16 @@ model NotificationSetting {
   @@map("notification_settings")
 }
 
+// status: pending | sent | skipped | expired | suppressed | failed (CHECK制約はmigrationで追加、T-402)。
+// 部分index(pendingの再投入走査、provider_message_idの一意)もPrisma DSLで表現できないためmigrationで追加している。
 model NotificationDelivery {
   id                    BigInt    @id @default(autoincrement())
   notificationSettingId BigInt    @map("notification_setting_id")
+  userId                BigInt    @map("user_id")
+  localDate             DateTime  @map("local_date") @db.Date
+  nextAttemptAt         DateTime  @map("next_attempt_at") @db.Timestamptz(6)
+  enqueuedAt            DateTime? @map("enqueued_at") @db.Timestamptz(6)
+  lockedUntil           DateTime? @map("locked_until") @db.Timestamptz(6)
   deduplicationKey      String    @unique @map("deduplication_key")
   scheduledAt           DateTime  @map("scheduled_at") @db.Timestamptz(6)
   status                String
@@ -299,9 +308,23 @@ model NotificationDelivery {
   updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   notificationSetting NotificationSetting @relation(fields: [notificationSettingId], references: [id], onDelete: Cascade)
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([notificationSettingId])
+  @@index([userId])
   @@map("notification_deliveries")
+}
+
+// hard bounce / complaintを受けたユーザー(reason: bounce | complaint、CHECK制約はmigrationで追加、T-402)。
+model EmailSuppression {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @unique @map("user_id")
+  reason    String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_suppressions")
 }
 
 model IdempotencyKey {
