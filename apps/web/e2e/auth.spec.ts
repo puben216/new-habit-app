@@ -61,6 +61,10 @@ test("signup → メール確認 → login → logout の一連を UI だけで�
 
   await page.getByRole("link", { name: "ログインへ" }).click();
   await login(page, user);
+  // 初回ログインはオンボーディングへ誘導される(T-213)。
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await page.getByLabel("表示名", { exact: true }).fill("たなか");
+  await page.getByRole("button", { name: "はじめる" }).click();
   await expect(page).toHaveURL(/\/today$/);
   await expect(page.getByRole("heading", { level: 1, name: "今日" })).toBeVisible();
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { InvalidProfileError } from "./errors";
-import { createDefaultProfile, validateProfileChanges } from "./profile";
+import { createDefaultProfile, hasCompletedOnboarding, validateProfileChanges } from "./profile";
 
 describe("createDefaultProfile(PROF-006)", () => {
   it("暫定既定値を返す", () => {
@@ -64,5 +64,13 @@ describe("validateProfileChanges(PROF-002)", () => {
         { field: "_root", message: expect.any(String) },
       ]);
     }
+  });
+});
+
+describe("hasCompletedOnboarding", () => {
+  it("表示名が null なら未完了、設定済みなら完了", () => {
+    expect(hasCompletedOnboarding({ displayName: null })).toBe(false);
+    expect(hasCompletedOnboarding({ displayName: "たなか" })).toBe(true);
+    expect(hasCompletedOnboarding(createDefaultProfile())).toBe(false);
   });
 });

@@ -151,6 +151,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - T-102 の`GET/PATCH /me`を利用: 初回の timezone・表示名の設定、プロフィール編集
 - E2E: onboarding profile(T-102 の E2E を回収)。timezone の不正値、他ユーザーの情報が見えないこと
+- 設計: Feature Spec([profile-screens.md](specs/profile-screens.md))と Implementation Plan([profile-screens.md](plans/profile-screens.md))を作成。オンボーディング完了は`displayName`が`null`でないこと(Application の`hasCompletedOnboarding`に一元化)、未完了は`(app)/(onboarded)` layout が`/onboarding`へ誘導、`locale`は UI が日本語のみのため編集 UI を出さない、と決定
+- 実装: `/onboarding`・`/profile`(表示名、タイムゾーン選択、週の開始曜日)、`SelectField`、ブラウザのタイムゾーンを初期提案、ナビゲーションにプロフィール追加。Migration・API 変更なし。`/today`は`(onboarded)`配下へ移動(URL は不変)
+- テスト: Unit(判定関数、ガード、選択肢構築・表示名検証の性質テスト、固定文言)と E2E 8 件(誘導、未完了/完了済みの redirect、編集の永続化、入力エラー、server 拒否の固定文言、HTML 文字列、2 ユーザーの分離、未認証)。手動変異 13 件を全件検出。E2E helper は既定でオンボーディングまで済ませる
 
 ### T-214 習慣管理画面
 

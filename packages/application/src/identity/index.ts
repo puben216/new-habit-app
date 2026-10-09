@@ -9,4 +9,4 @@ export type { GetMyProfileDeps } from "./get-my-profile";
 export { updateMyProfile } from "./update-my-profile";
 export type { UpdateMyProfileDeps } from "./update-my-profile";
 
-export { InvalidProfileError } from "@habit-app/domain";
+export { InvalidProfileError, hasCompletedOnboarding } from "@habit-app/domain";
