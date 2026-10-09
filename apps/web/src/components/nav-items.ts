@@ -9,6 +9,7 @@ export interface NavItem {
  */
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/today", label: "今日" },
+  { href: "/habits", label: "習慣" },
   { href: "/profile", label: "プロフィール" },
 ];
 

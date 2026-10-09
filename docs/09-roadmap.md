@@ -159,6 +159,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - T-104 の`/api/v1/habits`を利用: 一覧、作成(build/reduce)、スケジュール編集、アーカイブ、更新競合(409)時の再読み込み導線
 - E2E: build/reduce の CRUD(T-104 の E2E を回収)
+- 設計: Feature Spec([habit-screens.md](specs/habit-screens.md))と Implementation Plan([habit-screens.md](plans/habit-screens.md))を作成。「今日」(適用開始日の既定)はプロフィールの timezone から client が算出、スケジュール変更は適用開始日を指定して新しい版を追加(遡及は server の`422`を固定文言で表示)、競合(409)は入力を保持したまま「最新の内容を読み込む」で最新へ置換、`version`は取得時点の値を必ず送る、と決定
+- 実装: `/habits`(進行中/アーカイブ済み、さらに表示)・`/habits/new`・`/habits/[habitId]`(編集、スケジュール履歴、2 段階のアーカイブ)、型付き client(`lib/habits`)、nav に「習慣」。reduce は回数欄を出さず(1 固定)代わりの行動を入力。Migration・API 変更なし
+- テスト: Unit(日付算出・フォーム検証・update body・エラー分類。fast-check の性質テスト)と E2E 12 件(build/reduce 作成、入力エラー、編集、遡及拒否と翌日開始の追加、2 タブの競合、アーカイブ、他ユーザーの分離と UUID でない ID、HTML 文字列、二重クリック、ページング、未認証)。手動変異 18 件を全件検出(生存 1 件にテストを追加)
 
 ### T-215 今日の記録とチェックイン画面
 
