@@ -1,4 +1,4 @@
-import { parseEnv } from "@habit-app/config";
+import type { Env } from "@habit-app/config";
 import type {
   AuthRepositoryPort,
   Clock,
@@ -19,6 +19,8 @@ import {
 } from "@habit-app/infrastructure";
 
 import type { NextAuthResult } from "next-auth";
+
+import { getServerEnv } from "./env";
 
 /**
  * apps/web の auth route handler(T-101 Task 5)が共有する composition root。
@@ -45,7 +47,7 @@ interface AuthContainer {
 
 const globalForPrisma = globalThis as unknown as { __habitAppPrisma?: PrismaClient };
 
-function createEmailSender(env: ReturnType<typeof parseEnv>): EmailSenderPort {
+function createEmailSender(env: Env): EmailSenderPort {
   if (env.AUTH_EMAIL_SENDER === "smtp") {
     return createSmtpEmailSender({
       host: env.SMTP_HOST,
@@ -60,7 +62,7 @@ function createEmailSender(env: ReturnType<typeof parseEnv>): EmailSenderPort {
 }
 
 async function buildAuthContainer(): Promise<AuthContainer> {
-  const env = parseEnv(process.env);
+  const env = getServerEnv();
 
   const prisma: PrismaClient =
     globalForPrisma.__habitAppPrisma ?? createPrismaClient(env.DATABASE_URL);

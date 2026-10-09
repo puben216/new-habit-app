@@ -1,0 +1,89 @@
+/*
+ * design token と reset(ADR-010、docs/specs/web-ui-foundation.md WUI-001/WUI-INV-006)。
+ * 色は本アプリ独自の配色。文字と背景のコントラストは WCAG 2.2 AA(通常文字 4.5:1)を満たす値にする。
+ */
+:root {
+  --color-bg: #faf9f6;
+  --color-surface: #ffffff;
+  --color-text: #1f2933;
+  --color-text-muted: #4a5560;
+  --color-border: #c9d1d8;
+  --color-primary: #1f5f5b;
+  --color-primary-hover: #174a47;
+  --color-on-primary: #ffffff;
+  --color-danger: #9b1c1c;
+  --color-danger-bg: #fdf1f1;
+  --color-focus: #1d4ed8;
+
+  --font-sans:
+    system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", sans-serif;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --radius: 0.5rem;
+  --target-size: 2.75rem;
+  --content-width: 48rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.35;
+  margin: 0 0 var(--space-3);
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+p {
+  margin: 0 0 var(--space-4);
+}
+
+a {
+  color: var(--color-primary);
+  text-underline-offset: 0.2em;
+}
+
+/* 全ての操作可能要素で focus を visible にする(WCAG 2.4.7/2.4.11)。 */
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* skip link の移動先 `main` は programmatic focus のみ。枠は出さない。 */
+main:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -47,6 +47,8 @@ MVP の必須シナリオ:
 
 外部サービスは staging 専用 fake/adapter を使い、決済やメール誤送信を避ける。E2E データは test run ごとに namespace を分離する。
 
+実装(T-211、[ADR-010](adr/ADR-010-web-ui-stack.md)): E2E は `apps/web/e2e/` に置き、`pnpm test:e2e` で実行する。Docker Compose の Postgres(E2E 専用 database `habit_app_e2e` を実行ごとに作り直す)と Mailpit(ローカル/CI 専用の SMTP キャプチャ)を使い、確認メールの token は Mailpit の HTTP API から取得する。ユーザーは実行ごとに一意な架空データで、trace/screenshot は失敗時のみ保持する。CI の `e2e` job は secret を使わず `pull_request` のみで実行する。
+
 ## 品質ゲート
 
 ローカルと CI で同じコマンドを使う。

@@ -23,7 +23,7 @@ T-203/T-204 と同じ層構成で縦に薄く実装する。DB は CHECK 制約�
 4. **Migration**: `20261005000000_t301_weekly_review_constraints`(CHECK 4 つ)。
 5. **Contracts**(`packages/contracts/src/weekly-review.ts`): request/query/response と `weeklyReviewSummarySchema`。
 6. **Presentation**(`apps/web`): `weekly-review-handlers.ts`、`weekly-review-container.ts`、`app/api/v1/weekly-reviews/route.ts`(GET/POST)、`app/api/v1/weekly-reviews/[reviewId]/route.ts`(GET/PATCH)。
-7. **文書**: `docs/04`(実装時の補足)、`docs/05`(契約差分)、`docs/09`、`docs/10`(D-14、P1 解消)。
+7. **文書**: `docs/04`(実装時の補足)、`docs/05`(契約差分)、`docs/09`、`docs/10`(D-15、P1 解消)。
 
 ## Impact Analysis
 

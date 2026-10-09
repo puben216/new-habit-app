@@ -26,7 +26,7 @@ Roadmap Task: T-301
 - Migration: `weekly_reviews` の CHECK 制約の追加のみ(expand)。
 - Contracts: request/response の runtime schema(zod)。
 - Presentation(`apps/web`): `GET/POST /api/v1/weekly-reviews`、`GET/PATCH /api/v1/weekly-reviews/{reviewId}`。
-- 文書: `docs/04`、`docs/05`、`docs/09`、`docs/10`(D-14、P1 の一部を解消)。
+- 文書: `docs/04`、`docs/05`、`docs/09`、`docs/10`(D-15、P1 の一部を解消)。
 
 ## Out of Scope
 
@@ -319,7 +319,7 @@ Reviewed by: —
 | Gate                 | Result | Evidence                                                                                                                            |
 | -------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Product              | Pass   | Goal、Success Metrics、Scope/Out of Scope。`docs/02` UC-12、`docs/09` T-301                                                         |
-| Specification        | Pass   | WREV-001〜005、WREV-INV-001〜007、State Transitions、Acceptance Criteria、Failure and Edge Cases。未決事項は非ブロック(D-14 で決定) |
+| Specification        | Pass   | WREV-001〜005、WREV-INV-001〜007、State Transitions、Acceptance Criteria、Failure and Edge Cases。未決事項は非ブロック(D-15 で決定) |
 | Domain and Time      | Pass   | 週境界は `weekStartOf`/`localDateAt`(プロフィールの timezone と `weekStartsOn`)、Clock 注入、日付繰り上がり・52 週境界を明記        |
 | API and Data         | Pass   | API and Events(エラー code、冪等、pagination、競合)、Data and Migration(expand、index、取得量、rollback)                            |
 | Security and Privacy | Pass   | Security and Privacy、Authorization Matrix(IDOR/CSRF/XSS/Injection/abuse、ログ禁止、AI へ送らない)                                  |

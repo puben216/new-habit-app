@@ -1,0 +1,40 @@
+.root {
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-left-width: 6px;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.error {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.loading,
+.empty {
+  border-color: var(--color-primary);
+}
+
+.label {
+  margin: 0 0 var(--space-1);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.error .label {
+  color: var(--color-danger);
+}
+
+.title {
+  font-size: 1.125rem;
+}
+
+.description {
+  color: var(--color-text-muted);
+}
+
+.action {
+  margin-top: var(--space-4);
+}
