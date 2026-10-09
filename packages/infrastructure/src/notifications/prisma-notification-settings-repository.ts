@@ -4,6 +4,7 @@ import type {
 } from "@habit-app/application";
 import { isLocalTime } from "@habit-app/domain";
 import type { PrismaClient } from "../generated/prisma/client";
+import { UUID_PATTERN } from "./shared";
 
 const MAX_BIGINT = 9_223_372_036_854_775_807n;
 
@@ -119,6 +120,17 @@ export function createPrismaNotificationSettingsRepository(
                   updated_at`;
       const row = rows[0];
       return row === undefined ? null : toRecord(row);
+    },
+
+    async disableByUserPublicId({ userPublicId }) {
+      // 形式不正な ID は DB の uuid キャストでエラーになるため、先に弾く(何も起きない)。
+      if (!UUID_PATTERN.test(userPublicId)) return;
+      await prisma.$executeRaw`
+        UPDATE notification_settings
+        SET enabled = false
+        WHERE habit_id IS NULL
+          AND enabled
+          AND user_id = (SELECT id FROM users WHERE public_id = ${userPublicId}::uuid)`;
     },
   };
 }

@@ -132,7 +132,13 @@
 - `PUT` の body は `{ enabled, localTime, quietHours?, timezone? }`。`enabled` と `localTime`（`HH:mm`）は必須。`quietHours` は省略で既定の `22:00`〜`07:00`、`null` で quiet hours なし、`timezone` は省略でプロフィールの timezone。`PUT` は全体の置換で、`enabled: false` が配信停止。
 - 有効（`enabled: true`）で送信時刻が quiet hours 内の場合は `422`（`reminder_time_in_quiet_hours`）。時刻・timezone・quiet hours の内容違反は `422`（`invalid_notification_setting`）。
 - 自然な冪等な置換のため `Idempotency-Key` は使わない。成功は常に `200`。状態変更の共通要件は `/habits` と同じ。rate limit は未対応。
-- メール内のワンクリック unsubscribe は T-402 で設計する。
+- メール内のワンクリック unsubscribe は T-402 で実装した（下記）。
+
+`/notification-unsubscribe`（T-402）の正式な契約は [../specs/notification-delivery.md](specs/notification-delivery.md) の APIとイベント節と `packages/contracts/src/notification-delivery.ts` を正本とし、要点は次のとおり。
+
+- `POST /api/v1/notification-unsubscribe?token=...` は認証不要の公開 endpoint で、メールの `List-Unsubscribe` / `List-Unsubscribe-Post: List-Unsubscribe=One-Click`（RFC 8058）が指す。token は HMAC 署名つき（用途と公開 ID のみ。有効期限なし）。有効なら該当ユーザーの設定を `enabled = false` にして `200 { "status": "unsubscribed" }`（冪等）、不正・改ざん・用途違いは理由を区別せず `400`（`invalid_token`）。
+- `GET` は状態を変えず、確認用の最小 HTML を返す（メーラーのプリフェッチで勝手に停止されないため）。Origin 検証は行わず、token で保護する。
+- 通知の配送そのものは API ではなく、スケジューラ（EventBridge）→ SQS（`deliveryId` のみの message）→ ワーカーで行う。SES の bounce/complaint は SNS → SQS で受ける。
 
 ## AI 境界
 

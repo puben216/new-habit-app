@@ -14,3 +14,17 @@ export async function guardSession(deps: SessionGuardDeps): Promise<string> {
   if (actorUserId === null) return deps.redirectToLogin();
   return actorUserId;
 }
+
+export interface GuestGuardDeps {
+  readonly getActorUserId: () => Promise<string | null>;
+  readonly redirectToApp: () => never;
+}
+
+/**
+ * 認証画面(login/signup/password-reset 要求)のガード(docs/specs/auth-screens.md AUI-009)。
+ * 認証済みなら保護画面へ redirect し、未認証なら何もしない。
+ */
+export async function guardGuest(deps: GuestGuardDeps): Promise<void> {
+  const actorUserId = await deps.getActorUserId();
+  if (actorUserId !== null) deps.redirectToApp();
+}

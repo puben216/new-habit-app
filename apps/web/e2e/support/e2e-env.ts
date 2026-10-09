@@ -9,7 +9,9 @@ export const E2E_PORT = 3100;
 export const E2E_BASE_URL = `http://localhost:${E2E_PORT}`;
 
 export const E2E_DATABASE_NAME = "habit_app_e2e";
-const DATABASE_ORIGIN = "postgresql://habit_app:habit_app@localhost:5432";
+// ローカルの 5432 が他のプロジェクトに使われている場合は E2E_POSTGRES_PORT で変更できる(docker-compose.yml の POSTGRES_PORT と揃える)。
+const DATABASE_PORT = process.env["E2E_POSTGRES_PORT"] ?? "5432";
+const DATABASE_ORIGIN = `postgresql://habit_app:habit_app@localhost:${DATABASE_PORT}`;
 export const E2E_ADMIN_DATABASE_URL = `${DATABASE_ORIGIN}/postgres`;
 export const E2E_DATABASE_URL = `${DATABASE_ORIGIN}/${E2E_DATABASE_NAME}`;
 

@@ -9,7 +9,7 @@ test("未認証で保護画面を開くと /login へ redirect され、保護�
 }) => {
   await page.goto("/today");
 
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Ftoday$/);
   await expect(page.getByRole("heading", { level: 1, name: "ログイン" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "今日" })).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "メインメニュー" })).toHaveCount(0);

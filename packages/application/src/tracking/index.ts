@@ -16,11 +16,13 @@ export {
 export {
   ENTRY_BACKDATE_LIMIT_DAYS,
   getTodayScheduleUseCase,
+  hasUnrecordedScheduledHabitsUseCase,
   upsertHabitEntryUseCase,
 } from "./use-cases";
 export type {
   GetTodayScheduleDeps,
   GetTodayScheduleInput,
+  HasUnrecordedScheduledHabitsDeps,
   TodaySchedule,
   TodayScheduleItem,
   UpsertHabitEntryDeps,

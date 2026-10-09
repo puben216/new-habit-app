@@ -30,4 +30,13 @@ export interface NotificationSettingsRepositoryPort {
     readonly quietHours: QuietHours | null;
     readonly now: Date;
   }): Promise<NotificationSettingsRecord | null>;
+
+  /**
+   * ユーザーの公開 ID で、ユーザー単位の設定を `enabled = false` にする(配信停止リンク用。T-402)。
+   * 設定が無い・既に無効・ユーザーが存在しない場合も何も起きず成功する(冪等)。他の項目は変更しない。
+   */
+  disableByUserPublicId(input: {
+    readonly userPublicId: string;
+    readonly now: Date;
+  }): Promise<void>;
 }

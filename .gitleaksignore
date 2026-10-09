@@ -1,0 +1,6 @@
+# gitleaks の既知の誤検知(fingerprint 形式: <commit>:<file>:<rule>:<line>)。
+# T-402 の PR-A で、テスト用のダミー署名鍵のリテラルが generic-api-key に誤検知された。
+# 実在の鍵ではない。現在のコードはリテラルを低エントロピーのダミー値に置き換え済みで、
+# 以下は履歴(コミット 29b7d45)に残る 2 件のみを除外する。新しい検知は除外しない。
+29b7d45b6836743e22ef7f1a42321e1b34559e80:packages/infrastructure/src/notifications/prisma-reminder-delivery-repository.integration.test.ts:generic-api-key:35
+29b7d45b6836743e22ef7f1a42321e1b34559e80:packages/infrastructure/src/notifications/hmac-unsubscribe-token.test.ts:generic-api-key:6

@@ -6,7 +6,7 @@ const envSchema = z
     DATABASE_URL: z.string().url(),
     // Auth.js JWT署名鍵(docs/plans/auth-adapter.md Rollout and Operations、2026-09-22改訂)。
     AUTH_SECRET: z.string().min(32),
-    // EmailSenderPortの実装選択。本番でsmtpは許可しない(SesEmailSenderはT-401で実装)。
+    // EmailSenderPortの実装選択。本番でsmtpは許可しない(認証メールのSES送信は未実装。T-402はリマインド通知のSES送信のみで、認証メールは別タスク)。
     AUTH_EMAIL_SENDER: z.enum(["smtp", "ses"]).default("smtp"),
     SMTP_HOST: z.string().default("localhost"),
     SMTP_PORT: z.coerce.number().int().positive().default(1025),
@@ -22,6 +22,9 @@ const envSchema = z
       .enum(["true", "false"])
       .default("false")
       .transform((value) => value === "true"),
+    // メール内の配信停止 token の署名鍵(T-402)。配信停止 endpoint とリマインド送信でのみ必須とし、
+    // 未設定でも他の機能は起動できる(使用する側が未設定を検査して失敗させる)。
+    UNSUBSCRIBE_SIGNING_KEY: z.string().min(32).optional(),
   })
   .refine((value) => !(value.NODE_ENV === "production" && value.AUTH_EMAIL_SENDER === "smtp"), {
     message:

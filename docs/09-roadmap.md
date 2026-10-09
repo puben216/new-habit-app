@@ -143,6 +143,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 - T-101 の API を利用: signup、メール確認、login、logout、password reset の画面
 - 設計: 失敗時の文言でアカウントの有無を漏らさない(enumeration 対策)、CSRF/Origin、session 切れの扱い
 - Unit: フォーム validation の表示。E2E: signup → verify(Mailpit から token 取得)→ login → logout、password reset の一連(T-101 の E2E を回収)
+- 設計: Feature Spec([auth-screens.md](specs/auth-screens.md))と Implementation Plan([auth-screens.md](plans/auth-screens.md))を作成。遷移元への復帰は`next`クエリ(許可リスト方式の`sanitizeNextPath`、現在の path は proxy が`x-pathname` header で渡す。proxy は認証判定をしない)、認証済みユーザーの`/login`等は`/today`へ redirect、メール確認はリンクを開くだけでは token を消費せずボタンで確認、login の失敗文言は 1 種類に統一、と決定
+- 実装: `/signup`・`/login`・`/verify-email`(確認/再送)・`/password-reset`・`/password-reset/confirm`、ログアウト、フォーム部品(`TextField`/`ErrorSummary`)、Auth.js 標準 endpoint の client(`lib/auth/auth-client.ts`。成否は DB session 由来の session 応答で判定)、全 route へのセキュリティヘッダー(`frame-ancestors`、`Referrer-Policy: no-referrer`)、session 失効時の`next`+案内。Migration・API 変更なし。`docker-compose.yml`に`POSTGRES_PORT`、E2E に`E2E_POSTGRES_PORT`を追加(5432 を他のプロジェクトが使っている環境向け)
+- テスト: Unit(`next-path`・`validation`・`auth-client`・`pathname-header`・ガード・フォーム部品。性質テストは fast-check)と E2E 16 件(一連の流れ、login 失敗 3 種の本文一致、登録済み email の signup、reset の一連とリンク再利用拒否、`next`/不正な`next`、認証済みの redirect、logout 後の旧 cookie 無効、入力エラーのフォーカスと`aria-*`、二重クリック、通信失敗、ヘッダー)。変異テストは Stryker 未導入のため手動 38 件で確認し、生存した変異は等価(後段の検査が同じ入力を拒否する多層防御、または型で到達不能)で、境界入力と`reason`の無視のテストを追加。敵対的審査は実装後の差分で実施
 
 ### T-213 オンボーディングとプロフィール画面
 
@@ -222,6 +225,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - window scan、dedupe、SES、bounce/complaint
 - Integration: 重複/期限切れ/retry/DLQ
+- 設計: Feature Spec([notification-delivery.md](specs/notification-delivery.md))と Implementation Plan([notification-delivery.md](plans/notification-delivery.md))を作成。5 分間隔のスケジューラが有効な設定を走査して配送を `pending` で作り(`(設定, ローカル日)` の dedupe)、SQS 経由のワーカーが claim・判定・送信する。許容遅延 60 分、再試行は DB 上の状態(最大 5 回、exponential backoff + full jitter)、予期しない例外は SQS の redrive で DLQ へ。当日の予定がすべて記録済みなら送らず、本文は個人情報を含まない定型文。メール内の署名付きリンク(RFC 8058)でワンクリック配信停止、Permanent bounce/complaint は `email_suppressions` で永久停止と決定。差分が大きいため 2 本の PR(PR-A: コア、PR-B: AWS 接続・Lambda・Terraform)に分ける
+- 実装(PR-A): Domain `resolveReminderSlot`(DST の gap/fall-back を解決)・配送の定数と判定、Application `scheduleDueRemindersUseCase`/`deliverReminderUseCase`/`handleEmailFeedbackUseCase`/`unsubscribeUseCase` と各 port、tracking の公開 API `hasUnrecordedScheduledHabitsUseCase`、Infrastructure の Prisma repository 群と HMAC 署名 token、`GET/POST /api/v1/notification-unsubscribe`。Migration は列・CHECK・index・`email_suppressions` の追加のみ(expand)
+- テスト(PR-A): Unit(スロット変換の DST 遷移日を全分で検証するプロパティテスト、判定順序、再試行、token の改ざん検知)と Integration(実 PostgreSQL: dedupe、並行 claim 6 件で 1 回、終端の不変、CHECK、CASCADE、fresh と upgrade の Migration)を追加。E2E は Playwright 未導入のため対象外。SES/SQS adapter・Lambda・Terraform は PR-B
 
 ### T-403 Minimal admin
 

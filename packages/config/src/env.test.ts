@@ -105,6 +105,21 @@ describe("parseEnv", () => {
     expect(env.SMTP_PORT).toBe(2525);
   });
 
+  it("UNSUBSCRIBE_SIGNING_KEYは省略でき、指定する場合は32文字以上が必要", () => {
+    const base = {
+      NODE_ENV: "test",
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
+      AUTH_SECRET,
+    };
+    expect(parseEnv(base).UNSUBSCRIBE_SIGNING_KEY).toBeUndefined();
+    expect(
+      parseEnv({ ...base, UNSUBSCRIBE_SIGNING_KEY: "k".repeat(32) }).UNSUBSCRIBE_SIGNING_KEY,
+    ).toBe("k".repeat(32));
+    expect(() => parseEnv({ ...base, UNSUBSCRIBE_SIGNING_KEY: "k".repeat(31) })).toThrow(
+      "UNSUBSCRIBE_SIGNING_KEY",
+    );
+  });
+
   describe("AI 設定(T-303)", () => {
     const base = {
       DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
