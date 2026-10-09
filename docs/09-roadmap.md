@@ -129,6 +129,9 @@ Standard 変更として着手する各タスクは、実装前に [`feature-spe
 - snapshot、draft/complete、対象週
 - Unit: 集計 snapshot。Integration: 一意性/再実行
 - E2E: review 作成・確定
+- 設計: Feature Spec([weekly-review.md](specs/weekly-review.md))と Implementation Plan([weekly-review.md](plans/weekly-review.md))を作成。週の開始日はプロフィールの`weekStartsOn`(既定は月曜)、レビューは終了済みで直近 52 週以内の週を`POST`で明示作成(同じ週は冪等)、振り返りは 1 つの自由記述で確定後は編集不可、スコープは API+集計ロジックのみ(UI・E2E・AI 分析は対象外)と決定(D-14)
+- 実装: Domain `buildWeeklyReviewSummary`/`checkReviewableWeek`/`normalizeWeeklyReflection`(結果分類は T-204 の`statistics.ts`を`outcomeOf`/`calculateRangeStatistics`として共有)、Application `createWeeklyReviewUseCase`/`getWeeklyReviewUseCase`/`listWeeklyReviewsUseCase`/`updateWeeklyReviewUseCase`(保存済みスナップショットは契約 schema で読み出し時に検証)、Infrastructure `PrismaWeeklyReviewRepository`(`INSERT ... ON CONFLICT DO NOTHING`の単一文で冪等作成、`WHERE status = 'draft'`付きの単一`UPDATE`で原子的に更新・確定)と`DailyCheckInRepository.listByDateRange`、`GET/POST /api/v1/weekly-reviews`・`GET/PATCH /api/v1/weekly-reviews/{reviewId}`。Migration は CHECK 制約の追加のみ(expand)
+- テスト: Unit(Domain の集計・正規化とシード固定の性質テスト/Application/契約/handler)と Integration(実 PostgreSQL: 往復、再作成でスナップショット不変、並行作成 6 件で 1 行・確定 6 件で 1 回のみ成功、他ユーザー分離、CHECK 制約、fresh と upgrade の Migration)を追加。E2E は Playwright 未導入のため対象外。AI 分析(`/analysis`)は T-303/T-305
 
 ### T-302 AI contracts/fake adapter
 

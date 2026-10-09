@@ -111,6 +111,14 @@
 - 対象は active な習慣のみ。今日の未記録は `pending`（分母外）、過去の未記録は `missed`。`skipped` は分母から除外し、ストリークを切らず数えない。全体の成功率は合計件数から求める（習慣ごとの率の平均ではない）。
 - 読み取り専用。認証は `401`、user が存在しなければ `404`（`user_not_found`）。`Idempotency-Key` と rate limit は不要/未対応。
 
+`/weekly-reviews` の正式な契約は [../specs/weekly-review.md](specs/weekly-review.md) の API and Events 節と `packages/contracts/src/weekly-review.ts` を正本とし、上記の一覧からの差分は次のとおり。
+
+- `POST /weekly-reviews` の body は `{ weekStart }`。`weekStart` はプロフィールの `weekStartsOn` に一致する週の開始日で、終了済みかつ直近 52 週以内のみ。違反は `422 week_not_reviewable`（理由は `fieldErrors.weekStart` の文言で区別）。新規作成は `201`＋`Location`、同じ週が既にあれば再計算せず `200` で既存を返す。`Idempotency-Key` は不要（週が自然な冪等キー）。
+- `GET /weekly-reviews` は `limit`（1〜50、既定 20）と不透明な `cursor` で `weekStart` の新しい順に返し、`{ items, nextCursor }`。
+- `PATCH /weekly-reviews/{reviewId}` の body は `{ reflection?: string | null, status?: "completed" }`（1 項目以上必須）。`reflection` は前後の空白を除去し、空は `null`（最大 1000 文字）。`status: "completed"` で確定し、確定後の PATCH は `409 weekly_review_already_completed`。他人・存在しない・UUID 形式でない ID は区別せず `404 weekly_review_not_found`。
+- 応答 `WeeklyReview` は `{ id, weekStart, weekEnd, timezone, status, summary, reflection, completedAt, createdAt, updatedAt }`。`summary` は `schemaVersion: 1` のスナップショットで、`overall`・習慣ごと（`habitId`/`kind`/`name` と件数・`successRate`）・`checkIn`（`days`/`averageMood`/`averageDifficulty`）を持つ。自由記述（習慣の `purpose`/`cue`、チェックインのメモ）は含まない。
+- 本タスクでは `POST /weekly-reviews/{reviewId}/analysis` と `/ai-jobs` は未実装（T-303/T-305）。
+
 `/notification-settings` の正式な契約は [../specs/notification-preferences.md](specs/notification-preferences.md) の API and Events 節と `packages/contracts/src/notification-settings.ts` を正本とし、上記の表からの差分は次のとおり。
 
 - ユーザー単位の設定のみ（習慣ごとの通知は対象外）。`GET` は未保存でも `200` で無効の既定値（`updatedAt: null`）を返す。

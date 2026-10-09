@@ -65,6 +65,18 @@ function successRateOf(counts: OutcomeCounts): number | null {
   return denominator === 0 ? null : counts.success / denominator;
 }
 
+/**
+ * 予定機会 1 件の結果。記録があればその status、なければ日付が今日より前なら `missed`(未実施)、
+ * 今日なら `pending`(今日が終わるまで確定しない)。週次レビュー(T-301)と共有する唯一の分類規則。
+ */
+function outcomeOf(
+  recorded: HabitEntryStatus | undefined,
+  date: string,
+  today: string,
+): OccurrenceOutcome {
+  return recorded ?? (isBeforeCalendarDate(date, today) ? "missed" : "pending");
+}
+
 function emptyCounts(): { -readonly [K in keyof OutcomeCounts]: number } {
   return { scheduled: 0, success: 0, missed: 0, skipped: 0, pending: 0 };
 }
@@ -104,8 +116,7 @@ export function calculateHabitStatistics(input: CalculateHabitStatisticsInput): 
 
   for (const occurrence of occurrences) {
     const recorded = statusByDate.get(occurrence.date);
-    const outcome: OccurrenceOutcome =
-      recorded ?? (isBeforeCalendarDate(occurrence.date, today) ? "missed" : "pending");
+    const outcome = outcomeOf(recorded, occurrence.date, today);
 
     switch (outcome) {
       case "success":
@@ -160,4 +171,37 @@ export function aggregateWindowStatistics(
     total.pending += window.pending;
   }
   return windowStatistics(period.from, period.to, total);
+}
+
+export interface CalculateRangeStatisticsInput {
+  readonly scheduleVersions: readonly ScheduleVersion[];
+  readonly entries: readonly StatisticsEntry[];
+  /** 対象期間(両端を含むローカル暦日)。`generateOccurrences` の範囲上限に従う。 */
+  readonly from: string;
+  readonly to: string;
+  /** 今日(actor の timezone のローカル暦日)。`pending` の判定に使う。 */
+  readonly today: string;
+}
+
+/**
+ * 任意の期間の予定機会の件数と成功率を求める(週次レビューの集計用)。分類は
+ * `calculateHabitStatistics` と同じ規則で、期間外・予定のない日の記録は無視する。
+ */
+export function calculateRangeStatistics(input: CalculateRangeStatisticsInput): WindowStatistics {
+  const { scheduleVersions, entries, from, to, today } = input;
+  if (!isValidCalendarDate(today)) {
+    throw new InvalidScheduleCalculationInputError(`Invalid calendar date: ${today}`);
+  }
+
+  const statusByDate = new Map<string, HabitEntryStatus>();
+  for (const entry of entries) {
+    statusByDate.set(entry.date, entry.status);
+  }
+
+  const counts = emptyCounts();
+  for (const occurrence of generateOccurrences(scheduleVersions, { from, to })) {
+    counts.scheduled += 1;
+    counts[outcomeOf(statusByDate.get(occurrence.date), occurrence.date, today)] += 1;
+  }
+  return windowStatistics(from, to, counts);
 }

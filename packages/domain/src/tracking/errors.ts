@@ -21,3 +21,14 @@ export class InvalidDailyCheckInError extends HabitDomainError {
     this.field = field;
   }
 }
+
+/** 週次レビューの振り返りが不正な場合(docs/specs/weekly-review.md WREV-005)。 */
+export class InvalidWeeklyReviewError extends HabitDomainError {
+  /** 問題のある入力項目。`update` は項目横断のルール(更新内容が何もない)。 */
+  readonly field: "reflection" | "update";
+
+  constructor(field: "reflection" | "update", message: string) {
+    super(message);
+    this.field = field;
+  }
+}

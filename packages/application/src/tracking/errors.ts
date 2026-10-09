@@ -1,3 +1,5 @@
+import type { WeekNotReviewableReason } from "@habit-app/domain";
+
 /**
  * tracking use case の Application error。Presentation が HTTP status へ変換する。
  * メッセージに自由記述やユーザー識別子を含めない。
@@ -42,5 +44,43 @@ export class DailyCheckInNotFoundError extends TrackingApplicationError {
 export class UserNotFoundError extends TrackingApplicationError {
   constructor() {
     super("user not found");
+  }
+}
+
+/** 週次レビューの対象週が作成できない(WREV-002)。理由は Presentation が `fieldErrors.weekStart` の文言に使う。 */
+export class ReviewWeekNotAllowedError extends TrackingApplicationError {
+  readonly reason: WeekNotReviewableReason;
+
+  constructor(reason: WeekNotReviewableReason) {
+    super(`review week not allowed: ${reason}`);
+    this.reason = reason;
+  }
+}
+
+/** 週次レビューが存在しない(他ユーザーのレビューを含む。存在を区別しない)。 */
+export class WeeklyReviewNotFoundError extends TrackingApplicationError {
+  constructor() {
+    super("weekly review not found");
+  }
+}
+
+/** 確定済みの週次レビューは変更できない(WREV-005)。 */
+export class WeeklyReviewAlreadyCompletedError extends TrackingApplicationError {
+  constructor() {
+    super("weekly review already completed");
+  }
+}
+
+/** 週次レビュー一覧の cursor が不正。 */
+export class InvalidWeeklyReviewCursorError extends TrackingApplicationError {
+  constructor() {
+    super("invalid weekly review cursor");
+  }
+}
+
+/** 保存済みのスナップショットが schema に合わない(データ破損)。内容を含めない。 */
+export class CorruptedWeeklyReviewError extends TrackingApplicationError {
+  constructor() {
+    super("persisted weekly review violates invariants");
   }
 }

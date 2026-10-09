@@ -30,6 +30,14 @@ export function createFakeDailyCheckInRepository(
       calls.push({ method: "find", actorUserId });
       return store.get(key(actorUserId, date)) ?? null;
     },
+    async listByDateRange({ actorUserId, from, to }) {
+      calls.push({ method: "listByDateRange", actorUserId });
+      return [...store.entries()]
+        .filter(([storeKey]) => storeKey.startsWith(`${actorUserId}:`))
+        .map(([, record]) => record)
+        .filter((record) => record.date >= from && record.date <= to)
+        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    },
     async upsert({ actorUserId, date, mood, difficulty, note, now }) {
       calls.push({ method: "upsert", actorUserId });
       if (!users.has(actorUserId)) return null;
