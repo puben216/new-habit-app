@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@habit-app/application": "workspace:*",
@@ -14,6 +15,7 @@
     "@habit-app/contracts": "workspace:*",
     "@habit-app/domain": "workspace:*",
     "@habit-app/infrastructure": "workspace:*",
+    "@tanstack/react-query": "5.104.1",
     "next": "16.3.8",
     "next-auth": "5.0.0-beta.32",
     "react": "19.3.0",
@@ -21,8 +23,11 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/pg": "8.23.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "eslint-config-next": "16.3.6"
+    "eslint-config-next": "16.3.6",
+    "pg": "8.23.0"
   }
 }

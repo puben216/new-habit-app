@@ -31,4 +31,14 @@ export interface DailyCheckInRepositoryPort {
     readonly note: string | null;
     readonly now: Date;
   }): Promise<DailyCheckInRecord | null>;
+
+  /**
+   * actor の `[from, to]`(両端を含む)のチェックインを、日付の昇順で返す。他ユーザーのものは含まれない。
+   * 週次レビュー(T-301)が週の集計を 1 回の取得で得るために使う。
+   */
+  listByDateRange(input: {
+    readonly actorUserId: string;
+    readonly from: string;
+    readonly to: string;
+  }): Promise<readonly DailyCheckInRecord[]>;
 }

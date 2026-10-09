@@ -18,6 +18,9 @@
     "test:integration": "vitest run integration.test",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
+    "mail:up": "docker compose up -d mailpit",
+    "mail:down": "docker compose stop mailpit",
+    "test:e2e": "pnpm --filter web run test:e2e",
     "db:migrate:dev": "pnpm --filter @habit-app/infrastructure run migrate:dev",
     "db:migrate:deploy": "pnpm --filter @habit-app/infrastructure run migrate:deploy"
   },
@@ -26,6 +29,7 @@
     "dependency-cruiser": "18.2.0",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.6",
+    "fast-check": "4.10.2",
     "prettier": "3.9.6",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.0",

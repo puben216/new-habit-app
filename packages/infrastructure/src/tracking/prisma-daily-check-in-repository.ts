@@ -82,6 +82,21 @@ export function createPrismaDailyCheckInRepository(
       return row === null ? null : toRecord({ ...row, date: row.checkInDate });
     },
 
+    async listByDateRange({ actorUserId, from, to }) {
+      const userId = parseUserId(actorUserId);
+      if (userId === null) return [];
+      if (!CALENDAR_DATE_PATTERN.test(from) || !CALENDAR_DATE_PATTERN.test(to)) return [];
+
+      const rows = await prisma.dailyCheckIn.findMany({
+        where: {
+          userId,
+          checkInDate: { gte: dateFromCalendarDate(from), lte: dateFromCalendarDate(to) },
+        },
+        orderBy: { checkInDate: "asc" },
+      });
+      return rows.map((row) => toRecord({ ...row, date: row.checkInDate }));
+    },
+
     async upsert({ actorUserId, date, mood, difficulty, note, now }) {
       const userId = parseUserId(actorUserId);
       if (userId === null || !CALENDAR_DATE_PATTERN.test(date)) return null;

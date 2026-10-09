@@ -29,7 +29,14 @@ SQS -> worker Lambda -> AI provider / SES -> RDS
 | Domain         | Entity、Value Object、業務ルール、純粋な集計       | 原則なし                        |
 | Application    | ユースケース、Port、認可判断、トランザクション境界 | Domain                          |
 | Infrastructure | DB、AI、Email、Queue、Clock の Adapter             | Application/Domain の interface |
-| Presentation   | Route Handler、Server Action、UI、DTO 変換         | Application、共有 schema        |
+| Presentation   | Route Handler、UI、DTO 変換                        | Application、共有 schema        |
+
+`apps/web` の UI 構成(T-211、[ADR-010](adr/ADR-010-web-ui-stack.md)):
+
+- `src/app/(public)`: 認証不要の画面。`src/app/(app)`: 認証が必要な画面。layout が DB session を検証し、未認証なら `/login` へ redirect する(データの保護は API の認可が担う)。
+- `src/components`: 業務ロジックを持たない共通コンポーネントと CSS Modules。design token は `src/app/globals.css`。
+- `src/lib/api`: 型付き API client(runtime schema で応答を検証)と TanStack Query の設定。画面から直接 `fetch` しない。
+- `src/server`: Route Handler の composition root と env 読み込み(`getServerEnv`)。
 
 Domain は React、Next.js、ORM、AWS SDK、AI SDK を import しない。Application は HTTP や具体 DB エラーを知らない。Infrastructure の例外は Application のエラー型へ変換する。
 

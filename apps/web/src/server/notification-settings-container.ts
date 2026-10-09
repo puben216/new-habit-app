@@ -3,7 +3,7 @@ import {
   upsertNotificationSettingsUseCase,
 } from "@habit-app/application";
 import type { Clock } from "@habit-app/application";
-import { parseEnv } from "@habit-app/config";
+import { getServerEnv } from "./env";
 import {
   createPrismaNotificationSettingsRepository,
   createPrismaProfileRepository,
@@ -19,7 +19,7 @@ import { actorUserIdFromSession } from "./session-actor";
  * 初回リクエスト時まで構築を遅延させる(`next build` が env 検証や DB 接続を実行しないようにするため)。
  */
 async function buildNotificationSettingsHandlers(): Promise<NotificationSettingsHandlers> {
-  const env = parseEnv(process.env);
+  const env = getServerEnv();
   const { auth, prisma } = await getAuthContainer();
 
   const settingsRepository = createPrismaNotificationSettingsRepository(prisma);

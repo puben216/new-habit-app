@@ -167,7 +167,7 @@ Infrastructure -> Application/Domain ports
 
 ## Repository Commands
 
-T-005（CI baseline）完了時点で実行可能なcommand。以下はいずれも`.github/workflows/pr-quality.yml`によりmain向けPRで自動実行される（`test:integration`まで含む。追加のPostgres `services:`は不要、Testcontainersが自前でコンテナを起動する）。
+T-005（CI baseline）完了時点で実行可能なcommand（T-211で`mail:*`と`test:e2e`を追加）。`mail:*`以外は`.github/workflows/pr-quality.yml`によりmain向けPRで自動実行される（`test:integration`まで含む。追加のPostgres `services:`は不要、Testcontainersが自前でコンテナを起動する。`test:e2e`は別jobで、Docker Composeのpostgres/Mailpitを使う）。
 
 ```text
 pnpm format:check
@@ -181,11 +181,14 @@ pnpm db:up              # docker composeでローカルPostgresを起動
 pnpm db:down            # ローカルPostgresを停止
 pnpm db:migrate:dev     # ローカルDBへPrisma migrationを対話的に適用(packages/infrastructure)
 pnpm db:migrate:deploy  # 保留中のmigrationを適用(CI/本番相当)
+pnpm mail:up           # docker composeでMailpit(SMTPキャプチャ、Web/API 8025)を起動
+pnpm mail:down         # Mailpitを停止
+pnpm test:e2e          # Playwright E2E(Chromium)。postgresとMailpitが必要(`pnpm db:up`、`pnpm mail:up`)。E2E専用databaseを作り直して実行する
 ```
 
 `prisma migrate reset`等、DBを破壊的にリセットするコマンドはAIエージェントからの実行を明示的にブロックされる（Prisma 7の安全機構）。実行する場合は必ずユーザーに対象環境と影響を説明し、明示的な同意を得てから`PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`を設定する。
 
-`pnpm test:e2e`はPlaywright導入後（T-211のE2E基盤導入時）に追加する。それまでは存在しないコマンドや成功結果を推測して報告しない。
+`pnpm test:e2e`はT-211で導入済み。初回は`pnpm --filter web exec playwright install chromium`でブラウザを取得する。CIの`e2e` jobは`pr-quality.yml`で実行され、secretを使わない。
 
 `.github/workflows/security-scan.yml`はmain向けPRでsecret scan（gitleaks）と`pnpm audit --audit-level=moderate`を実行する。Prisma CLI自身が同梱する開発時専用依存由来の既知vulnerabilityは`pnpm-workspace.yaml`の`auditConfig.ignoreGhsas`にレビュー済みとして記録済み。Terraform/IaC scan、SBOM生成、staging deployはインフラ未着手のため未実装（T-501以降）。SAST（Semgrep/CodeQL等）はAuth/API（T-101〜）未実装で攻撃面が薄いため今回は対象外とし、T-101着手時に再検討する。依存方向チェック（`pnpm lint:boundaries`、dependency-cruiser）はpr-quality.ymlに既に導入済み。
 

@@ -124,3 +124,25 @@ export type {
   SesFeedbackEvent,
   UnsubscribeQuery,
 } from "./notification-delivery";
+
+export {
+  WEEKLY_REVIEW_CURSOR_MAX_LENGTH,
+  WEEKLY_REVIEW_LIST_DEFAULT_LIMIT,
+  WEEKLY_REVIEW_LIST_MAX_LIMIT,
+  WEEKLY_REVIEW_REFLECTION_MAX_LENGTH,
+  createWeeklyReviewRequestSchema,
+  listWeeklyReviewsQuerySchema,
+  updateWeeklyReviewRequestSchema,
+  weeklyReviewIdParamSchema,
+  weeklyReviewListResponseSchema,
+  weeklyReviewResponseSchema,
+  weeklyReviewSummarySchema,
+} from "./weekly-review";
+export type {
+  CreateWeeklyReviewRequest,
+  ListWeeklyReviewsQuery,
+  UpdateWeeklyReviewRequest,
+  WeeklyReviewListResponse,
+  WeeklyReviewResponse,
+  WeeklyReviewSummaryResponse,
+} from "./weekly-review";
