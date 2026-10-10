@@ -212,7 +212,7 @@ test("通知配送の失敗一覧は状態を文字で示し、絞り込みと�
   await page.getByRole("link", { name: "失敗", exact: true }).click();
   await expect(page.getByRole("row").filter({ hasText: targetPublicId })).toBeVisible();
 
-  // AI ジョブ(T-303 前はデータなし)。
+  // AI ジョブ(失敗したジョブがなければ空状態)。
   await page.getByRole("link", { name: "AI ジョブの失敗" }).click();
   await expect(page).toHaveURL("/admin/ai-jobs");
   await expect(page.getByRole("heading", { name: "該当するジョブはありません" })).toBeVisible();
