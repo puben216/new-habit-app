@@ -222,3 +222,8 @@
 - 提案採用率は品質シグナルだが、ユーザー成果と同一視しない
 
 OpenAI 採用時の根拠: [Responses API は structured JSON と strongly typed な custom function calls を提供する](https://developers.openai.com/api/reference/cli/resources/responses/methods/create)。プロバイダー最終決定時に Claude の公式仕様・データ取扱いも同じ観点で比較する。
+
+### 追記(T-215): 日付指定の予定
+
+- `GET /api/v1/schedule/{date}`: 今日から過去 7 日前までの日付に予定された active な習慣と、その日の記録を返す。応答は `GET /api/v1/schedule/today` と同じ形(`date` は指定日)。範囲外・未来日は `422`(`entry_date_out_of_range`)、不正な暦日は `422`(`validation_failed`)。認証必須。
+- `GET /api/v1/schedule/today` と `GET /api/v1/schedule/{date}` の応答に `earliestDate`(記録を補正できる最も古い暦日)を追加する(後方互換な追加)。詳細は [specs/today-screens.md](specs/today-screens.md) TUI-005。

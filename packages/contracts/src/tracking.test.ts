@@ -70,6 +70,7 @@ describe("response schemas", () => {
     const body = {
       date: "2026-01-14",
       timezone: "Asia/Tokyo",
+      earliestDate: "2026-01-07",
       items: [
         {
           habit: {
@@ -86,5 +87,16 @@ describe("response schemas", () => {
       ],
     };
     expect(todayScheduleResponseSchema.safeParse(body).success).toBe(true);
+  });
+
+  it("earliestDate は必須で、実在する暦日でなければ拒否する", () => {
+    const base = { date: "2026-01-14", timezone: "Asia/Tokyo", items: [] };
+    expect(todayScheduleResponseSchema.safeParse(base).success).toBe(false);
+    expect(
+      todayScheduleResponseSchema.safeParse({ ...base, earliestDate: "2026-02-30" }).success,
+    ).toBe(false);
+    expect(
+      todayScheduleResponseSchema.safeParse({ ...base, earliestDate: "2026-01-07" }).success,
+    ).toBe(true);
   });
 });
