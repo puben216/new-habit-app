@@ -655,7 +655,8 @@ describe("管理機能の repository 群(T-403)", () => {
           INSERT INTO ai_jobs (user_id, kind, subject_type, subject_public_id, status, prompt_version,
                                output_schema_version, provider, model, input_fingerprint, result_json, failure_code)
           VALUES (${BigInt(user.id)}, 'habit_design', 'habit', gen_random_uuid(), ${status}, 'v1', 'v1',
-                  'fake', 'fake-1', ${`fp-secret-${seq}`}, '{"note":"model output secret"}'::jsonb,
+                  'fake', 'fake-1', ${`fp-secret-${seq}`},
+                  ${status === "fallback" || status === "succeeded" ? '{"note":"model output secret"}' : null}::jsonb,
                   ${status === "failed" ? "timeout" : null})`;
       }
       const page = await listAiJobFailuresUseCase(readDeps(), {
