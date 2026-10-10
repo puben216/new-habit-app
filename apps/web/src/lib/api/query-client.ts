@@ -16,6 +16,20 @@ export function isRetryableError(failureCount: number, error: unknown): boolean 
   return error.code === CLIENT_ERROR_CODES.networkError || error.status >= 500;
 }
 
+/**
+ * 利用者自身のログアウト中は、session 失効の 401(進行中の取得が受ける)を「期限切れ」として扱わない。
+ * ログアウトの直後に走っている取得が 401 になっても、案内付きの login 遷移を起こさないため。
+ */
+const signingOut = new WeakSet<QueryClient>();
+
+export function markSigningOut(client: QueryClient): void {
+  signingOut.add(client);
+}
+
+export function unmarkSigningOut(client: QueryClient): void {
+  signingOut.delete(client);
+}
+
 export interface QueryClientOptions {
   /** `401` を受けたとき(session 失効)に呼ばれる。多重呼び出しは 1 回にまとめる。 */
   readonly onUnauthorized: (queryClient: QueryClient) => void;
@@ -26,7 +40,7 @@ export function createQueryClient(options: QueryClientOptions): QueryClient {
 
   // `handleError` は cache の生成時に渡すが、実行は QueryClient の生成後になる。
   function handleError(error: unknown): void {
-    if (!isUnauthorizedError(error) || handled) return;
+    if (!isUnauthorizedError(error) || handled || signingOut.has(client)) return;
     handled = true;
     options.onUnauthorized(client);
   }

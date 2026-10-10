@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiError, CLIENT_ERROR_CODES } from "./api-error";
 import {
   MAX_QUERY_RETRIES,
+  markSigningOut,
+  unmarkSigningOut,
   createQueryClient,
   isRetryableError,
   isUnauthorizedError,
@@ -94,6 +96,40 @@ describe("createQueryClient", () => {
     ).rejects.toBeInstanceOf(ApiError);
 
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("ログアウト中の 401 では onUnauthorized を呼ばず、解除すると再び呼ぶ", async () => {
+    const onUnauthorized = vi.fn();
+    const client = createQueryClient({ onUnauthorized });
+    const fail = (key: string) =>
+      client.fetchQuery({
+        queryKey: [key],
+        queryFn: () => Promise.reject(apiError(401)),
+        retry: false,
+      });
+
+    markSigningOut(client);
+    await expect(fail("a")).rejects.toBeInstanceOf(ApiError);
+    expect(onUnauthorized).not.toHaveBeenCalled();
+
+    unmarkSigningOut(client);
+    await expect(fail("b")).rejects.toBeInstanceOf(ApiError);
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("ログアウト中の印は別の QueryClient に影響しない", async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const a = createQueryClient({ onUnauthorized: first });
+    const b = createQueryClient({ onUnauthorized: second });
+    markSigningOut(a);
+
+    await expect(
+      b.fetchQuery({ queryKey: ["x"], queryFn: () => Promise.reject(apiError(401)), retry: false }),
+    ).rejects.toBeInstanceOf(ApiError);
+
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(first).not.toHaveBeenCalled();
   });
 
   it("401 以外の失敗では onUnauthorized を呼ばない", async () => {
