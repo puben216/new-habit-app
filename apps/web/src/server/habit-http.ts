@@ -107,6 +107,7 @@ type ParsedBody<T> =
 export async function readJsonBody<T>(
   request: Request,
   schema: z.ZodType<T>,
+  maxBytes: number = HABIT_REQUEST_BODY_MAX_BYTES,
 ): Promise<ParsedBody<T>> {
   if (!isJsonContentType(request)) {
     return {
@@ -117,7 +118,7 @@ export async function readJsonBody<T>(
       }),
     };
   }
-  const text = await readLimitedText(request, HABIT_REQUEST_BODY_MAX_BYTES);
+  const text = await readLimitedText(request, maxBytes);
   if (text === null) {
     return {
       ok: false,

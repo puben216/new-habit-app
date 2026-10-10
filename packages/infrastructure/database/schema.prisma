@@ -33,18 +33,21 @@ model User {
   idempotencyKeys        IdempotencyKey[]
   sessions               Session[]
   passwordResetTokens    PasswordResetToken[]
+  adminUser              AdminUser?
 
   @@map("users")
 }
 
 // Auth.js DB session戦略(ADR-001)。id はプロジェクト全体の方針(bigint identity)に合わせる。
 model Session {
-  id           BigInt   @id @default(autoincrement())
-  sessionToken String   @unique @map("session_token")
-  userId       BigInt   @map("user_id")
-  expires      DateTime @db.Timestamptz(6)
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            BigInt    @id @default(autoincrement())
+  sessionToken  String    @unique @map("session_token")
+  userId        BigInt    @map("user_id")
+  expires       DateTime  @db.Timestamptz(6)
+  // 管理者のMFA(TOTP)を検証した時刻(T-403)。session単位で、新しいloginは未検証(NULL)から始まる。
+  mfaVerifiedAt DateTime? @map("mfa_verified_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -345,8 +348,43 @@ model IdempotencyKey {
   @@map("idempotency_keys")
 }
 
+// 管理者アカウント(T-403)。usersとは別表で、付与は運用スクリプトのみ(API/UIに経路なし)。
+// status: active | disabled (CHECK制約はmigrationで追加)。totpSecretEncはAES-256-GCMの暗号文(平文は保存しない)。
+model AdminUser {
+  id                BigInt    @id @default(autoincrement())
+  publicId          String    @unique @default(dbgenerated("gen_random_uuid()")) @map("public_id") @db.Uuid
+  userId            BigInt    @unique @map("user_id")
+  status            String    @default("active")
+  totpSecretEnc     String    @map("totp_secret_enc")
+  totpLastStep      BigInt?   @map("totp_last_step")
+  mfaFailedAttempts Int       @default(0) @map("mfa_failed_attempts")
+  mfaLockedUntil    DateTime? @map("mfa_locked_until") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recoveryCodes AdminRecoveryCode[]
+
+  @@map("admin_users")
+}
+
+// 単回使用のリカバリーコード。ハッシュ(SHA-256)のみ保存する。
+model AdminRecoveryCode {
+  id          BigInt    @id @default(autoincrement())
+  adminUserId BigInt    @map("admin_user_id")
+  codeHash    String    @unique @map("code_hash")
+  usedAt      DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@map("admin_recovery_codes")
+}
+
 // 追記専用。actorはuser/admin/systemのいずれかを表す文字列とし、FKは張らない
 // (adminモデルは未設計のため)。ipHashはIPアドレスの不可逆化表現。
+// T-403: UPDATE/DELETE/TRUNCATEはDB triggerが拒否する(追記専用)。triggerとCHECK・indexはmigrationで追加している。
 model AuditLog {
   id             BigInt   @id @default(autoincrement())
   actor          String

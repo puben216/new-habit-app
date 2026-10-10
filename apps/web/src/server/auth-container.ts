@@ -57,8 +57,8 @@ function createEmailSender(env: Env): EmailSenderPort {
       passwordResetUrlBase: `${env.APP_BASE_URL}/password-reset/confirm`,
     });
   }
-  // SesEmailSenderはT-401で実装予定(docs/plans/auth-adapter.md Interfaces and Contracts参照)。
-  throw new Error("AUTH_EMAIL_SENDER=ses はまだ実装されていません(T-401)");
+  // 認証メールのSES送信はT-405で実装する(T-402はリマインド通知のSES送信のみ)。
+  throw new Error("AUTH_EMAIL_SENDER=ses はまだ実装されていません(T-405)");
 }
 
 async function buildAuthContainer(): Promise<AuthContainer> {

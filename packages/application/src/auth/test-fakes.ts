@@ -142,6 +142,14 @@ export function createFakeAuthRepository(): FakeAuthRepository {
       return { userId: session.userId };
     },
 
+    async findSessionDetails(input) {
+      const session = sessions.get(input.sessionToken);
+      if (session === undefined || isTokenExpired(session.expiresAt, input.now)) {
+        return null;
+      }
+      return { userId: session.userId, sessionId: input.sessionToken, mfaVerifiedAt: null };
+    },
+
     async deleteSession(sessionToken) {
       sessions.delete(sessionToken);
     },
