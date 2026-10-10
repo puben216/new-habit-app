@@ -5,6 +5,8 @@ allowBuilds:
   "@prisma/engines": true
   argon2: true
   cpu-features: true
+  # tsx(運用スクリプトの実行用 devDependency)が使う esbuild の postinstall(標準ツール)を許可する。
+  esbuild: true
   prisma: true
   protobufjs: true
   ssh2: true

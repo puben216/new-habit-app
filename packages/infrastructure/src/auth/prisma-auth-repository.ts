@@ -178,6 +178,20 @@ export function createPrismaAuthRepository(prisma: PrismaClient): AuthRepository
       return { userId: session.userId.toString() };
     },
 
+    async findSessionDetails(input) {
+      const session = await prisma.session.findUnique({
+        where: { sessionToken: input.sessionToken },
+      });
+      if (session === null || isTokenExpired(session.expires, input.now)) {
+        return null;
+      }
+      return {
+        userId: session.userId.toString(),
+        sessionId: session.id.toString(),
+        mfaVerifiedAt: session.mfaVerifiedAt,
+      };
+    },
+
     async deleteSession(sessionToken) {
       // 既に失効済み(不存在)でも logout は成功扱いにするため deleteMany を使う。
       await prisma.session.deleteMany({ where: { sessionToken } });

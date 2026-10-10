@@ -242,3 +242,14 @@ Notification scheduler/delivery（[../specs/notification-delivery.md](specs/noti
 - index: `(user_id)`（FK）、`(next_attempt_at) WHERE status = 'pending'`（再投入の走査）、`UNIQUE (provider_message_id) WHERE provider_message_id IS NOT NULL`（bounce/complaint の引き当て）、`notification_settings (id) WHERE enabled AND habit_id IS NULL AND channel = 'email'`（スケジューラの走査）。
 - `email_suppressions`（新設）: `user_id` UNIQUE（FK CASCADE）、`reason` は `bounce | complaint`（CHECK）。ユーザー単位で、アドレス単位への拡張は email 変更・再登録の実装時に検討する。
 - `scheduled_at` は送信枠の UTC の瞬間、`local_date` は枠のローカル日。保存値に email・習慣名は含めない。
+
+## 実装時の補足（T-403）
+
+Minimal admin（[../specs/minimal-admin.md](specs/minimal-admin.md)、[../plans/minimal-admin.md](plans/minimal-admin.md)）の実装時の追加決定。Migration は `20261010000000_t403_minimal_admin`（expand のみ）。
+
+- `admin_users`（新設）: `users` とは別表で、付与は運用スクリプトのみ（API/UI に経路なし）。`user_id` UNIQUE（FK CASCADE、index を兼ねる）、`public_id`（uuid、監査・応答の識別子）、`status`（`active`/`disabled`、CHECK）、`totp_secret_enc`（AES-256-GCM の暗号文。AAD は所有ユーザーの ID）、`totp_last_step`（直前に受理した TOTP のステップ。replay 防止）、`mfa_failed_attempts`（CHECK >= 0）、`mfa_locked_until`。
+- `admin_recovery_codes`（新設）: SHA-256 のハッシュのみ（`code_hash` UNIQUE）、`used_at`（単回使用）。`admin_user_id` の FK は CASCADE で index あり。
+- `sessions.mfa_verified_at`（NULL 許容）: 管理者の MFA 検証時刻を **session 行** に持つ。新しい login は新しい session 行なので未検証から始まり、logout・失効・`admin:disable`・`admin:reset-mfa` で無効になる。管理者かどうかは session に持たせず毎回 `admin_users` で判定する。
+- `audit_logs`: `BEFORE UPDATE OR DELETE`（行）と `BEFORE TRUNCATE`（文）の trigger で変更を拒否する（追記専用）。多層防御であり、本番の実際の境界は runtime role に INSERT/SELECT のみを与える権限設定（T-501/T-502）。`actor`/`action` の空文字を拒否する CHECK と、`(actor, created_at DESC)`・`(created_at DESC, id DESC)` の index を追加した。ユーザー削除時の匿名化・保持期間の保守は T-404 が専用の Migration で扱う。
+- 失敗カウント・replay 防止・リカバリーコードの単回使用は、すべて単一の条件付き `UPDATE`（または CTE の 1 文）で原子的に行う。ロック明けの最初の失敗は 1 回目から数え直す。
+- 管理者の閲覧用クエリは列の allowlist のみを読み、習慣・記録・メモ・通知設定の中身、`ai_jobs.result_json`・`input_fingerprint` には触れない。
