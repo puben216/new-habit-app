@@ -732,8 +732,14 @@ describe("管理機能の repository 群(T-403)", () => {
       const recovery = granted.stdout.match(/[A-Z2-9]{5}-[A-Z2-9]{5}/g) ?? [];
       expect(recovery).toHaveLength(8);
 
-      const sessionId = await createSession(user.id, "cli-session");
+      // CLI で付与した管理者を実時刻で検証するため、セッションの有効期限も実時刻から作る。
+      // 固定の NOW(2026-10-10T03:00Z)基準だと、実時刻が NOW + 1h を過ぎた時点で期限切れになり失敗する。
       const now = new Date();
+      const sessionId = await createSession(
+        user.id,
+        "cli-session",
+        new Date(now.getTime() + 3_600_000),
+      );
       expect(
         await verifyAdminMfaUseCase(verifyDeps(now), {
           actorUserId: user.id,
