@@ -175,6 +175,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - T-204 の`GET /dashboard`を利用: ストリーク、7/30 日成功率、習慣ごとの内訳、空状態
 - E2E: 記録後の反映(T-204 の E2E を回収)。数値の表現は集計定義(D-13)に一致させ、色だけに依存しない
+- 設計: Feature Spec([dashboard-screen.md](specs/dashboard-screen.md))と Implementation Plan([dashboard-screen.md](plans/dashboard-screen.md))を作成。集計は server のまま client は整形のみ、成功率は整数%で`rate < 1`を 100%、`rate > 0`を 0%にしない、`null`は「まだ集計できません」と 0% を区別、ストリークは単位を「回」とし控えめな文言(復帰率の仮説)、集計定義を`details`で説明、と決定
+- 実装: `/dashboard`(全体の直近 7/30 日、習慣ごとの内訳、数値の見方)、整形(`lib/dashboard/format.ts`)、nav に「ダッシュボード」、T-215 の記録成功時に`["dashboard"]`を無効化。Migration・API 変更なし
+- テスト: Unit(整形の境界と性質テスト)と E2E 7 件(記録後の反映 33% → 43% と連続回数、スキップは分母外、空状態、確定前の習慣は 0% でなく「まだ集計できません」、HTML 文字列と説明、他ユーザーの分離、未認証)。手動変異 7 件を全件検出
 
 ### T-217 通知設定画面
 
