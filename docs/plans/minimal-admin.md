@@ -1,9 +1,9 @@
 # 最小管理機能 Implementation Plan
 
-Status: In Progress
+Status: Done
 責任者: TBD
-最終更新: 2026-10-09
-Spec: [../specs/minimal-admin.md](../specs/minimal-admin.md)
+最終更新: 2026-10-10
+Spec: [../specs/minimal-admin.md](../specs/minimal-admin.md)、画面: [../specs/admin-screens.md](../specs/admin-screens.md)
 変更区分: Standard
 
 ## 方針
