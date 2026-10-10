@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
+import { markSigningOut, unmarkSigningOut } from "@/lib/api/query-client";
 import { signOut } from "@/lib/auth/auth-client";
 import { NETWORK_ERROR_MESSAGE, UNEXPECTED_ERROR_MESSAGE } from "@/lib/auth/messages";
 import { CLIENT_ERROR_CODES, isApiError } from "@/lib/api/api-error";
@@ -15,7 +16,15 @@ export function LogoutButton() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const mutation = useMutation({
+    // 進行中の取得が、ログアウト後の 401 を「期限切れ」として扱わないようにしてから送る。
+    onMutate: async () => {
+      markSigningOut(queryClient);
+      await queryClient.cancelQueries();
+    },
     mutationFn: () => signOut(),
+    onError: () => {
+      unmarkSigningOut(queryClient);
+    },
     onSuccess: () => {
       queryClient.clear();
       router.replace("/login");

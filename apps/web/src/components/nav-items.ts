@@ -11,6 +11,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/today", label: "今日" },
   { href: "/habits", label: "習慣" },
   { href: "/dashboard", label: "ダッシュボード" },
+  { href: "/notifications", label: "通知" },
   { href: "/profile", label: "プロフィール" },
 ];
 

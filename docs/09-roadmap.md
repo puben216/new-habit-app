@@ -183,6 +183,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - T-401 の`/api/v1/notification-settings`を利用: 送信時刻、quiet hours、停止と再開
 - E2E: 設定と停止(T-401 の E2E を回収)。メール送信自体は T-402 のスコープ
+- 設計: Feature Spec([notification-screen.md](specs/notification-screen.md))と Implementation Plan([notification-screen.md](plans/notification-screen.md))を作成。停止/有効化は画面に保存済みの値に`enabled`だけを反転して即時に`PUT`(未保存の編集や検証に依存しない)、設定の保存は`enabled`を変えない(保存だけで有効にならない: opt-in)、時刻の整合は server が判定し固定文言で表示、と決定
+- 実装: `/notifications`(状態表示、停止/有効化、送信時刻・タイムゾーン・送らない時間帯の設定)、nav に「通知」。Migration・API 変更なし。ログアウト時に進行中の取得の 401 を「期限切れ」として扱わない処理(`markSigningOut`)を追加
+- テスト: Unit(body の組み立て: enabled 保持・保存済みの値のみ使用の性質テスト、検証、エラーの固定文言、ログアウト中の 401 抑止)と E2E 9 件(未保存の既定値、保存では有効にならない、停止/有効化で設定保持、送信時刻の拒否と停止中の保存、再開の拒否、未保存の不正な編集があっても停止できる、入力エラー、二重クリック、他ユーザーの分離、未認証)。手動変異で確認
 
 ## Phase 3: 週次レビューと AI
 
