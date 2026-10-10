@@ -36,6 +36,8 @@ export interface TodayScheduleItem {
 export interface TodaySchedule {
   readonly date: string;
   readonly timezone: string;
+  /** 記録を補正できる最も古い暦日(今日から `ENTRY_BACKDATE_LIMIT_DAYS` 日前)。client が日数を再定義しないために返す。 */
+  readonly earliestDate: string;
   readonly items: readonly TodayScheduleItem[];
 }
 
@@ -73,6 +75,45 @@ export async function listAllActiveHabits(
   return collected.reverse();
 }
 
+/** 対象日が「今日から過去 7 日前まで」に収まることを確認する(HENT-004。upsert と予定取得で共有)。 */
+function assertEntryDateInRange(todayDate: string, date: string): void {
+  const oldest = addCalendarDays(todayDate, -ENTRY_BACKDATE_LIMIT_DAYS);
+  if (!isValidCalendarDate(date) || date < oldest || date > todayDate) {
+    throw new EntryDateOutOfRangeError();
+  }
+}
+
+async function buildSchedule(
+  deps: GetTodayScheduleDeps,
+  actorUserId: string,
+  timezone: string,
+  todayDate: string,
+  date: string,
+): Promise<TodaySchedule> {
+  const [habits, entries] = await Promise.all([
+    listAllActiveHabits(deps.habitRepository, actorUserId),
+    deps.entryRepository.listByDate({ actorUserId, date }),
+  ]);
+  const entryByHabitId = new Map(entries.map((entry) => [entry.habitId, entry]));
+
+  const items: TodayScheduleItem[] = [];
+  for (const { habit } of habits) {
+    const occurrence = scheduledOccurrenceOn(habit.scheduleVersions, date);
+    if (occurrence === null) continue;
+    items.push({
+      habit,
+      targetCount: occurrence.targetCount,
+      entry: entryByHabitId.get(habit.id) ?? null,
+    });
+  }
+  return {
+    date,
+    timezone,
+    earliestDate: addCalendarDays(todayDate, -ENTRY_BACKDATE_LIMIT_DAYS),
+    items,
+  };
+}
+
 /** 今日(actor の timezone のローカル日)に予定された習慣と、その日の記録を返す(HENT-001)。 */
 export async function getTodayScheduleUseCase(
   deps: GetTodayScheduleDeps,
@@ -81,23 +122,29 @@ export async function getTodayScheduleUseCase(
   const today = await resolveLocalToday(deps.profileRepository, deps.now, input.actorUserId);
   // user が存在しない(削除済み等)。習慣も存在しない扱いにする。
   if (today === null) throw new HabitNotFoundError();
-  const [habits, entries] = await Promise.all([
-    listAllActiveHabits(deps.habitRepository, input.actorUserId),
-    deps.entryRepository.listByDate({ actorUserId: input.actorUserId, date: today.date }),
-  ]);
-  const entryByHabitId = new Map(entries.map((entry) => [entry.habitId, entry]));
+  return buildSchedule(deps, input.actorUserId, today.timezone, today.date, today.date);
+}
 
-  const items: TodayScheduleItem[] = [];
-  for (const { habit } of habits) {
-    const occurrence = scheduledOccurrenceOn(habit.scheduleVersions, today.date);
-    if (occurrence === null) continue;
-    items.push({
-      habit,
-      targetCount: occurrence.targetCount,
-      entry: entryByHabitId.get(habit.id) ?? null,
-    });
-  }
-  return { date: today.date, timezone: today.timezone, items };
+export interface GetScheduleOnDateInput {
+  readonly actorUserId: string;
+  /** 対象日(`YYYY-MM-DD`)。今日から過去 7 日前までの範囲(docs/specs/today-screens.md TUI-005)。 */
+  readonly date: string;
+}
+
+/**
+ * 指定日(今日から過去 7 日前まで)に予定された習慣と、その日の記録を返す。過去の記録の補正画面用。
+ *
+ * @throws {EntryDateOutOfRangeError} 対象日が範囲外または実在しない暦日
+ * @throws {HabitNotFoundError} actor の user が存在しない
+ */
+export async function getScheduleOnDateUseCase(
+  deps: GetTodayScheduleDeps,
+  input: GetScheduleOnDateInput,
+): Promise<TodaySchedule> {
+  const today = await resolveLocalToday(deps.profileRepository, deps.now, input.actorUserId);
+  if (today === null) throw new HabitNotFoundError();
+  assertEntryDateInRange(today.date, input.date);
+  return buildSchedule(deps, input.actorUserId, today.timezone, today.date, input.date);
 }
 
 export interface UpsertHabitEntryDeps {
@@ -133,10 +180,7 @@ export async function upsertHabitEntryUseCase(
   // user が存在しない(削除済み等)。習慣も存在しない扱いにする。
   if (today === null) throw new HabitNotFoundError();
 
-  const oldest = addCalendarDays(today.date, -ENTRY_BACKDATE_LIMIT_DAYS);
-  if (!isValidCalendarDate(input.date) || input.date < oldest || input.date > today.date) {
-    throw new EntryDateOutOfRangeError();
-  }
+  assertEntryDateInRange(today.date, input.date);
 
   const record = await deps.habitRepository.findById({
     actorUserId: input.actorUserId,

@@ -15,11 +15,13 @@ export {
 } from "./errors";
 export {
   ENTRY_BACKDATE_LIMIT_DAYS,
+  getScheduleOnDateUseCase,
   getTodayScheduleUseCase,
   hasUnrecordedScheduledHabitsUseCase,
   upsertHabitEntryUseCase,
 } from "./use-cases";
 export type {
+  GetScheduleOnDateInput,
   GetTodayScheduleDeps,
   GetTodayScheduleInput,
   HasUnrecordedScheduledHabitsDeps,

@@ -10,6 +10,7 @@ import { createFakeHabitEntryRepository } from "./test-fakes";
 import type { FakeHabitEntryRepository } from "./test-fakes";
 import {
   ENTRY_BACKDATE_LIMIT_DAYS,
+  getScheduleOnDateUseCase,
   getTodayScheduleUseCase,
   upsertHabitEntryUseCase,
 } from "./use-cases";
@@ -367,6 +368,101 @@ describe("getTodayScheduleUseCase", () => {
     const s = setup(WED_NOON_JST);
     await expect(
       getTodayScheduleUseCase(s.todayDeps(), { actorUserId: "999" }),
+    ).rejects.toBeInstanceOf(HabitNotFoundError);
+  });
+});
+
+describe("getTodayScheduleUseCase: earliestDate", () => {
+  it("earliestDate は今日から ENTRY_BACKDATE_LIMIT_DAYS 日前のローカル暦日", async () => {
+    const s = setup(WED_NOON_JST);
+    const today = await getTodayScheduleUseCase(s.todayDeps(), { actorUserId: USER_A });
+    expect(today.date).toBe("2026-01-14");
+    expect(today.earliestDate).toBe("2026-01-07");
+    expect(ENTRY_BACKDATE_LIMIT_DAYS).toBe(7);
+  });
+});
+
+describe("getScheduleOnDateUseCase", () => {
+  it("指定日(過去)に予定された習慣と、その日の記録だけを返す。date は指定日", async () => {
+    // 今日は 2026-01-14(水)。1/12 は月曜。
+    const s = setup(WED_NOON_JST);
+    const monday = await s.createHabit(USER_A, {
+      name: "monday",
+      schedule: { effectiveFrom: "2025-01-01", daysOfWeek: [1], targetCount: 2 },
+    });
+    await s.createHabit(USER_A, {
+      name: "wed-only",
+      schedule: { effectiveFrom: "2025-01-01", daysOfWeek: [3], targetCount: 1 },
+    });
+    await upsertHabitEntryUseCase(s.upsertDeps(), {
+      actorUserId: USER_A,
+      habitId: monday,
+      date: "2026-01-12",
+      status: "missed",
+      quantity: 1,
+    });
+
+    const result = await getScheduleOnDateUseCase(s.todayDeps(), {
+      actorUserId: USER_A,
+      date: "2026-01-12",
+    });
+
+    expect(result.date).toBe("2026-01-12");
+    expect(result.earliestDate).toBe("2026-01-07");
+    expect(result.items.map((i) => i.habit.id)).toEqual([monday]);
+    expect(result.items[0]?.targetCount).toBe(2);
+    expect(result.items[0]?.entry?.status).toBe("missed");
+  });
+
+  it("範囲: 今日と 7 日前は受理、未来日・8 日前・実在しない暦日は拒否", async () => {
+    const s = setup(WED_NOON_JST);
+    await s.createHabit(USER_A);
+    const call = (date: string) =>
+      getScheduleOnDateUseCase(s.todayDeps(), { actorUserId: USER_A, date });
+
+    await expect(call("2026-01-14")).resolves.toMatchObject({ date: "2026-01-14" });
+    await expect(call("2026-01-07")).resolves.toMatchObject({ date: "2026-01-07" });
+    await expect(call("2026-01-15")).rejects.toBeInstanceOf(EntryDateOutOfRangeError);
+    await expect(call("2026-01-06")).rejects.toBeInstanceOf(EntryDateOutOfRangeError);
+    await expect(call("2026-02-30")).rejects.toBeInstanceOf(EntryDateOutOfRangeError);
+  });
+
+  it("「今日」は actor の timezone で決まる(UTC では前日でも 1 日先の範囲が変わる)", async () => {
+    // 2026-01-14T16:00Z は Tokyo では 1/15、UTC では 1/14。
+    const s = setup("2026-01-14T16:00:00Z", "Asia/Tokyo");
+    await expect(
+      getScheduleOnDateUseCase(s.todayDeps(), { actorUserId: USER_A, date: "2026-01-15" }),
+    ).resolves.toMatchObject({ date: "2026-01-15", earliestDate: "2026-01-08" });
+  });
+
+  it("他ユーザーの習慣・記録は含めない", async () => {
+    const s = setup(WED_NOON_JST);
+    await s.createHabit(USER_B, { name: "b-habit" });
+    const result = await getScheduleOnDateUseCase(s.todayDeps(), {
+      actorUserId: USER_A,
+      date: "2026-01-13",
+    });
+    expect(result.items).toEqual([]);
+  });
+
+  it("アーカイブ済みの習慣は含めない", async () => {
+    const s = setup(WED_NOON_JST);
+    const archived = await s.createHabit(USER_A);
+    await archiveHabitUseCase(
+      { habitRepository: s.habitRepository, now: () => s.now.current },
+      { actorUserId: USER_A, habitId: archived, version: 1 },
+    );
+    const result = await getScheduleOnDateUseCase(s.todayDeps(), {
+      actorUserId: USER_A,
+      date: "2026-01-13",
+    });
+    expect(result.items).toEqual([]);
+  });
+
+  it("user が存在しなければ HabitNotFoundError", async () => {
+    const s = setup(WED_NOON_JST);
+    await expect(
+      getScheduleOnDateUseCase(s.todayDeps(), { actorUserId: "999", date: "2026-01-13" }),
     ).rejects.toBeInstanceOf(HabitNotFoundError);
   });
 });
