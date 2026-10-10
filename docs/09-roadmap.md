@@ -175,6 +175,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - T-204 の`GET /dashboard`を利用: ストリーク、7/30 日成功率、習慣ごとの内訳、空状態
 - E2E: 記録後の反映(T-204 の E2E を回収)。数値の表現は集計定義(D-13)に一致させ、色だけに依存しない
+- 設計: Feature Spec([dashboard-screen.md](specs/dashboard-screen.md))と Implementation Plan([dashboard-screen.md](plans/dashboard-screen.md))を作成。集計は server のまま client は整形のみ、成功率は整数%で`rate < 1`を 100%、`rate > 0`を 0%にしない、`null`は「まだ集計できません」と 0% を区別、ストリークは単位を「回」とし控えめな文言(復帰率の仮説)、集計定義を`details`で説明、と決定
+- 実装: `/dashboard`(全体の直近 7/30 日、習慣ごとの内訳、数値の見方)、整形(`lib/dashboard/format.ts`)、nav に「ダッシュボード」、T-215 の記録成功時に`["dashboard"]`を無効化。Migration・API 変更なし
+- テスト: Unit(整形の境界と性質テスト)と E2E 7 件(記録後の反映 33% → 43% と連続回数、スキップは分母外、空状態、確定前の習慣は 0% でなく「まだ集計できません」、HTML 文字列と説明、他ユーザーの分離、未認証)。手動変異 7 件を全件検出
 
 ### T-217 通知設定画面
 
@@ -205,6 +208,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 - SQS producer、Lambda consumer、attempt、DLQ、idempotency
 - Integration: timeout/429/5xx/partial batch/duplicate
 - E2E: fake provider で pending → completed
+- 設計: Feature Spec([ai-queue-pipeline.md](specs/ai-queue-pipeline.md))と Implementation Plan([ai-queue-pipeline.md](plans/ai-queue-pipeline.md))を作成。範囲は queue port・worker・`ai_jobs` 状態管理・`POST /weekly-reviews/{id}/analysis`(202)・`GET /ai-jobs/{id}` まで。実 SQS adapter・Terraform・実 provider は対象外(T-501、ADR-003)、分析の中身は T-305(D-16)
+- 実装: Domain `decideAiJobClaim`/`canonicalJson`、Application `requestWeeklyAnalysisUseCase`/`getAiJobUseCase`/`processAiJobUseCase`/`handleAiJobMessages`(SQS 形式の部分バッチ失敗)と入力の最小化・fingerprint、Infrastructure `PrismaAiJobRepository`(`ON CONFLICT DO NOTHING` の冪等作成、単一文の claim と lease、確定と attempt を 1 transaction)・inline queue(ローカル/E2E 用)、`apps/workers` の SQS handler、Config(`AI_QUEUE_DRIVER`/`AI_PROVIDER`/`AI_PUBLICATION_ENABLED`。本番で `inline` を拒否)。Migration は unique index と CHECK の追加のみ(expand)
+- テスト: Unit(状態遷移と canonical JSON の性質テスト、入力の最小化、request/process/handler の全分岐、重複配送、受信上限、契約、HTTP、Config)と Integration(実 PostgreSQL: 並行作成 6 件で 1 行・並行 claim 6 件で 1 件・lease 切れの引き継ぎ、確定の競合、CHECK 制約、POST→処理→GET の一周、fresh と upgrade の Migration)を追加。E2E は UI 未実装のため対象外
 
 ### T-304 Habit design coaching
 

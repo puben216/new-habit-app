@@ -12,6 +12,7 @@ import {
   entryLabel,
   type RecordAction,
 } from "@/lib/today/entry-actions";
+import { DASHBOARD_QUERY_KEY } from "@/lib/dashboard/dashboard-api";
 import { RECORDED_MESSAGE, describeRecordError } from "@/lib/today/messages";
 import { SCHEDULE_ROOT_KEY, putEntry } from "@/lib/today/today-api";
 
@@ -44,7 +45,10 @@ export function HabitRecordCard({ item, date }: HabitRecordCardProps) {
     },
     onSuccess: async () => {
       setMessage({ kind: "ok", text: RECORDED_MESSAGE });
-      await queryClient.invalidateQueries({ queryKey: SCHEDULE_ROOT_KEY });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: SCHEDULE_ROOT_KEY }),
+        queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY }),
+      ]);
     },
     onError: async (error) => {
       setMessage({ kind: "error", text: describeRecordError(error) });

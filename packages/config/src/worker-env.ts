@@ -30,6 +30,10 @@ const workerEnvSchema = z
     SES_CONFIGURATION_SET: z.string().min(1).optional(),
     /** scheduler(投入先)。 */
     NOTIFICATION_QUEUE_URL: z.string().url().optional(),
+    /** ai-coaching(AiCoachPort の実装。実 provider は ADR-003 の確定後に追加する。現在は fake のみ)。 */
+    AI_PROVIDER: z.enum(["fake"]).default("fake"),
+    /** ai-coaching(AI 提案の公開 Feature Flag)。false の間は provider を呼ばず定型 fallback で完結する。 */
+    AI_PUBLICATION_ENABLED: booleanFlag,
   })
   .refine((v) => v.DATABASE_URL !== undefined || v.DATABASE_URL_SECRET_ARN !== undefined, {
     message: "DATABASE_URL か DATABASE_URL_SECRET_ARN のいずれかが必要です",
