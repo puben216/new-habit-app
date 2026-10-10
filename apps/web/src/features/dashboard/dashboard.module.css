@@ -1,0 +1,98 @@
+.cards,
+.windows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-4);
+}
+
+.card {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.habits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cardTitle {
+  margin: 0 0 var(--space-2);
+  font-size: 1.0625rem;
+}
+
+.windowTitle {
+  margin: 0 0 var(--space-1);
+  font-size: 0.9375rem;
+}
+
+.period {
+  margin-left: var(--space-2);
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.rate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.rateLabel {
+  color: var(--color-text-muted);
+}
+
+.rate strong {
+  font-size: 1.375rem;
+}
+
+.meter {
+  width: 6rem;
+  height: 0.75rem;
+}
+
+.breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+
+.breakdown div {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.breakdown dt {
+  color: var(--color-text-muted);
+}
+
+.breakdown dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.streak {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+}
+
+.definition {
+  margin: var(--space-4) 0;
+}
+
+.definition summary {
+  cursor: pointer;
+  min-height: var(--target-size);
+  display: flex;
+  align-items: center;
+}
