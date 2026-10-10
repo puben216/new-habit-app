@@ -21,6 +21,10 @@ export const E2E_SMTP_PORT = "1025";
 
 export const E2E_AUTH_SECRET = "e2e-only-dummy-secret-not-for-real-use-0123456789";
 
+// 管理機能(T-403)用のダミー鍵。32 バイトの固定値(base64)と 32 文字以上の HMAC 鍵で、実在の Secret ではない。
+export const E2E_ADMIN_TOTP_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
+export const E2E_AUDIT_IP_HASH_KEY = "e2e-only-dummy-audit-ip-hash-key-0123456789";
+
 /** アプリ(`next build`/`next start`)に渡す env。`NODE_ENV` は起動コマンド側で指定する。 */
 export function e2eAppEnv(): Record<string, string> {
   return {
@@ -32,5 +36,7 @@ export function e2eAppEnv(): Record<string, string> {
     SMTP_PORT: E2E_SMTP_PORT,
     EMAIL_FROM: "no-reply@habit-app.local",
     APP_BASE_URL: E2E_BASE_URL,
+    ADMIN_TOTP_ENCRYPTION_KEY: E2E_ADMIN_TOTP_ENCRYPTION_KEY,
+    AUDIT_IP_HASH_KEY: E2E_AUDIT_IP_HASH_KEY,
   };
 }
