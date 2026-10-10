@@ -1,4 +1,8 @@
-import { getTodayScheduleUseCase, upsertHabitEntryUseCase } from "@habit-app/application";
+import {
+  getScheduleOnDateUseCase,
+  getTodayScheduleUseCase,
+  upsertHabitEntryUseCase,
+} from "@habit-app/application";
 import type { Clock } from "@habit-app/application";
 import { getServerEnv } from "./env";
 import {
@@ -34,6 +38,7 @@ async function buildEntryHandlers(): Promise<EntryHandlers> {
     resolveActorUserId: async () => actorUserIdFromSession(await auth()),
     useCases: {
       getToday: (input) => getTodayScheduleUseCase(deps, input),
+      getOnDate: (input) => getScheduleOnDateUseCase(deps, input),
       upsert: (input) => upsertHabitEntryUseCase(deps, input),
     },
   });

@@ -41,12 +41,14 @@ const habit = createHabit({
 const todaySchedule: TodaySchedule = {
   date: "2026-01-14",
   timezone: "Asia/Tokyo",
+  earliestDate: "2026-01-07",
   items: [{ habit, targetCount: 1, entry }],
 };
 
 function setup(options: { actor?: string | null } = {}) {
   const useCases = {
     getToday: vi.fn<EntryUseCases["getToday"]>(async () => todaySchedule),
+    getOnDate: vi.fn<EntryUseCases["getOnDate"]>(async () => todaySchedule),
     upsert: vi.fn<EntryUseCases["upsert"]>(async () => entry),
   };
   const handlers = createEntryHandlers({
@@ -218,5 +220,44 @@ describe("PUT /habits/{habitId}/entries/{date}", () => {
     const { handlers, useCases } = setup();
     useCases.upsert.mockRejectedValueOnce(new Error("connection string leaked"));
     await expect(handlers.upsert(putRequest({ status: "success" }), params)).rejects.toThrow();
+  });
+});
+
+describe("GET /schedule/{date}", () => {
+  const request = new Request(`${ORIGIN}/api/v1/schedule/2026-01-12`);
+
+  it("200 で指定日の予定と earliestDate を返す", async () => {
+    const { handlers, useCases } = setup();
+    const response = await handlers.scheduleOnDate(request, { date: "2026-01-12" });
+
+    expect(response.status).toBe(200);
+    expect(useCases.getOnDate).toHaveBeenCalledWith({ actorUserId: "42", date: "2026-01-12" });
+    const body = (await response.json()) as { earliestDate: string };
+    expect(body.earliestDate).toBe("2026-01-07");
+  });
+
+  it("未認証は 401 で use case を呼ばない", async () => {
+    const { handlers, useCases } = setup({ actor: null });
+    const response = await handlers.scheduleOnDate(request, { date: "2026-01-12" });
+    expect(response.status).toBe(401);
+    expect(useCases.getOnDate).not.toHaveBeenCalled();
+  });
+
+  it("不正な暦日は 422(use case を呼ばない)", async () => {
+    const { handlers, useCases } = setup();
+    for (const date of ["2026-02-30", "abc", "2026-1-1", "", "../etc"]) {
+      const response = await handlers.scheduleOnDate(request, { date });
+      expect(response.status).toBe(422);
+      expect((await problem(response)).code).toBe("validation_failed");
+    }
+    expect(useCases.getOnDate).not.toHaveBeenCalled();
+  });
+
+  it("範囲外は 422 entry_date_out_of_range", async () => {
+    const { handlers, useCases } = setup();
+    useCases.getOnDate.mockRejectedValueOnce(new EntryDateOutOfRangeError());
+    const response = await handlers.scheduleOnDate(request, { date: "2026-01-01" });
+    expect(response.status).toBe(422);
+    expect((await problem(response)).code).toBe("entry_date_out_of_range");
   });
 });

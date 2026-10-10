@@ -28,6 +28,7 @@ import {
 
 export interface EntryUseCases {
   getToday(input: { actorUserId: string }): Promise<TodaySchedule>;
+  getOnDate(input: { actorUserId: string; date: string }): Promise<TodaySchedule>;
   upsert(input: UpsertHabitEntryInput): Promise<HabitEntryRecord>;
 }
 
@@ -46,6 +47,7 @@ export interface EntryRouteParams {
 
 export interface EntryHandlers {
   today(request: Request): Promise<Response>;
+  scheduleOnDate(request: Request, params: { readonly date: string }): Promise<Response>;
   upsert(request: Request, params: EntryRouteParams): Promise<Response>;
 }
 
@@ -95,6 +97,7 @@ function toTodayResponse(today: TodaySchedule): TodayScheduleResponse {
   return {
     date: today.date,
     timezone: today.timezone,
+    earliestDate: today.earliestDate,
     items: today.items.map((item) => ({
       habit: {
         id: item.habit.id,
@@ -136,6 +139,23 @@ export function createEntryHandlers(deps: EntryHandlerDeps): EntryHandlers {
       return run(async () => {
         const today = await deps.useCases.getToday({ actorUserId });
         return jsonResponse(200, toTodayResponse(today));
+      });
+    },
+
+    async scheduleOnDate(request, params) {
+      const actorUserId = await deps.resolveActorUserId(request);
+      if (actorUserId === null) return unauthorizedResponse();
+
+      const date = habitEntryDateParamSchema.safeParse(params.date);
+      if (!date.success) {
+        return validationFailedResponse({
+          date: ["日付は YYYY-MM-DD 形式の実在する暦日で指定してください"],
+        });
+      }
+
+      return run(async () => {
+        const schedule = await deps.useCases.getOnDate({ actorUserId, date: date.data });
+        return jsonResponse(200, toTodayResponse(schedule));
       });
     },
 

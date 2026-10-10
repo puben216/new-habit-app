@@ -25,8 +25,10 @@ test("認証済みなら空の保護画面が描画され、現在地がナビ�
 
   await expect(page).toHaveURL(/\/today$/);
   await expect(page.getByRole("heading", { level: 1, name: "今日" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "今日" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("main")).toContainText("準備中");
+  await expect(
+    page.getByRole("navigation", { name: "メインメニュー" }).getByRole("link", { name: "今日" }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("heading", { level: 2, name: "習慣の記録" })).toBeVisible();
 });
 
 test("skip link を keyboard で操作すると本文へ移動する", async ({ page, context }) => {
@@ -52,7 +54,7 @@ test("Tab の順序は skip link → ブランド → ナビゲーションで�
   const expectedOrder = ["本文へ移動", "AI Habit Coach", "今日"];
   for (const name of expectedOrder) {
     await page.keyboard.press("Tab");
-    const link = page.getByRole("link", { name });
+    const link = page.getByRole("link", { name, exact: true }).first();
     await expect(link).toBeFocused();
     await expect(link).toBeInViewport();
     const outlineStyle = await link.evaluate((element) => getComputedStyle(element).outlineStyle);

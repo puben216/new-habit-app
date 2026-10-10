@@ -54,6 +54,9 @@
 | GET     | `/admin/operations/ai-jobs`       | 管理者の失敗状況確認 |
 | GET     | `/admin/operations/notifications` | 配送失敗確認         |
 | GET     | `/admin/users/{publicId}`         | 必要最小限の状態確認 |
+| GET     | `/admin/users?email=`             | email 完全一致の検索 |
+| POST    | `/admin/mfa/verify`               | 管理者の MFA 検証    |
+| GET     | `/admin/me`                       | 管理者の MFA 状態    |
 
 ## HTTP 契約例
 
@@ -140,6 +143,15 @@
 - `GET` は状態を変えず、確認用の最小 HTML を返す（メーラーのプリフェッチで勝手に停止されないため）。Origin 検証は行わず、token で保護する。
 - 通知の配送そのものは API ではなく、スケジューラ（EventBridge）→ SQS（`deliveryId` のみの message）→ ワーカーで行う。SES の bounce/complaint は SNS → SQS で受ける。
 
+`/admin/*` の正式な契約は [../specs/minimal-admin.md](specs/minimal-admin.md) の APIとイベント節と `packages/contracts/src/admin.ts` を正本とし、上記の表からの差分は次のとおり。
+
+- 認可の振り分け: 未認証 `401`、管理者でない（Member、無効化済み、停止中）は **`404`**（`not_found`。存在しない route と同じ応答で、入力形式の検証結果も明かさない）、管理者だが MFA 未検証/期限切れ（検証から 30 分）は `403`（`mfa_required`）。管理者かどうかは毎回 DB で判定する。
+- `POST /admin/mfa/verify` は body `{ code }`（6 桁の TOTP、または `XXXXX-XXXXX` のリカバリーコード）。成功 `200`、無効なコードは種別を区別せず `403`（`invalid_mfa_code`）、連続 5 回の失敗で 15 分ロック（`429`、`mfa_locked`、`Retry-After`）。同じ TOTP の再利用は拒否される。Origin 検証・`Content-Type`・body 上限 1 KiB は他の `POST` と同じ。
+- `GET /admin/users?email=` は完全一致（正規化後）で `items` が 0〜1 件。`emailMasked`（`u***@example.test`）・`publicId`・`status`・`createdAt` のみ。`GET /admin/users/{publicId}` は状態・直近 30 日の配送/AI ジョブの状態別件数・suppression の有無のみ。
+- `GET /admin/operations/notifications`（`failed`/`expired`/`suppressed`）と `/admin/operations/ai-jobs`（`failed`/`fallback`）は `status`・`limit`（1〜50）・`cursor`（直前ページ最後の ID）の keyset ページング。email・設定の中身・AI の入出力は含まない。
+- すべての閲覧は、閲覧の前に監査ログへ追記され（追記に失敗したら閲覧しない）、検索した email は監査に残らない。応答は `Cache-Control: no-store` と `X-Robots-Tag: noindex`。
+- 管理 API は読み取り専用（`GET` と `POST /admin/mfa/verify` のみ）。Admin の付与・無効化は運用スクリプト（`pnpm admin:grant|admin:disable|admin:reset-mfa`）だけで、API/UI に経路はない。rate limit は未対応。
+
 ## AI 境界
 
 `AiCoachPort` は provider SDK を抽象化する。Application が渡すのは目的別 DTO のみで、provider 固有の response object を返さない。実装時点の公式仕様を再確認し、OpenAI 採用時は Responses API の Structured Outputs と function calling を Adapter 内に閉じ込める。
@@ -217,3 +229,8 @@
 - 提案採用率は品質シグナルだが、ユーザー成果と同一視しない
 
 OpenAI 採用時の根拠: [Responses API は structured JSON と strongly typed な custom function calls を提供する](https://developers.openai.com/api/reference/cli/resources/responses/methods/create)。プロバイダー最終決定時に Claude の公式仕様・データ取扱いも同じ観点で比較する。
+
+### 追記(T-215): 日付指定の予定
+
+- `GET /api/v1/schedule/{date}`: 今日から過去 7 日前までの日付に予定された active な習慣と、その日の記録を返す。応答は `GET /api/v1/schedule/today` と同じ形(`date` は指定日)。範囲外・未来日は `422`(`entry_date_out_of_range`)、不正な暦日は `422`(`validation_failed`)。認証必須。
+- `GET /api/v1/schedule/today` と `GET /api/v1/schedule/{date}` の応答に `earliestDate`(記録を補正できる最も古い暦日)を追加する(後方互換な追加)。詳細は [specs/today-screens.md](specs/today-screens.md) TUI-005。

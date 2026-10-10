@@ -38,6 +38,8 @@ export type HabitEntryResponse = z.infer<typeof habitEntryResponseSchema>;
 export const todayScheduleResponseSchema = z.object({
   date: calendarDateSchema,
   timezone: z.string(),
+  /** 記録を補正できる最も古い暦日(今日から過去 7 日前)。 */
+  earliestDate: calendarDateSchema,
   items: z.array(
     z.object({
       habit: z.object({

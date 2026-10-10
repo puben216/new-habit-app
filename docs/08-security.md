@@ -16,6 +16,7 @@
 - 認証は IdP、認可は Application policy として分離
 - すべての user resource query に actor user ID を含め、取得後チェックだけに依存しない
 - Admin は別 role/group、MFA 必須、通常 UI/API と route/permission を分離
+  - 実装（T-403、[ADR-012](adr/ADR-012-admin-access.md)）: 別表 `admin_users`（付与は運用スクリプトのみ）、TOTP（RFC 6238）+ リカバリーコード、MFA は session 単位で 30 分の絶対期限、失敗 5 回で 15 分ロック、Member には管理 route を `404` で秘匿
 - sensitive action（email変更、export、削除）は再認証
 - login/rate limit、generic error、session rotation/revocation を実装
 - service role は queue ごとに最小権限。migration role と runtime role を分ける
@@ -53,6 +54,7 @@
 
 - 管理画面に習慣本文やレビュー本文を既定表示しない。サポート上必要な場合のみ理由・期限付き elevation
 - admin action は append-only audit。actor、目的、対象、時刻、request ID を記録
+  - 実装（T-403）: 管理者の閲覧・MFA 検証・運用スクリプトの操作を `audit_logs` へ、閲覧の前に追記する（追記に失敗したら閲覧しない）。DB の trigger で UPDATE/DELETE/TRUNCATE を拒否（多層防御。実際の境界は runtime role の権限、T-501/T-502）。検索した email・コード・秘密は残さず、IP は鍵つき HMAC のみ
 - break-glass role は通常無効、利用時 alarm、事後レビュー
 - 脆弱性報告窓口、incident response、credential rotation、breach assessment を用意
 

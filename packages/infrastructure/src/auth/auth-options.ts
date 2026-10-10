@@ -76,14 +76,21 @@ export function createAuthHandlers(deps: AuthHandlersDeps): NextAuthResult {
         const result =
           sessionToken === undefined
             ? null
-            : await deps.authRepository.findSessionUser({ sessionToken, now: new Date() });
+            : await deps.authRepository.findSessionDetails({ sessionToken, now: new Date() });
 
         if (result === null) {
           // AUTH-009: 期限切れ/改ざんされた session は unauthenticated として扱う(user を持たせない)。
           return { expires: session.expires };
         }
 
-        return { ...session, user: { ...session.user, id: result.userId } };
+        // sessionId / mfaVerifiedAt は管理機能(T-403)が「この session で MFA を検証済みか」を判定するために使う。
+        // 管理者かどうかは session に持たせず、毎回 DB(admin_users)で判定する(ADM-INV-001)。
+        return {
+          ...session,
+          user: { ...session.user, id: result.userId },
+          sessionId: result.sessionId,
+          mfaVerifiedAt: result.mfaVerifiedAt === null ? null : result.mfaVerifiedAt.toISOString(),
+        };
       },
     },
     events: {

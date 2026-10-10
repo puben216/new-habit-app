@@ -25,6 +25,10 @@ const envSchema = z
     // メール内の配信停止 token の署名鍵(T-402)。配信停止 endpoint とリマインド送信でのみ必須とし、
     // 未設定でも他の機能は起動できる(使用する側が未設定を検査して失敗させる)。
     UNSUBSCRIBE_SIGNING_KEY: z.string().min(32).optional(),
+    // 管理機能(T-403)。TOTP 秘密の暗号鍵(32 バイトを base64。形式は使う側が検証する)と、
+    // 監査ログに残す IP の HMAC 鍵。未設定でも他の機能は起動できる(管理 API は使うときに検査して失敗する)。
+    ADMIN_TOTP_ENCRYPTION_KEY: z.string().min(1).optional(),
+    AUDIT_IP_HASH_KEY: z.string().min(32).optional(),
   })
   .refine((value) => !(value.NODE_ENV === "production" && value.AUTH_EMAIL_SENDER === "smtp"), {
     message:

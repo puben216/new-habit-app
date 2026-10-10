@@ -167,6 +167,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - T-202/T-203 の`GET /schedule/today`、`PUT /habits/{habitId}/entries/{date}`、`GET/PUT /daily-check-ins/{date}`を利用: 今日の予定、成功/未実施/skip/訂正、過去 7 日の補正、mood/difficulty/note
 - E2E: 成功/未実施/skip/訂正、当日チェックイン(T-202、T-203 の E2E を回収)。再送・二重クリックで重複しないこと
+- 設計: Feature Spec([today-screens.md](specs/today-screens.md))と Implementation Plan([today-screens.md](plans/today-screens.md))を作成。過去 7 日の補正のため読み取り専用の`GET /api/v1/schedule/{date}`を追加し、応答に`earliestDate`を加えて client が「7 日」を再定義しない(HENT-INV-005)、記録操作は操作の種類から`status`を決めるだけで成否判定は server、チェックインの`404`は未記録として扱う、と決定
+- 実装: Application`getScheduleOnDateUseCase`(範囲検証を upsert と共有)、`/today`を記録画面に(日付選択、習慣ごとの記録・訂正・途中経過、デイリーチェックイン)。Migration なし
+- テスト: Unit(日付選択肢の性質テスト、操作→body、チェックイン検証、エラーの固定文言、`getCheckIn`の 404 扱い、Application の範囲境界・timezone・他ユーザー、handler の 401/422/200)と E2E 12 件(記録と訂正、途中経過の拒否、過去日の補正、不正な date クエリ、空状態、チェックイン、未設定への置換、HTML 文字列、二重クリック、他ユーザーの分離、新規 API)。手動変異 18 件を全件検出(生存 1 件にテスト追加)。二重クリックは再描画より速い連続クリックで 2 回送られたため、同期的なロック(ref)を追加
 
 ### T-216 ダッシュボード画面
 
@@ -241,6 +244,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - admin MFA/role、read-only operation view、audit
 - Integration/E2E: member 拒否、admin access、監査
+- 設計: Feature Spec([minimal-admin.md](specs/minimal-admin.md))と Implementation Plan([minimal-admin.md](plans/minimal-admin.md))を作成。管理者は別表 `admin_users` + 運用スクリプトで付与(API/UI に経路なし)、既存の session + TOTP の追加認証(MFA は session 単位で 30 分、リカバリーコード 8 個、失敗 5 回で 15 分ロック)、Member には管理 route を 404 で秘匿、検索は email 完全一致 + マスク表示、閲覧は監査を先に追記(fail closed)、`audit_logs` は DB で追記専用と決定。差分が大きいため 2 本の PR(PR-A: バックエンド、PR-B: 画面と E2E)に分ける
+- 実装(PR-A): Domain `admin`(MFA の有効期限・ロック・コード正規化・マスク)、Application(`authorizeAdmin`、`verifyAdminMfaUseCase`、閲覧 4 本、付与/無効化/MFA 再発行)と各 port、Infrastructure(TOTP は RFC 6238 の公式ベクトルで検証、AES-256-GCM の `SecretBox`、リカバリーコード、IP の HMAC、Prisma repository 群、session の `findSessionDetails`)、`/api/v1/admin/*`(6 本 + 未定義 path の catch-all)、運用スクリプト `pnpm admin:grant|admin:disable|admin:reset-mfa`(`tsx`)。Migration は新テーブル 2・`sessions.mfa_verified_at`・`audit_logs` の追記専用化(expand のみ)
+- テスト(PR-A): Unit(TOTP の公式ベクトル、暗号の改ざん検知、判定の境界、認可の振り分けと Member への応答の同一性、監査が先)と Integration(実 PostgreSQL: 失敗カウントの原子性、同じコードの並行使用で成功 1 件、ロック、リカバリーコードの単回使用、追記専用、閲覧の allowlist、スクリプトの子プロセス実行、fresh と upgrade の Migration)を追加。画面と E2E は PR-B
 
 ### T-404 Export/account deletion
 

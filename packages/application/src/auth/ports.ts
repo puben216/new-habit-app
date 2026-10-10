@@ -103,6 +103,16 @@ export interface AuthRepositoryPort {
     readonly now: Date;
   }): Promise<{ readonly userId: string } | null>;
 
+  /**
+   * `findSessionUser` に加えて、session 行の識別子と管理者の MFA 検証時刻(T-403)を返す。
+   * Auth.js の session callback が使う。有効でなければ null。
+   */
+  findSessionDetails(input: { readonly sessionToken: string; readonly now: Date }): Promise<{
+    readonly userId: string;
+    readonly sessionId: string;
+    readonly mfaVerifiedAt: Date | null;
+  } | null>;
+
   /** logout(AUTH-006)時に session を失効させる。存在しない sessionToken を渡しても成功扱いとする。 */
   deleteSession(sessionToken: string): Promise<void>;
 }
