@@ -41,3 +41,53 @@ export type {
   FallbackReason,
   ThirdPartyRightsRegistryPort,
 } from "./ports";
+export {
+  AiJobApplicationError,
+  AiJobLimitReachedError,
+  AiJobNotFoundError,
+  AiQueueUnavailableError,
+  AnalysisInputInvalidError,
+  CorruptedAiJobError,
+  WeeklyReviewNotCompletedError,
+} from "./job-errors";
+export { handleAiJobMessages } from "./job-handler";
+export type { AiJobBatchResponse, AiJobQueueBatch, AiJobQueueRecord } from "./job-handler";
+export type {
+  AiJobAttemptRecord,
+  AiJobKind,
+  AiJobQueuePort,
+  AiJobRecord,
+  AiJobRepositoryPort,
+  AttemptOutcome,
+  ClaimAiJobResult,
+  CompleteAiJobInput,
+  CreateAiJobInput,
+} from "./job-ports";
+export {
+  AI_JOB_LEASE_SECONDS,
+  AI_JOB_MAX_ACTIVE_PER_USER,
+  AI_JOB_MAX_RECEIVE,
+  WEEKLY_IMPROVEMENT_KIND,
+  WEEKLY_IMPROVEMENT_PROMPT_VERSION,
+  WEEKLY_REVIEW_SUBJECT_TYPE,
+  getAiJobUseCase,
+  processAiJobUseCase,
+  requestWeeklyAnalysisUseCase,
+} from "./job-use-cases";
+export type {
+  AiJob,
+  AiJobConfig,
+  GetAiJobDeps,
+  ProcessAiJobDeps,
+  ProcessAiJobInput,
+  ProcessAiJobOutcome,
+  RequestWeeklyAnalysisDeps,
+  RequestWeeklyAnalysisInput,
+  RequestWeeklyAnalysisResult,
+} from "./job-use-cases";
+export {
+  NIL_SUBJECT_ID,
+  buildWeeklyImprovementInput,
+  fingerprintWeeklyInput,
+} from "./weekly-input";
+export type { ActiveHabitDetail, WeeklyInputResult } from "./weekly-input";

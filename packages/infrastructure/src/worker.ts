@@ -3,6 +3,7 @@
  * (Lambda の成果物に不要な依存を入れないため)。Web は `@habit-app/infrastructure` を使う。
  */
 export { createPrismaClient, type PrismaClient } from "./database/prisma-client";
+export * from "./ai";
 export * from "./email";
 export * from "./habits";
 export * from "./notifications";

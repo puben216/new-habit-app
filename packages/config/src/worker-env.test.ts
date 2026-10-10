@@ -70,3 +70,27 @@ describe("isNotificationDeliveryEnabled", () => {
     expect(isNotificationDeliveryEnabled({ NOTIFICATION_DELIVERY_ENABLED: "true" })).toBe(true);
   });
 });
+
+describe("parseWorkerEnv: AI 設定(T-303)", () => {
+  it("既定は fake provider・公開無効", () => {
+    expect(parseWorkerEnv(base)).toMatchObject({
+      AI_PROVIDER: "fake",
+      AI_PUBLICATION_ENABLED: false,
+    });
+  });
+
+  it("AI_PUBLICATION_ENABLED は true / false のみ受け付ける", () => {
+    expect(parseWorkerEnv({ ...base, AI_PUBLICATION_ENABLED: "true" }).AI_PUBLICATION_ENABLED).toBe(
+      true,
+    );
+    for (const bad of ["1", "yes", "TRUE", ""]) {
+      expect(() => parseWorkerEnv({ ...base, AI_PUBLICATION_ENABLED: bad })).toThrow(
+        "AI_PUBLICATION_ENABLED",
+      );
+    }
+  });
+
+  it("未知の AI_PROVIDER は拒否する", () => {
+    expect(() => parseWorkerEnv({ ...base, AI_PROVIDER: "openai" })).toThrow("AI_PROVIDER");
+  });
+});

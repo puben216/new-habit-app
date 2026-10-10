@@ -177,3 +177,16 @@ export type {
   AdminUserSearchQuery,
   AdminUserSearchResponse,
 } from "./admin";
+
+export {
+  AI_JOB_FAILURE_CODES,
+  AI_JOB_FALLBACK_REASONS,
+  AI_JOB_KINDS,
+  AI_JOB_STATUS_VALUES,
+  aiJobIdParamSchema,
+  aiJobMessageV1Schema,
+  aiJobResponseSchema,
+  aiJobResultV1Schema,
+  requestWeeklyAnalysisBodySchema,
+} from "./ai-job";
+export type { AiJobMessageV1, AiJobResponse, AiJobResultV1 } from "./ai-job";

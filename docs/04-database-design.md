@@ -253,3 +253,14 @@ Minimal admin（[../specs/minimal-admin.md](specs/minimal-admin.md)、[../plans/
 - `audit_logs`: `BEFORE UPDATE OR DELETE`（行）と `BEFORE TRUNCATE`（文）の trigger で変更を拒否する（追記専用）。多層防御であり、本番の実際の境界は runtime role に INSERT/SELECT のみを与える権限設定（T-501/T-502）。`actor`/`action` の空文字を拒否する CHECK と、`(actor, created_at DESC)`・`(created_at DESC, id DESC)` の index を追加した。ユーザー削除時の匿名化・保持期間の保守は T-404 が専用の Migration で扱う。
 - 失敗カウント・replay 防止・リカバリーコードの単回使用は、すべて単一の条件付き `UPDATE`（または CTE の 1 文）で原子的に行う。ロック明けの最初の失敗は 1 回目から数え直す。
 - 管理者の閲覧用クエリは列の allowlist のみを読み、習慣・記録・メモ・通知設定の中身、`ai_jobs.result_json`・`input_fingerprint` には触れない。
+
+## 実装時の補足（T-303）
+
+AI queue pipeline（[../specs/ai-queue-pipeline.md](specs/ai-queue-pipeline.md)、[../plans/ai-queue-pipeline.md](plans/ai-queue-pipeline.md)）の実装時の追加決定。Migration は `20261009000000_t303_ai_job_constraints`（expand のみ。`ai_jobs`/`ai_job_attempts` は T-303 以前に書き込みがなく backfill 不要）。
+
+- 冪等キーの unique index `ai_jobs_idempotency_uidx (user_id, kind, subject_public_id, prompt_version, input_fingerprint)` を追加した。作成は `INSERT ... ON CONFLICT DO NOTHING` の単一文で、同じ入力の job は 1 件に収束する。`input_fingerprint` は `subjectId`（job ごとの AI 用 ID）を除いた入力の canonical JSON の SHA-256（hex）。
+- CHECK を追加した: `kind IN ('weekly_improvement','habit_design')`、`(status IN ('succeeded','fallback')) = (result_json IS NOT NULL)` かつ `result_json` は object、`status <> 'failed' OR failure_code IS NOT NULL`。`ai_job_attempts` は `attempt_no >= 1`、`outcome IN ('succeeded','fallback','failed','error')`、`latency_ms IS NULL OR latency_ms >= 0`。
+- `ai_jobs.status` の遷移は `queued → running → succeeded|fallback|failed` と、worker 失敗時の `running → queued`。claim は `UPDATE ... WHERE status = 'queued' OR (status = 'running' AND updated_at < now() - lease)` の単一文で、lease の判定は DB の時刻（`updated_at` は `set_updated_at` trigger が更新時に設定）。専用の lease 列は持たない。確定・解放は `WHERE status = 'running'` 付きで、終端状態を上書きしない。
+- `ai_job_attempts` は worker の 1 回の実行（claim 後の確定または解放）につき 1 行（`attempt_no` は job ごとの連番）。provider 内の再試行は `generateSafeCoaching` が行い、行にしない。`outcome`・`latency_ms`・`error_category`（fallbackReason / failureCode / `worker_error`）のみ記録し、prompt・入力・出力本文は記録しない。`input_tokens`/`output_tokens`/`estimated_cost`/`provider_request_id` は実 provider の導入時（ADR-003）に記録する。
+- `result_json` は `schemaVersion: 1` の構造化出力のみ（`source`、`output`、`contentSafety`、`fallbackReason`）。入力は保存しない。読み出し時に契約 schema で検証する。形を変える場合は新しい `schemaVersion` を追加する。
+- 保存期間・ユーザーによる削除は `docs/10` の P1 が未決のため未実装（`user_id` の `ON DELETE CASCADE` に従う）。

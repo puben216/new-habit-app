@@ -120,7 +120,14 @@
 - `GET /weekly-reviews` は `limit`（1〜50、既定 20）と不透明な `cursor` で `weekStart` の新しい順に返し、`{ items, nextCursor }`。
 - `PATCH /weekly-reviews/{reviewId}` の body は `{ reflection?: string | null, status?: "completed" }`（1 項目以上必須）。`reflection` は前後の空白を除去し、空は `null`（最大 1000 文字）。`status: "completed"` で確定し、確定後の PATCH は `409 weekly_review_already_completed`。他人・存在しない・UUID 形式でない ID は区別せず `404 weekly_review_not_found`。
 - 応答 `WeeklyReview` は `{ id, weekStart, weekEnd, timezone, status, summary, reflection, completedAt, createdAt, updatedAt }`。`summary` は `schemaVersion: 1` のスナップショットで、`overall`・習慣ごと（`habitId`/`kind`/`name` と件数・`successRate`）・`checkIn`（`days`/`averageMood`/`averageDifficulty`）を持つ。自由記述（習慣の `purpose`/`cue`、チェックインのメモ）は含まない。
-- 本タスクでは `POST /weekly-reviews/{reviewId}/analysis` と `/ai-jobs` は未実装（T-303/T-305）。
+- `POST /weekly-reviews/{reviewId}/analysis` と `/ai-jobs/{jobId}` は T-303 で実装した（下記）。
+
+`/weekly-reviews/{reviewId}/analysis` と `/ai-jobs/{jobId}` の正式な契約は [../specs/ai-queue-pipeline.md](specs/ai-queue-pipeline.md) の API and Events 節と `packages/contracts/src/ai-job.ts` を正本とし、上記の一覧からの差分は次のとおり（T-303）。
+
+- `POST /weekly-reviews/{reviewId}/analysis` は body なし（または `{}`）。確定（`completed`）済みのレビューのみ受け付け、`draft` は `409 weekly_review_not_completed`。新規 job は `202`＋`Location`、同じ入力（レビュー・prompt version・入力 fingerprint）の既存 job は `200` でそれを返す（`Idempotency-Key` 不要）。同時実行中の job が 1 ユーザー 3 件なら新規は `429 ai_job_limit_reached`、queue に投入できなければ `503 queue_unavailable`（job は `queued` のまま残り、再依頼で再投入される）。
+- `GET /ai-jobs/{jobId}` の応答は `{ id, kind, status, subject: { type, id }, promptVersion, outputSchemaVersion, result, failureCode, createdAt, updatedAt }`。`status` は `queued|running|succeeded|fallback|failed`。`result` は `succeeded`/`fallback` のとき `{ schemaVersion: 1, source: "ai"|"fallback", output, contentSafety, fallbackReason }`（`output` は `WeeklyImprovementPlanV1` または定型 fallback）。provider・model・fingerprint・内部 ID は返さない。他人・存在しない・UUID 形式でない ID は区別せず `404 ai_job_not_found`。
+- queue message は `{ "v": 1, "jobId": "<uuid>" }` のみ（入力・自由記述・user ID を含めない）。worker は SQS の ReportBatchItemFailures 形式（`batchItemFailures`）で返し、解釈できない message は DLQ へ、受信 3 回に達した処理失敗は規則ベースの fallback（`worker_exhausted`）で確定して ack する。
+- 実 SQS adapter と配備は T-501。ローカル/E2E では `AI_QUEUE_DRIVER=inline`（同一プロセスで handler を呼ぶ）を使い、本番では拒否される。
 
 `/notification-settings` の正式な契約は [../specs/notification-preferences.md](specs/notification-preferences.md) の API and Events 節と `packages/contracts/src/notification-settings.ts` を正本とし、上記の表からの差分は次のとおり。
 

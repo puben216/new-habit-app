@@ -208,6 +208,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 - SQS producer、Lambda consumer、attempt、DLQ、idempotency
 - Integration: timeout/429/5xx/partial batch/duplicate
 - E2E: fake provider で pending → completed
+- 設計: Feature Spec([ai-queue-pipeline.md](specs/ai-queue-pipeline.md))と Implementation Plan([ai-queue-pipeline.md](plans/ai-queue-pipeline.md))を作成。範囲は queue port・worker・`ai_jobs` 状態管理・`POST /weekly-reviews/{id}/analysis`(202)・`GET /ai-jobs/{id}` まで。実 SQS adapter・Terraform・実 provider は対象外(T-501、ADR-003)、分析の中身は T-305(D-16)
+- 実装: Domain `decideAiJobClaim`/`canonicalJson`、Application `requestWeeklyAnalysisUseCase`/`getAiJobUseCase`/`processAiJobUseCase`/`handleAiJobMessages`(SQS 形式の部分バッチ失敗)と入力の最小化・fingerprint、Infrastructure `PrismaAiJobRepository`(`ON CONFLICT DO NOTHING` の冪等作成、単一文の claim と lease、確定と attempt を 1 transaction)・inline queue(ローカル/E2E 用)、`apps/workers` の SQS handler、Config(`AI_QUEUE_DRIVER`/`AI_PROVIDER`/`AI_PUBLICATION_ENABLED`。本番で `inline` を拒否)。Migration は unique index と CHECK の追加のみ(expand)
+- テスト: Unit(状態遷移と canonical JSON の性質テスト、入力の最小化、request/process/handler の全分岐、重複配送、受信上限、契約、HTTP、Config)と Integration(実 PostgreSQL: 並行作成 6 件で 1 行・並行 claim 6 件で 1 件・lease 切れの引き継ぎ、確定の競合、CHECK 制約、POST→処理→GET の一周、fresh と upgrade の Migration)を追加。E2E は UI 未実装のため対象外
 
 ### T-304 Habit design coaching
 
