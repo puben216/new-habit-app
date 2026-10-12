@@ -91,6 +91,11 @@ export async function registerVerifiedUser(
   return user;
 }
 
+/** 既存ユーザーで新しい session を得る(同じユーザーの別 session を作るときに使う)。 */
+export async function signInExisting(context: BrowserContext, user: E2eUser): Promise<void> {
+  await signInWithApi(context.request, user);
+}
+
 /** signup と確認を終え、`context` に session cookie を得る。既定ではオンボーディングも済ませる。 */
 export async function signUpAndSignIn(
   context: BrowserContext,

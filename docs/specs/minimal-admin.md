@@ -29,7 +29,7 @@ PR-A(バックエンド)と PR-B(画面と E2E)の 2 本に分けて届ける。
 - DB: Migration 1 本(`admin_users`、`admin_recovery_codes`、`sessions.mfa_verified_at`、`audit_logs` の追記専用化と index)。
 - Presentation(`apps/web`、PR-A): `POST /api/v1/admin/mfa/verify`、`GET /api/v1/admin/me`、`GET /api/v1/admin/users`、`GET /api/v1/admin/users/{publicId}`、`GET /api/v1/admin/operations/notifications`、`GET /api/v1/admin/operations/ai-jobs`。
 - 運用スクリプト(PR-A): `pnpm admin:grant|disable|reset-mfa`(Admin の付与・無効化・MFA 再発行)。
-- 画面と E2E(PR-B): `/admin/mfa`、`/admin`、`/admin/users`、`/admin/users/[publicId]`、`/admin/notifications`、`/admin/ai-jobs`、Playwright E2E。
+- 画面と E2E(PR-B。画面の振る舞いは [admin-screens.md](admin-screens.md)): `/admin/mfa`、`/admin`、`/admin/users`、`/admin/users/[publicId]`、`/admin/notifications`、`/admin/ai-jobs`、Playwright E2E。
 - 文書: `docs/04`、`docs/05`、`docs/08`、`docs/09`、`docs/10`、新しい ADR(ADR-012)、Runbook。
 
 ## 対象外
@@ -85,7 +85,7 @@ Admin は、通常どおり登録・email 確認済みの Member に `admin_user
 
 ### ADM-005 ユーザー概要
 
-- `GET /api/v1/admin/users/{publicId}` は、そのユーザーの概要を返す: `publicId`、`emailMasked`、`status`、`createdAt`、`emailVerified`(真偽値)、`notification`(`enabled`、`suppressed`、直近 30 日の配送の状態別件数)、`aiJobs`(直近 30 日の状態別件数)。ユーザーがいなければ `404`(`user_not_found`)。
+- `GET /api/v1/admin/users/{publicId}` は、そのユーザーの概要を返す: `publicId`、`emailMasked`、`status`、`createdAt`、`emailVerified`(真偽値)、`notification`(`suppressed`、直近 30 日の配送の状態別件数。通知設定の中身である `enabled` は返さない)、`aiJobs`(直近 30 日の状態別件数)。ユーザーがいなければ `404`(`user_not_found`)。
 - 習慣・記録・メモ・通知設定の時刻や timezone、AI の入出力、email の全体は返さない。
 - 閲覧は監査ログに `admin.user.view`(対象は `publicId`)として残す。
 

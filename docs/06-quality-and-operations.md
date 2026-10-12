@@ -44,6 +44,7 @@ MVP の必須シナリオ:
 6. ログアウト/セッション期限切れ/他ユーザーリソース拒否
 7. 通知 opt-in/out と設定変更
 8. キーボード操作と主要な a11y assertion
+9. 管理画面: Member は通常の 404、Admin は MFA 検証後のみ閲覧でき、検索・閲覧が監査に残る(email は残らない)
 
 外部サービスは staging 専用 fake/adapter を使い、決済やメール誤送信を避ける。E2E データは test run ごとに namespace を分離する。
 
