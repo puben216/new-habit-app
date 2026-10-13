@@ -8,6 +8,7 @@ import {
   signUpAndSignIn,
   type E2eUser,
 } from "./support/auth";
+import { E2E_BASE_URL } from "./support/e2e-env";
 import { extractTokenFromEmail, waitForEmail } from "./support/mailpit";
 
 /** T-212 の E2E: 認証画面(docs/specs/auth-screens.md)。 */
@@ -181,7 +182,7 @@ test("logout 後は以前の session cookie が server 側で無効になる", a
   const replay = await browser.newContext();
   await replay.addCookies(savedCookies);
   const replayPage = await replay.newPage();
-  await replayPage.goto("http://localhost:3100/today");
+  await replayPage.goto(`${E2E_BASE_URL}/today`);
   await expect(replayPage).toHaveURL(/\/login\?next=%2Ftoday$/);
   await replay.close();
 });
