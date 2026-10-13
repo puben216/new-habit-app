@@ -142,6 +142,9 @@ test("誤ったパスワードは受理されず、入力は消え、5 回続く
 });
 
 test("猶予期間を過ぎると取り消せず、削除ジョブで完全に削除される", async ({ page, context }) => {
+  // 本物の削除ジョブ(`pnpm account:purge`)の子プロセスを 2 回起動する。単独で約 25 秒かかり、全体実行の負荷で既定の 30 秒を超えるため。
+  test.setTimeout(120_000);
+
   const user = await signUpAndSignIn(context);
   await createHabit(context, "散歩");
   const publicId = await userPublicId(user.email);

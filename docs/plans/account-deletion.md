@@ -1,8 +1,8 @@
 # アカウント削除 Implementation Plan
 
-Status: In Progress
+Status: Done
 責任者: TBD
-最終更新: 2026-10-12
+最終更新: 2026-10-13
 Spec: [../specs/account-deletion.md](../specs/account-deletion.md)
 変更区分: Standard
 
