@@ -8,6 +8,7 @@ import {
   signUpAndSignIn,
   type E2eUser,
 } from "./support/auth";
+import { E2E_BASE_URL } from "./support/e2e-env";
 import { extractTokenFromEmail, waitForEmail } from "./support/mailpit";
 
 /** T-212 の E2E: 認証画面(docs/specs/auth-screens.md)。 */
@@ -61,10 +62,12 @@ test("signup → メール確認 → login → logout の一連を UI だけで�
 
   await page.getByRole("link", { name: "ログインへ" }).click();
   await login(page, user);
-  // 初回ログインはオンボーディングへ誘導される(T-213)。
-  await expect(page).toHaveURL(/\/onboarding$/);
-  await page.getByLabel("表示名", { exact: true }).fill("たなか");
-  await page.getByRole("button", { name: "はじめる" }).click();
+  // 初回ログインは、/today の上に閉じられない初回設定のモーダルが表示される(T-213)。
+  await expect(page).toHaveURL(/\/today$/);
+  const onboarding = page.getByRole("dialog", { name: "はじめての設定" });
+  await onboarding.getByLabel("表示名", { exact: true }).fill("たなか");
+  await onboarding.getByRole("button", { name: "はじめる" }).click();
+  await expect(onboarding).toHaveCount(0);
   await expect(page).toHaveURL(/\/today$/);
   await expect(page.getByRole("heading", { level: 1, name: "今日" })).toBeVisible();
 
@@ -179,7 +182,7 @@ test("logout 後は以前の session cookie が server 側で無効になる", a
   const replay = await browser.newContext();
   await replay.addCookies(savedCookies);
   const replayPage = await replay.newPage();
-  await replayPage.goto("http://localhost:3100/today");
+  await replayPage.goto(`${E2E_BASE_URL}/today`);
   await expect(replayPage).toHaveURL(/\/login\?next=%2Ftoday$/);
   await replay.close();
 });

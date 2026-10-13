@@ -3,18 +3,18 @@ import { redirect } from "next/navigation";
 import { DEFAULT_NEXT_PATH } from "@/lib/auth/next-path";
 
 import { getProfileForActor } from "./profile-container";
-import { guardNotOnboarding, guardOnboarded } from "./onboarding-guard";
+import { guardNotOnboarding, isOnboardingRequired } from "./onboarding-guard";
 import { requireSession } from "./require-session";
 
 export const ONBOARDING_PATH = "/onboarding";
 
-/** `(onboarded)` layout 用。未認証は login へ、未完了は `/onboarding` へ redirect する。 */
-export async function requireOnboarded(): Promise<void> {
+/**
+ * `(onboarded)` layout 用。未認証は login へ redirect し、認証済みならオンボーディングが未完了かを返す。
+ * 未完了のときは、layout が子の代わりに閉じられないモーダルを表示する(PFS-001)。
+ */
+export async function isOnboardingRequiredForSession(): Promise<boolean> {
   const userId = await requireSession();
-  await guardOnboarded({
-    getProfile: () => getProfileForActor(userId),
-    redirect: () => redirect(ONBOARDING_PATH),
-  });
+  return isOnboardingRequired({ getProfile: () => getProfileForActor(userId) });
 }
 
 /** `/onboarding` 用。完了済みなら `/today` へ redirect する。 */

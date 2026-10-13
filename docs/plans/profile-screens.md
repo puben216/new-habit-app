@@ -92,3 +92,13 @@ N/A。
 - [x] 依存 task が完了している
 - [x] rollout/rollback 方針が決定している
 - [x] 実装前ゲートの全必須項目が Pass または根拠付き N/A
+
+## 変更(2026-10-13): 初回設定を閉じられないモーダルにする
+
+[Spec の PFS-001/002](../specs/profile-screens.md) の変更に伴う実装方針。
+
+- `(app)/(onboarded)/layout.tsx`: 未完了なら `/onboarding` へ redirect せず、子の代わりに案内(`StateMessage`)と `OnboardingDialog` を描画する。判定は `isOnboardingRequired`(`onboarding-guard.ts`。Application の `hasCompletedOnboarding` に委ねる)。
+- `features/profile/onboarding-dialog.tsx`: ブラウザ標準の `<dialog>` を `showModal()` で表示し、`cancel`(Esc)を `preventDefault` する。中身は既存の `ProfileForm`(`mode="onboarding"`)で、保存成功時は `onOnboarded` で `router.refresh()` する。
+- `ProfileForm`: `onOnboarded` を追加。省略時は従来どおり `/today` へ遷移する(`/onboarding` ページ)。
+- `/onboarding` ページ・`requireNotOnboarded` は変更しない(従来の URL を残す)。
+- テスト: `isOnboardingRequired` の Unit、E2E(`profile.spec.ts`、`auth.spec.ts`)をモーダルの表示・Esc・フォーカス・URL 不変・保存後の表示に更新。

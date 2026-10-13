@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { guardNotOnboarding, guardOnboarded } from "./onboarding-guard";
+import { guardNotOnboarding, isOnboardingRequired } from "./onboarding-guard";
 
 class RedirectSignal extends Error {}
 const makeRedirect = () =>
@@ -8,31 +8,27 @@ const makeRedirect = () =>
     throw new RedirectSignal();
   });
 
-describe("guardOnboarded", () => {
-  it("未完了(displayName が null)なら redirect する", async () => {
-    const redirect = makeRedirect();
+describe("isOnboardingRequired", () => {
+  it("未完了(displayName が null)なら true", async () => {
     await expect(
-      guardOnboarded({ getProfile: async () => ({ displayName: null }), redirect }),
-    ).rejects.toBeInstanceOf(RedirectSignal);
+      isOnboardingRequired({ getProfile: async () => ({ displayName: null }) }),
+    ).resolves.toBe(true);
   });
 
-  it("完了済みなら何もしない", async () => {
-    const redirect = makeRedirect();
-    await guardOnboarded({ getProfile: async () => ({ displayName: "たなか" }), redirect });
-    expect(redirect).not.toHaveBeenCalled();
+  it("完了済みなら false", async () => {
+    await expect(
+      isOnboardingRequired({ getProfile: async () => ({ displayName: "たなか" }) }),
+    ).resolves.toBe(false);
   });
 
-  it("プロフィール取得の失敗は redirect せず伝播する", async () => {
-    const redirect = makeRedirect();
+  it("プロフィール取得の失敗は伝播する(未完了とも完了済みとも扱わない)", async () => {
     await expect(
-      guardOnboarded({
+      isOnboardingRequired({
         getProfile: async () => {
           throw new Error("db down");
         },
-        redirect,
       }),
     ).rejects.toThrow("db down");
-    expect(redirect).not.toHaveBeenCalled();
   });
 });
 
