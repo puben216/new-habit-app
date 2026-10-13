@@ -99,12 +99,13 @@ describe("アカウント削除の repository(T-404)", () => {
       VALUES (${id}, '2026-09-28'::date, 'Asia/Tokyo', '{}'::jsonb)`;
     const job = await prisma.$queryRaw<{ id: bigint }[]>`
       INSERT INTO ai_jobs (user_id, kind, subject_type, subject_public_id, status, prompt_version,
-                           output_schema_version, provider, model, input_fingerprint)
-      VALUES (${id}, 'habit_design', 'habit', gen_random_uuid(), 'succeeded', 'v1', 'v1', 'fake', 'fake-1', 'fp')
+                           output_schema_version, provider, model, input_fingerprint, result_json)
+      VALUES (${id}, 'habit_design', 'habit', gen_random_uuid(), 'succeeded', 'v1', 'v1', 'fake', 'fake-1', 'fp',
+              '{"note":"出力の例"}'::jsonb)
       RETURNING id`;
     await prisma.$executeRaw`
       INSERT INTO ai_job_attempts (ai_job_id, attempt_no, started_at, outcome)
-      VALUES (${job[0]?.id}, 1, ${NOW}, 'ok')`;
+      VALUES (${job[0]?.id}, 1, ${NOW}, 'succeeded')`;
     const setting = await prisma.$queryRaw<{ id: bigint }[]>`
       INSERT INTO notification_settings (user_id, channel, local_time, timezone, enabled)
       VALUES (${id}, 'email', '20:00'::time, 'Asia/Tokyo', true) RETURNING id`;
