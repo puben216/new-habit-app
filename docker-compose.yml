@@ -7,8 +7,9 @@ services:
       POSTGRES_PASSWORD: habit_app
       POSTGRES_DB: habit_app_dev
     ports:
-      # 他のプロジェクトが 5432 を使っている場合は POSTGRES_PORT で変更できる(E2E は E2E_POSTGRES_PORT)。
-      - "${POSTGRES_PORT:-5432}:5432"
+      # 他のプロジェクトと重なりにくいよう、ホスト側の既定は 5435(コンテナ内は 5432)。変更は POSTGRES_PORT
+      # (E2E は E2E_POSTGRES_PORT。両方を同じ値にする)。
+      - "${POSTGRES_PORT:-5435}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
