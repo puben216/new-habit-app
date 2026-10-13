@@ -5,19 +5,22 @@
  * (`AUTH_SECRET` は E2E のアプリ起動専用の固定値。本番・開発用の値とは無関係)。
  * 接続先はローカルの Docker Compose(`postgres`、`mailpit`)であり、開発用 database には触れない。
  */
-export const E2E_PORT = 3100;
+// 他のプロジェクトの E2E(3100 など一般的な番号)と重ならない既定。変更は E2E_APP_PORT。
+export const E2E_PORT = Number(process.env["E2E_APP_PORT"] ?? "19100");
 export const E2E_BASE_URL = `http://localhost:${E2E_PORT}`;
 
 export const E2E_DATABASE_NAME = "habit_app_e2e";
-// ローカルの 5432 が他のプロジェクトに使われている場合は E2E_POSTGRES_PORT で変更できる(docker-compose.yml の POSTGRES_PORT と揃える)。
-const DATABASE_PORT = process.env["E2E_POSTGRES_PORT"] ?? "5432";
+// 既定は docker-compose.yml の POSTGRES_PORT の既定(19435)と同じ。ポートが重なる場合は E2E_POSTGRES_PORT で変更できる(POSTGRES_PORT と揃える)。
+const DATABASE_PORT = process.env["E2E_POSTGRES_PORT"] ?? "19435";
 const DATABASE_ORIGIN = `postgresql://habit_app:habit_app@localhost:${DATABASE_PORT}`;
 export const E2E_ADMIN_DATABASE_URL = `${DATABASE_ORIGIN}/postgres`;
 export const E2E_DATABASE_URL = `${DATABASE_ORIGIN}/${E2E_DATABASE_NAME}`;
 
-export const E2E_MAILPIT_HTTP_URL = "http://localhost:8025";
+// 既定は docker-compose.yml の MAILPIT_HTTP_PORT / MAILPIT_SMTP_PORT の既定(19026 / 19025)と同じ。
+// ポートが重なる場合は E2E_MAILPIT_HTTP_PORT / E2E_MAILPIT_SMTP_PORT で変更できる(compose の値と揃える)。
+export const E2E_MAILPIT_HTTP_URL = `http://localhost:${process.env["E2E_MAILPIT_HTTP_PORT"] ?? "19026"}`;
 export const E2E_SMTP_HOST = "localhost";
-export const E2E_SMTP_PORT = "1025";
+export const E2E_SMTP_PORT = process.env["E2E_MAILPIT_SMTP_PORT"] ?? "19025";
 
 export const E2E_AUTH_SECRET = "e2e-only-dummy-secret-not-for-real-use-0123456789";
 

@@ -17,7 +17,7 @@ describe("parseEnv", () => {
       AUTH_SECRET,
       AUTH_EMAIL_SENDER: "smtp",
       SMTP_HOST: "localhost",
-      SMTP_PORT: 1025,
+      SMTP_PORT: 19025,
       EMAIL_FROM: "no-reply@habit-app.local",
       APP_BASE_URL: "http://localhost:3000",
       AI_QUEUE_DRIVER: "inline",
