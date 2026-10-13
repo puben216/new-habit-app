@@ -190,3 +190,18 @@ export {
   requestWeeklyAnalysisBodySchema,
 } from "./ai-job";
 export type { AiJobMessageV1, AiJobResponse, AiJobResultV1 } from "./ai-job";
+
+export {
+  ACCOUNT_DELETION_REQUEST_MAX_BODY_BYTES,
+  REAUTH_PASSWORD_MAX_LENGTH,
+  accountDeletionCancelledResponseSchema,
+  accountDeletionRequestedResponseSchema,
+  accountDeletionStatusResponseSchema,
+  requestAccountDeletionRequestSchema,
+} from "./account-deletion";
+export type {
+  AccountDeletionCancelledResponse,
+  AccountDeletionRequestedResponse,
+  AccountDeletionStatusResponse,
+  RequestAccountDeletionRequest,
+} from "./account-deletion";

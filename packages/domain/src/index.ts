@@ -5,3 +5,4 @@ export * from "./tracking";
 export * from "./notifications";
 export * from "./ai";
 export * from "./admin";
+export * from "./account";

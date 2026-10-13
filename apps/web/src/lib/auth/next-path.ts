@@ -6,6 +6,8 @@
  */
 export const DEFAULT_NEXT_PATH = "/today";
 export const SESSION_EXPIRED_REASON = "session_expired";
+/** アカウント削除の要求直後の案内(T-404)。login の `reason` だけで使い、`buildLoginPath` は付与しない。 */
+export const DELETION_REQUESTED_REASON = "deletion_requested";
 
 const MAX_NEXT_LENGTH = 2048;
 const PLACEHOLDER_ORIGIN = "http://next-path.invalid";

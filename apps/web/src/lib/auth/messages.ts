@@ -20,6 +20,9 @@ export const FORM_INVALID_MESSAGE = "入力内容を確認してください。"
 export const SESSION_EXPIRED_MESSAGE =
   "ログインの有効期限が切れました。もう一度ログインしてください。";
 
+export const DELETION_REQUESTED_MESSAGE =
+  "アカウントの削除を受け付けました。30 日以内に再ログインすると、削除を取り消せます。";
+
 export const SIGNUP_DONE_MESSAGE =
   "確認メールを送信しました。届いていない場合は迷惑メールフォルダーもご確認ください。";
 

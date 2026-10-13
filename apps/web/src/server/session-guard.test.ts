@@ -1,6 +1,7 @@
+import { ACCOUNT_STATUSES } from "@habit-app/domain";
 import { describe, expect, it, vi } from "vitest";
 
-import { guardSession } from "./session-guard";
+import { decideRestoreGuard, guardSession } from "./session-guard";
 
 class RedirectSignal extends Error {}
 
@@ -44,5 +45,20 @@ describe("guardSession", () => {
       }),
     ).rejects.toThrow("db down");
     expect(redirectToLogin).not.toHaveBeenCalled();
+  });
+});
+
+describe("decideRestoreGuard(/account/restore。account-deletion.md ACD-007)", () => {
+  it("削除予約中の session だけが表示でき、未認証は login、それ以外は通常の画面へ", () => {
+    expect(decideRestoreGuard("deletion_pending")).toBe("render");
+    expect(decideRestoreGuard(null)).toBe("login");
+    expect(decideRestoreGuard("active")).toBe("app");
+    expect(decideRestoreGuard("suspended")).toBe("app");
+  });
+
+  it("全ての状態に結果がある(新しい状態の追加時に取りこぼさない)", () => {
+    for (const status of ACCOUNT_STATUSES) {
+      expect(["render", "login", "app"]).toContain(decideRestoreGuard(status));
+    }
   });
 });

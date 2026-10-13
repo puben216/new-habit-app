@@ -8,6 +8,8 @@ datasource db {
 }
 
 // status: active | suspended | deletion_pending (CHECK制約はmigrationで追加)
+// T-404: (status = 'deletion_pending') = (deleted_at IS NOT NULL) のCHECKと、期限スキャン用の部分index
+// `users_deletion_pending_deleted_at_idx` はPrisma DSLで表現できないためmigrationで追加している。
 // password_hash: T-101でMVPスコープがCredentialsのみのため not null(OAuth追加時にnullableへ変更するmigrationが必要)。
 model User {
   id              BigInt    @id @default(autoincrement())

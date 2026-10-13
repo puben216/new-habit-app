@@ -17,7 +17,7 @@
 - すべての user resource query に actor user ID を含め、取得後チェックだけに依存しない
 - Admin は別 role/group、MFA 必須、通常 UI/API と route/permission を分離
   - 実装（T-403、[ADR-012](adr/ADR-012-admin-access.md)）: 別表 `admin_users`（付与は運用スクリプトのみ）、TOTP（RFC 6238）+ リカバリーコード、MFA は session 単位で 30 分の絶対期限、失敗 5 回で 15 分ロック、Member には管理 route を `404` で秘匿
-- sensitive action（email変更、export、削除）は再認証
+- sensitive action（email変更、export、削除）は再認証（T-404: 削除はパスワードの再入力。失敗は 5 回/15 分で制限し、通常のログインとは独立。MFA は将来の追加予定）
 - login/rate limit、generic error、session rotation/revocation を実装
 - service role は queue ごとに最小権限。migration role と runtime role を分ける
 
@@ -48,6 +48,7 @@
 - at rest/in transit encryption。secret は Secrets Manager、ローカルは `.env`（commit 禁止）
 - email 等の検索が必要な値は正規化・アクセス制限。ログ相関には user public ID ではなく rotate 可能な pseudonymous ID
 - retention: app data、AI result、audit、backup、export を個別定義。削除要求が backup と provider にどう反映されるか明文化
+  - アカウント削除（T-404）: 要求から 30 日の猶予（取り消し可）の後、日次ジョブが `users` と全子データを物理削除し、監査ログには公開 ID だけを残す。AI・メール provider 側のデータは provider 確定時（ADR-003）に削除手順を決め、バックアップは基盤（T-502）で保持期間を決める
 - S3 export は短期限 presigned URL、暗号化、lifecycle、自分の object のみ
 
 ## 管理・監査

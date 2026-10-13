@@ -264,3 +264,14 @@ AI queue pipeline（[../specs/ai-queue-pipeline.md](specs/ai-queue-pipeline.md)�
 - `ai_job_attempts` は worker の 1 回の実行（claim 後の確定または解放）につき 1 行（`attempt_no` は job ごとの連番）。provider 内の再試行は `generateSafeCoaching` が行い、行にしない。`outcome`・`latency_ms`・`error_category`（fallbackReason / failureCode / `worker_error`）のみ記録し、prompt・入力・出力本文は記録しない。`input_tokens`/`output_tokens`/`estimated_cost`/`provider_request_id` は実 provider の導入時（ADR-003）に記録する。
 - `result_json` は `schemaVersion: 1` の構造化出力のみ（`source`、`output`、`contentSafety`、`fallbackReason`）。入力は保存しない。読み出し時に契約 schema で検証する。形を変える場合は新しい `schemaVersion` を追加する。
 - 保存期間・ユーザーによる削除は `docs/10` の P1 が未決のため未実装（`user_id` の `ON DELETE CASCADE` に従う）。
+
+## 実装時の補足（T-404）
+
+アカウント削除（[../specs/account-deletion.md](specs/account-deletion.md)、[../plans/account-deletion.md](plans/account-deletion.md)）の実装時の追加決定。Migration は `20261012000000_t404_account_deletion`（expand のみ）。
+
+- `users` に `CHECK ((status = 'deletion_pending') = (deleted_at IS NOT NULL))` を追加した。削除予約は `status = 'deletion_pending'` と `deleted_at = 要求時刻` を条件付き更新の単一文で同時に設定し、取り消しは両方を元に戻す。猶予期間（30 日）の終了は `deleted_at + 30 日`（UTC の経過時間）。
+- 削除ジョブの期限スキャン（`WHERE status = 'deletion_pending' AND deleted_at <= ? ORDER BY deleted_at`）のために、部分 index `users_deletion_pending_deleted_at_idx (deleted_at) WHERE status = 'deletion_pending'` を追加した。
+- `login_attempts.purpose` に `reauth` を追加した（再認証の失敗を通常のログインと独立して数えるため）。
+- 物理削除は `DELETE FROM users` で行い、子データは既存の `ON DELETE CASCADE` が削除する。`public` スキーマの全 FK が `ON DELETE CASCADE` であること、`user_id` 列を持つ全テーブルが `users` への FK を持つことを Integration Test で検査する（新しいテーブルが削除漏れを起こさないようにするため）。
+- `audit_logs` は FK を持たず、削除後も残る。残るのは公開 ID（`target_public_id`）、`actor`（`user:{公開 ID}` または `system`）、action、request ID、IP の不可逆化表現のみで、メールや内容を含まない。
+- 削除予約中の `deletion_pending` のユーザーのデータは削除しない（取り消しで復元するため）。AI・メールの provider 側のデータとバックアップは本タスクでは削除されない（`docs/10` に未決として記録）。

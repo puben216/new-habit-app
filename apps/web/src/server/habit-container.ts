@@ -12,6 +12,7 @@ import { createPrismaHabitRepository, createUuidGenerator } from "@habit-app/inf
 import { getAuthContainer } from "./auth-container";
 import { createHabitHandlers } from "./habit-handlers";
 import type { HabitHandlers } from "./habit-handlers";
+import { actorUserIdFromSession } from "./session-actor";
 
 /**
  * `/api/v1/habits` route の composition root。auth-container と同様、初回リクエスト時まで
@@ -33,9 +34,9 @@ async function buildHabitHandlers(): Promise<HabitHandlers> {
     allowedOrigin: new URL(env.APP_BASE_URL).origin,
     async resolveActorUserId() {
       // 認証(誰か)のみをここで判定する。認可(所有者のみ)は repository の query 条件で行う。
-      const session = await auth();
-      const userId = session?.user?.id;
-      return typeof userId === "string" && ACTOR_USER_ID_PATTERN.test(userId) ? userId : null;
+      // 削除予約中の session を遮断する判定は `actorUserIdFromSession` に集約されている(T-404 ACD-INV-003)。
+      const userId = actorUserIdFromSession(await auth());
+      return userId !== null && ACTOR_USER_ID_PATTERN.test(userId) ? userId : null;
     },
     useCases: {
       create: (input) => createHabitUseCase({ habitRepository, idGenerator, now }, input),
