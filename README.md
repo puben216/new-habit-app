@@ -27,7 +27,7 @@
 ```text
 pnpm install
 pnpm db:up        # Postgres
-pnpm mail:up      # Mailpit(メール確認用。Web UI: http://localhost:8025)
+pnpm mail:up      # Mailpit(メール確認用。Web UI: http://localhost:8026)
 pnpm db:migrate:deploy
 pnpm --filter web dev
 ```

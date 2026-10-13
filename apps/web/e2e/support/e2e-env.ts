@@ -15,9 +15,11 @@ const DATABASE_ORIGIN = `postgresql://habit_app:habit_app@localhost:${DATABASE_P
 export const E2E_ADMIN_DATABASE_URL = `${DATABASE_ORIGIN}/postgres`;
 export const E2E_DATABASE_URL = `${DATABASE_ORIGIN}/${E2E_DATABASE_NAME}`;
 
-export const E2E_MAILPIT_HTTP_URL = "http://localhost:8025";
+// 既定は docker-compose.yml の MAILPIT_HTTP_PORT / MAILPIT_SMTP_PORT の既定(8026 / 1025)と同じ。
+// ポートが重なる場合は E2E_MAILPIT_HTTP_PORT / E2E_MAILPIT_SMTP_PORT で変更できる(compose の値と揃える)。
+export const E2E_MAILPIT_HTTP_URL = `http://localhost:${process.env["E2E_MAILPIT_HTTP_PORT"] ?? "8026"}`;
 export const E2E_SMTP_HOST = "localhost";
-export const E2E_SMTP_PORT = "1025";
+export const E2E_SMTP_PORT = process.env["E2E_MAILPIT_SMTP_PORT"] ?? "1025";
 
 export const E2E_AUTH_SECRET = "e2e-only-dummy-secret-not-for-real-use-0123456789";
 
