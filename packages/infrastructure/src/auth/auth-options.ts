@@ -90,6 +90,8 @@ export function createAuthHandlers(deps: AuthHandlersDeps): NextAuthResult {
           user: { ...session.user, id: result.userId },
           sessionId: result.sessionId,
           mfaVerifiedAt: result.mfaVerifiedAt === null ? null : result.mfaVerifiedAt.toISOString(),
+          // 削除予約中(deletion_pending)の session を Member 向け API から遮断するために使う(T-404)。
+          accountStatus: result.userStatus,
         };
       },
     },

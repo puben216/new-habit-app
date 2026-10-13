@@ -2,8 +2,7 @@ import { createHmac } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 
-import pg from "pg";
-
+import { withDatabase } from "./database";
 import { E2E_ADMIN_TOTP_ENCRYPTION_KEY, E2E_DATABASE_URL } from "./e2e-env";
 
 /**
@@ -85,17 +84,6 @@ export function totpCode(secret: Buffer, nowMs: number = Date.now()): string {
     ((digest[offset + 2] ?? 0) << 8) |
     (digest[offset + 3] ?? 0);
   return String(binary % 1_000_000).padStart(6, "0");
-}
-
-/** E2E database への直接の問い合わせ(結果の確認と運用データの投入。認証の迂回には使わない)。 */
-async function withDatabase<T>(run: (client: pg.Client) => Promise<T>): Promise<T> {
-  const client = new pg.Client({ connectionString: E2E_DATABASE_URL });
-  await client.connect();
-  try {
-    return await run(client);
-  } finally {
-    await client.end();
-  }
 }
 
 export async function userPublicId(email: string): Promise<string> {

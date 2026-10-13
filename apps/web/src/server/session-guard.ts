@@ -1,3 +1,5 @@
+import type { AccountStatus } from "@habit-app/domain";
+
 /**
  * 保護画面のガード(docs/specs/web-ui-foundation.md WUI-002)。
  *
@@ -27,4 +29,16 @@ export interface GuestGuardDeps {
 export async function guardGuest(deps: GuestGuardDeps): Promise<void> {
   const actorUserId = await deps.getActorUserId();
   if (actorUserId !== null) deps.redirectToApp();
+}
+
+/**
+ * 削除予約中の画面(`/account/restore`)のガード(docs/specs/account-deletion.md ACD-007)。
+ * 判定は session のアカウント状態だけで行う。未認証は login へ、active は通常の画面へ戻し、
+ * 削除予約中の session だけが表示できる。
+ */
+export type RestoreGuardOutcome = "render" | "login" | "app";
+
+export function decideRestoreGuard(status: AccountStatus | null): RestoreGuardOutcome {
+  if (status === null) return "login";
+  return status === "deletion_pending" ? "render" : "app";
 }

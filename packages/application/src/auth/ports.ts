@@ -1,3 +1,5 @@
+import type { AccountStatus } from "@habit-app/domain";
+
 /**
  * auth use case が依存する port(interface)群(docs/plans/auth-adapter.md Interfaces and Contracts)。
  * 実装(Infrastructure)は T-101 Task 4 で行う。ここでは Application が要求する契約のみを定義する。
@@ -111,13 +113,21 @@ export interface AuthRepositoryPort {
     readonly userId: string;
     readonly sessionId: string;
     readonly mfaVerifiedAt: Date | null;
+    /** `users.status`。削除予約中(`deletion_pending`)の session を Member API から遮断するために使う(T-404)。 */
+    readonly userStatus: AccountStatus;
   } | null>;
 
   /** logout(AUTH-006)時に session を失効させる。存在しない sessionToken を渡しても成功扱いとする。 */
   deleteSession(sessionToken: string): Promise<void>;
 }
 
-export type LoginAttemptPurpose = "signup" | "login" | "verify_resend" | "password_reset";
+export type LoginAttemptPurpose =
+  | "signup"
+  | "login"
+  | "verify_resend"
+  | "password_reset"
+  /** 削除などの sensitive action の再認証(T-404)。通常のログインの制限とは独立。 */
+  | "reauth";
 
 /**
  * AUTH-010 の rate limit/lockout 判定に使う port。

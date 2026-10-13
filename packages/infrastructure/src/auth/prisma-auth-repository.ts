@@ -1,4 +1,4 @@
-import { isTokenExpired } from "@habit-app/domain";
+import { isAccountStatus, isTokenExpired } from "@habit-app/domain";
 import type {
   AuthRepositoryPort,
   AuthUserRecord,
@@ -181,14 +181,18 @@ export function createPrismaAuthRepository(prisma: PrismaClient): AuthRepository
     async findSessionDetails(input) {
       const session = await prisma.session.findUnique({
         where: { sessionToken: input.sessionToken },
+        include: { user: { select: { status: true } } },
       });
       if (session === null || isTokenExpired(session.expires, input.now)) {
         return null;
       }
+      // 状態の値域は DB の CHECK が保証する。万一未知の値なら、認証済みとして扱わない(fail closed)。
+      if (!isAccountStatus(session.user.status)) return null;
       return {
         userId: session.userId.toString(),
         sessionId: session.id.toString(),
         mfaVerifiedAt: session.mfaVerifiedAt,
+        userStatus: session.user.status,
       };
     },
 

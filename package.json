@@ -25,7 +25,8 @@
     "db:migrate:deploy": "pnpm --filter @habit-app/infrastructure run migrate:deploy",
     "admin:grant": "tsx packages/infrastructure/src/admin/admin-cli-main.ts grant",
     "admin:disable": "tsx packages/infrastructure/src/admin/admin-cli-main.ts disable",
-    "admin:reset-mfa": "tsx packages/infrastructure/src/admin/admin-cli-main.ts reset-mfa"
+    "admin:reset-mfa": "tsx packages/infrastructure/src/admin/admin-cli-main.ts reset-mfa",
+    "account:purge": "tsx apps/workers/src/account/purge-cli.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.2",

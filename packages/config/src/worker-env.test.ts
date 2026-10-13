@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isNotificationDeliveryEnabled, parseWorkerEnv } from "./worker-env";
+import { isAccountPurgeEnabled, isNotificationDeliveryEnabled, parseWorkerEnv } from "./worker-env";
 
 const base = {
   AWS_REGION: "ap-northeast-1",
@@ -92,5 +92,27 @@ describe("parseWorkerEnv: AI 設定(T-303)", () => {
 
   it("未知の AI_PROVIDER は拒否する", () => {
     expect(() => parseWorkerEnv({ ...base, AI_PROVIDER: "openai" })).toThrow("AI_PROVIDER");
+  });
+});
+
+describe("ACCOUNT_PURGE_ENABLED(T-404)", () => {
+  it("既定で無効。'true' のときだけ有効で、曖昧な値は拒否する", () => {
+    expect(parseWorkerEnv(base).ACCOUNT_PURGE_ENABLED).toBe(false);
+    expect(parseWorkerEnv({ ...base, ACCOUNT_PURGE_ENABLED: "true" }).ACCOUNT_PURGE_ENABLED).toBe(
+      true,
+    );
+    for (const bad of ["1", "yes", "TRUE", ""]) {
+      expect(() => parseWorkerEnv({ ...base, ACCOUNT_PURGE_ENABLED: bad })).toThrow(
+        "ACCOUNT_PURGE_ENABLED",
+      );
+    }
+  });
+
+  it("isAccountPurgeEnabled は他の設定が無くても Flag だけを読む。通知の Flag とは独立", () => {
+    expect(isAccountPurgeEnabled({})).toBe(false);
+    expect(isAccountPurgeEnabled({ ACCOUNT_PURGE_ENABLED: "false" })).toBe(false);
+    expect(isAccountPurgeEnabled({ ACCOUNT_PURGE_ENABLED: "true" })).toBe(true);
+    expect(isAccountPurgeEnabled({ NOTIFICATION_DELIVERY_ENABLED: "true" })).toBe(false);
+    expect(isNotificationDeliveryEnabled({ ACCOUNT_PURGE_ENABLED: "true" })).toBe(false);
   });
 });

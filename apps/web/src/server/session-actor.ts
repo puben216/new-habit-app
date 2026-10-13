@@ -1,3 +1,5 @@
+import { isAccountStatus, type AccountStatus } from "@habit-app/domain";
+
 /**
  * Auth.js の session から actor user ID を取り出す(docs/specs/auth-adapter.md AUTH-009)。
  *
@@ -6,11 +8,38 @@
  * ある場合にのみ認証済みとみなし、それ以外はすべて未認証(null)として扱う。
  */
 export function actorUserIdFromSession(session: unknown): string | null {
+  const userId = userIdFromSession(session);
+  if (userId === null) return null;
+  // 削除予約中の session は、Member 向けの全 API で actor を持たない(= 401)。この 1 箇所に集約し、
+  // 新しい API も自動的に遮断される(docs/specs/account-deletion.md ACD-INV-003)。
+  return (session as { accountStatus?: unknown }).accountStatus === "deletion_pending"
+    ? null
+    : userId;
+}
+
+export interface AccountSessionInfo {
+  readonly userId: string;
+  /** DB の `users.status`(session callback が毎回 DB から取得して載せる)。 */
+  readonly status: AccountStatus;
+}
+
+function userIdFromSession(session: unknown): string | null {
   if (typeof session !== "object" || session === null) return null;
   const user = (session as { user?: unknown }).user;
   if (typeof user !== "object" || user === null) return null;
   const id = (user as { id?: unknown }).id;
   return typeof id === "string" && id.length > 0 ? id : null;
+}
+
+/**
+ * 削除予約中の session でも user ID を取り出す(アカウントの状態の確認と取り消しだけが使う。ACD-003)。
+ * 有効な session で、状態が未知・欠落の場合は認証済みとして扱わない(fail closed)。
+ */
+export function accountSessionFromAuth(session: unknown): AccountSessionInfo | null {
+  const userId = userIdFromSession(session);
+  if (userId === null) return null;
+  const status = (session as { accountStatus?: unknown }).accountStatus;
+  return isAccountStatus(status) ? { userId, status } : null;
 }
 
 export interface AdminSessionInfo {

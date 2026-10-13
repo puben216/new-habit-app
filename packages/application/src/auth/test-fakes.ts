@@ -147,7 +147,12 @@ export function createFakeAuthRepository(): FakeAuthRepository {
       if (session === undefined || isTokenExpired(session.expiresAt, input.now)) {
         return null;
       }
-      return { userId: session.userId, sessionId: input.sessionToken, mfaVerifiedAt: null };
+      return {
+        userId: session.userId,
+        sessionId: input.sessionToken,
+        mfaVerifiedAt: null,
+        userStatus: "active",
+      };
     },
 
     async deleteSession(sessionToken) {

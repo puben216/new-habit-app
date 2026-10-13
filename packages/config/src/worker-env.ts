@@ -30,6 +30,8 @@ const workerEnvSchema = z
     SES_CONFIGURATION_SET: z.string().min(1).optional(),
     /** scheduler(投入先)。 */
     NOTIFICATION_QUEUE_URL: z.string().url().optional(),
+    /** false(既定)の間は account-purge は DB に接続せず何もしない(Feature Flag。T-404)。 */
+    ACCOUNT_PURGE_ENABLED: booleanFlag,
     /** ai-coaching(AiCoachPort の実装。実 provider は ADR-003 の確定後に追加する。現在は fake のみ)。 */
     AI_PROVIDER: z.enum(["fake"]).default("fake"),
     /** ai-coaching(AI 提案の公開 Feature Flag)。false の間は provider を呼ばず定型 fallback で完結する。 */
@@ -59,3 +61,7 @@ export const parseWorkerEnv = (source: EnvSource): WorkerEnv => {
 /** 他の検証より先に Feature Flag だけを読む(無効なら、残りの設定が未投入でも起動できる)。 */
 export const isNotificationDeliveryEnabled = (source: EnvSource): boolean =>
   source["NOTIFICATION_DELIVERY_ENABLED"] === "true";
+
+/** account-purge の Feature Flag だけを先に読む(無効なら、残りの設定が未投入でも起動できる)。 */
+export const isAccountPurgeEnabled = (source: EnvSource): boolean =>
+  source["ACCOUNT_PURGE_ENABLED"] === "true";

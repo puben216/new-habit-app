@@ -13,6 +13,7 @@ import { TextField } from "@/components/text-field";
 import { signInWithPassword } from "@/lib/auth/auth-client";
 import { describeFormError } from "@/lib/auth/form-errors";
 import {
+  DELETION_REQUESTED_MESSAGE,
   LOGIN_FAILED_MESSAGE,
   SESSION_EXPIRED_MESSAGE,
   issueMessage,
@@ -24,11 +25,13 @@ export interface LoginFormProps {
   /** server で検証済みの遷移先。 */
   readonly nextPath: string;
   readonly sessionExpired: boolean;
+  /** アカウント削除を要求した直後の案内(T-404)。 */
+  readonly deletionRequested?: boolean;
 }
 
 type FieldErrors = Partial<Record<AuthField, string>>;
 
-export function LoginForm({ nextPath, sessionExpired }: LoginFormProps) {
+export function LoginForm({ nextPath, sessionExpired, deletionRequested = false }: LoginFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -84,6 +87,13 @@ export function LoginForm({ nextPath, sessionExpired }: LoginFormProps) {
 
   return (
     <>
+      {deletionRequested ? (
+        <StateMessage
+          kind="empty"
+          title="削除を受け付けました"
+          description={DELETION_REQUESTED_MESSAGE}
+        />
+      ) : null}
       {sessionExpired ? (
         <StateMessage
           kind="empty"

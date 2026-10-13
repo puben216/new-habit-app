@@ -261,6 +261,9 @@ T-101〜T-204 は API・Domain・Application までで、ブラウザで操作�
 
 - 再認証、async export、猶予期間、cascade/provider cleanup
 - Integration/E2E: 他人 export 拒否、削除完了
+- 設計: 2 本の PR に分ける(PR-A: 再認証とアカウント削除、PR-B: データエクスポート)。PR-A の Feature Spec([account-deletion.md](specs/account-deletion.md))と Implementation Plan([account-deletion.md](plans/account-deletion.md))を作成。猶予 30 日(ADR-006)・再ログインで取り消し可、再認証はパスワード(失敗は 5 回/15 分で制限、MFA は将来)、削除予約中の session は Member API を一括で 401 にして取り消し画面にだけ入れる、期限後に日次ジョブが `users` を削除し子データは CASCADE、監査は公開 ID のみ、AI・メール provider とバックアップは差し込み口と引き継ぎで対応と決定
+- 実装(PR-A): Domain `account`(猶予期間・期限判定)、Application `requestAccountDeletionUseCase`/`cancelAccountDeletionUseCase`/`getAccountDeletionStatusUseCase`/`purgeExpiredAccountsUseCase`、Infrastructure `PrismaAccountRepository`(条件付き更新・行ロック・監査と削除を同一 transaction)、`DELETE /me`・`GET /me/deletion`・`POST /me/deletion/cancel`、`/account/delete`・`/account/restore` 画面、Worker `account-purge`(Feature Flag `ACCOUNT_PURGE_ENABLED`、手動実行 `pnpm account:purge`)。Migration は CHECK・部分 index・`reauth` の追加(expand)
+- テスト(PR-A): Unit(期限の性質テスト、再認証と制限、取り消しの境界、purge の選別と冪等、遮断の性質テスト、handler)と Integration(実 PostgreSQL: 全データの削除、全 FK の CASCADE、並行 purge・取り消しとの競合、CHECK、fresh と upgrade の Migration)、E2E(要求・遮断・取り消し・ロック・期限後の削除)を追加。Lambda・EventBridge の Terraform は T-501 で追加
 
 ### T-405 Auth email via SES
 

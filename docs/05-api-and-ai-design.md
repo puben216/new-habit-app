@@ -15,12 +15,14 @@
 
 ### Session/Profile
 
-| Method    | Path         | 用途                                                     |
-| --------- | ------------ | -------------------------------------------------------- |
-| POST      | `/auth/*`    | IdP Adapter 経由の登録・ログイン等（方式確定後に詳細化） |
-| GET/PATCH | `/me`        | 自分のプロフィール取得・更新                             |
-| DELETE    | `/me`        | 再認証を伴う削除要求                                     |
-| GET       | `/me/export` | 非同期 export ジョブ作成または取得                       |
+| Method    | Path                  | 用途                                                     |
+| --------- | --------------------- | -------------------------------------------------------- |
+| POST      | `/auth/*`             | IdP Adapter 経由の登録・ログイン等（方式確定後に詳細化） |
+| GET/PATCH | `/me`                 | 自分のプロフィール取得・更新                             |
+| DELETE    | `/me`                 | 再認証を伴う削除要求（30 日の猶予。T-404）               |
+| GET       | `/me/deletion`        | 削除予約の状態の取得（削除予約中の session も可）        |
+| POST      | `/me/deletion/cancel` | 猶予期間内の削除の取り消し（削除予約中の session のみ）  |
+| GET       | `/me/export`          | 非同期 export ジョブ作成または取得                       |
 
 ### Habits/Tracking
 
@@ -151,6 +153,13 @@
 - `GET /admin/operations/notifications`（`failed`/`expired`/`suppressed`）と `/admin/operations/ai-jobs`（`failed`/`fallback`）は `status`・`limit`（1〜50）・`cursor`（直前ページ最後の ID）の keyset ページング。email・設定の中身・AI の入出力は含まない。
 - すべての閲覧は、閲覧の前に監査ログへ追記され（追記に失敗したら閲覧しない）、検索した email は監査に残らない。応答は `Cache-Control: no-store` と `X-Robots-Tag: noindex`。
 - 管理 API は読み取り専用（`GET` と `POST /admin/mfa/verify` のみ）。Admin の付与・無効化は運用スクリプト（`pnpm admin:grant|admin:disable|admin:reset-mfa`）だけで、API/UI に経路はない。rate limit は未対応。
+
+`/me` の削除系の正式な契約は [../specs/account-deletion.md](specs/account-deletion.md) の APIとイベント節と `packages/contracts/src/account-deletion.ts` を正本とし、上記の表からの差分は次のとおり。
+
+- `DELETE /me` の body は `{ password }` のみ（再認証）。成功は `200`、`{ status: "deletion_pending", scheduledFor }`。誤りは `403`（`reauthentication_failed`）、直近 15 分に 5 回失敗した後は `429`（`too_many_attempts`。通常のログインの制限とは独立）、二重の要求は `409`（`deletion_already_requested`）、停止中は `409`（`account_not_active`）。成功すると全 session が失効する。
+- 削除予約中の session は、`/me/deletion*` 以外のすべての Member API で actor を持たず `401` になる。再ログイン自体は許可される。
+- `POST /me/deletion/cancel` は猶予期間（要求から 30 日）内だけ成功し、期限後は `409`（`grace_period_expired`）、削除予約中でなければ `409`（`deletion_not_requested`）。
+- `GET /me/export`（非同期 export）は T-404 の PR-B で扱う。
 
 ## AI 境界
 
