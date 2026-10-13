@@ -15,33 +15,92 @@ async function loginViaUi(page: Page, user: { email: string; password: string })
   await page.getByRole("button", { name: "ログイン" }).click();
 }
 
-test("初回ログインでオンボーディングへ誘導され、保存すると /today へ進み値が保存される", async ({
+function onboardingDialog(page: Page) {
+  return page.getByRole("dialog", { name: "はじめての設定" });
+}
+
+test("初回ログインで初回設定のモーダルが表示され、保存すると /today を使え、値が保存される", async ({
   page,
   context,
 }) => {
   const user = await registerVerifiedUser(context.request, createFakeUser(), { onboarded: false });
 
   await loginViaUi(page, user);
-  await expect(page).toHaveURL(/\/onboarding$/);
-  await expect(page.getByRole("heading", { level: 1, name: "はじめての設定" })).toBeVisible();
-
-  await page.getByLabel("表示名", { exact: true }).fill("たなか");
-  await page.getByLabel("タイムゾーン").selectOption("America/New_York");
-  await page.getByRole("button", { name: "はじめる" }).click();
+  // redirect せず、/today の上に閉じられないモーダルが出る。画面の中身はまだ表示されない。
   await expect(page).toHaveURL(/\/today$/);
+  const dialog = onboardingDialog(page);
+  await expect(dialog).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "今日" })).toHaveCount(0);
+
+  await dialog.getByLabel("表示名", { exact: true }).fill("たなか");
+  await dialog.getByLabel("タイムゾーン").selectOption("America/New_York");
+  await dialog.getByRole("button", { name: "はじめる" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(page.getByRole("heading", { level: 1, name: "今日" })).toBeVisible();
 
   const me = await (await page.request.get("/api/v1/me")).json();
   expect(me.displayName).toBe("たなか");
   expect(me.timezone).toBe("America/New_York");
 });
 
-test("未完了のまま他の保護画面を開くと /onboarding へ戻される", async ({ page, context }) => {
+test("未完了のまま他の保護画面を開いても URL は変わらず、モーダルが表示され、保存すると同じ画面が表示される", async ({
+  page,
+  context,
+}) => {
   await signUpAndSignIn(context, createFakeUser(), { onboarded: false });
 
-  for (const path of ["/today", "/profile"]) {
+  for (const path of ["/today", "/habits", "/profile"]) {
     await page.goto(path);
-    await expect(page).toHaveURL(/\/onboarding$/);
+    await expect(page, path).toHaveURL(new RegExp(`${path}$`));
+    await expect(onboardingDialog(page), path).toBeVisible();
   }
+
+  await page.goto("/habits");
+  const dialog = onboardingDialog(page);
+  await dialog.getByLabel("表示名", { exact: true }).fill("はなこ");
+  await dialog.getByRole("button", { name: "はじめる" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page).toHaveURL(/\/habits$/);
+  await expect(page.getByRole("heading", { level: 1, name: "習慣" })).toBeVisible();
+});
+
+test("モーダルは Esc では閉じず、フォーカスはダイアログの外へ出ない", async ({ page, context }) => {
+  await signUpAndSignIn(context, createFakeUser(), { onboarded: false });
+  await page.goto("/today");
+  const dialog = onboardingDialog(page);
+  await expect(dialog).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+
+  // Tab を繰り返しても、フォーカスは常にダイアログ内にある(背後のナビゲーションへ移らない)。
+  for (let i = 0; i < 12; i += 1) {
+    await page.keyboard.press("Tab");
+    const inside = await page.evaluate(
+      () => document.activeElement?.closest("dialog[open]") !== null,
+    );
+    expect(inside, `Tab ${i + 1} 回目`).toBe(true);
+  }
+  // 背後のナビゲーションは操作できない(クリックはダイアログに遮られる)。
+  await expect(
+    page.getByRole("link", { name: "習慣" }).click({ timeout: 1_500 }),
+  ).rejects.toThrow();
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(dialog).toBeVisible();
+});
+
+test("専用ページ /onboarding でも同じ設定ができ、保存すると /today へ進む", async ({
+  page,
+  context,
+}) => {
+  await signUpAndSignIn(context, createFakeUser(), { onboarded: false });
+  await page.goto("/onboarding");
+  await expect(page.getByRole("heading", { level: 1, name: "はじめての設定" })).toBeVisible();
+  await page.getByLabel("表示名", { exact: true }).fill("たろう");
+  await page.getByRole("button", { name: "はじめる" }).click();
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(page.getByRole("heading", { level: 1, name: "今日" })).toBeVisible();
 });
 
 test("完了済みの Member が /onboarding を開くと /today へ戻される", async ({ page, context }) => {

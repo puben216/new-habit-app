@@ -32,9 +32,14 @@ export interface ProfileFormProps {
   readonly mode: ProfileFormMode;
   /** server が `Intl.supportedValuesOf("timeZone")` から作った候補。 */
   readonly supportedTimezones: readonly string[];
+  /**
+   * オンボーディングの保存に成功したときの動作。省略時は `/today` へ遷移する(`/onboarding` 画面)。
+   * モーダルでは、元の URL のまま server の判定をやり直す(`router.refresh()`)ために指定する。
+   */
+  readonly onOnboarded?: (() => void) | undefined;
 }
 
-export function ProfileForm({ mode, supportedTimezones }: ProfileFormProps) {
+export function ProfileForm({ mode, supportedTimezones, onOnboarded }: ProfileFormProps) {
   const query = useQuery({
     queryKey: PROFILE_QUERY_KEY,
     queryFn: ({ signal }) => fetchProfile(signal),
@@ -52,7 +57,12 @@ export function ProfileForm({ mode, supportedTimezones }: ProfileFormProps) {
     );
   }
   return (
-    <ProfileFormBody mode={mode} profile={query.data} supportedTimezones={supportedTimezones} />
+    <ProfileFormBody
+      mode={mode}
+      profile={query.data}
+      supportedTimezones={supportedTimezones}
+      onOnboarded={onOnboarded}
+    />
   );
 }
 
@@ -60,6 +70,7 @@ function ProfileFormBody({
   mode,
   profile,
   supportedTimezones,
+  onOnboarded,
 }: ProfileFormProps & { readonly profile: ProfileResponse }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -86,7 +97,10 @@ function ProfileFormBody({
     mutationFn: updateProfile,
     onSuccess: (saved) => {
       queryClient.setQueryData(PROFILE_QUERY_KEY, saved);
-      if (mode === "onboarding") router.replace("/today");
+      if (mode === "onboarding") {
+        if (onOnboarded === undefined) router.replace("/today");
+        else onOnboarded();
+      }
     },
     onError: (error) => {
       if (isApiError(error) && error.code === CLIENT_ERROR_CODES.networkError) {

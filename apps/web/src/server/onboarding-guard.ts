@@ -9,9 +9,14 @@ export interface OnboardingGuardDeps {
   readonly redirect: () => never;
 }
 
-/** `(onboarded)` 配下用。未完了なら `/onboarding` へ redirect する。 */
-export async function guardOnboarded(deps: OnboardingGuardDeps): Promise<void> {
-  if (!hasCompletedOnboarding(await deps.getProfile())) deps.redirect();
+/**
+ * `(onboarded)` 配下用。オンボーディングが未完了かを返す。未完了のときの表示(閉じられないモーダル)は
+ * 呼び出し側が決める(PFS-001)。判定自体は Application の `hasCompletedOnboarding` に委ねる。
+ */
+export async function isOnboardingRequired(deps: {
+  readonly getProfile: OnboardingGuardDeps["getProfile"];
+}): Promise<boolean> {
+  return !hasCompletedOnboarding(await deps.getProfile());
 }
 
 /** `/onboarding` 用。完了済みなら保護画面へ redirect する。 */

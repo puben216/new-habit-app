@@ -2,7 +2,7 @@
 
 Status: Ready
 責任者: TBD
-最終更新: 2026-10-09
+最終更新: 2026-10-13
 変更区分: Standard
 ロードマップ項目: T-213
 
@@ -12,16 +12,16 @@ T-102 の `GET/PATCH /api/v1/me` を画面として提供する。新規 Member 
 
 ## 成功指標
 
-- 新規 Member は login 後に `/onboarding` へ誘導され、表示名とタイムゾーンを保存すると `/today` へ進める(E2E)。
-- オンボーディング未完了の Member は、保護画面(`/today` 等)を開いても `/onboarding` へ戻される(E2E)。
+- 新規 Member は login 後、初回設定のモーダルが表示され、表示名とタイムゾーンを保存すると、そのまま `/today` を使える(E2E)。
+- オンボーディング未完了の Member は、保護画面(`/today` 等)を開いても、画面の中身は表示されず、閉じられない初回設定のモーダルだけが表示される(E2E)。モーダルは Esc でも閉じられず、背後の画面は操作できない(E2E)。
 - 他ユーザーのプロフィールは画面からも API からも取得・更新できない(E2E)。
 - タイムゾーンの不正値は保存されず、固定の文言で表示される(Unit、E2E)。
 - フォームは keyboard だけで操作でき、エラーが項目と要約の両方で伝わる(E2E)。
 
 ## 範囲
 
-- 画面: `/onboarding`(初回設定)、`/profile`(閲覧・編集)。
-- オンボーディング完了の判定(`displayName` が `null` でないこと)と、未完了時の誘導(`(app)/(onboarded)` layout)。
+- 画面: 初回設定のモーダル(`(app)/(onboarded)` 配下のすべての画面で、未完了のときに表示)、`/onboarding`(同じ初回設定を専用ページで開く場合。従来の URL を残す)、`/profile`(閲覧・編集)。
+- オンボーディング完了の判定(`displayName` が `null` でないこと)と、未完了時の初回設定モーダルの表示(`(app)/(onboarded)` layout)。
 - 編集項目: 表示名、タイムゾーン、週の開始曜日。
 - ブラウザのタイムゾーンを初期選択として提案する(ユーザーが変更可能)。
 - ナビゲーションへ「プロフィール」を追加。
@@ -48,15 +48,16 @@ T-102 の `GET/PATCH /api/v1/me` を画面として提供する。新規 Member 
 ### PFS-001 オンボーディングの判定と誘導
 
 - オンボーディング完了とは、プロフィールの `displayName` が `null` でないこと(PROF-006)。判定は Application の関数 1 箇所に置き、Presentation で再実装しない。
-- 保護画面のうち `(app)/(onboarded)` 配下(`/today`、`/profile`)は、未完了なら `/onboarding` へ redirect し、子を描画しない。`/onboarding` は `(onboarded)` の外に置く。
-- 完了済みの Member が `/onboarding` を開くと `/today` へ redirect する。
+- 保護画面のうち `(app)/(onboarded)` 配下(`/today`、`/profile` など)は、未完了なら子を描画せず、**閉じられない初回設定のモーダル**を表示する(redirect しない。URL は変わらない)。モーダルの背後には、設定が必要であることを伝える案内だけを置く(JS が有効になる前・無効のときの代替も兼ねる)。`/onboarding` は `(onboarded)` の外に置く。
+- 完了済みの Member が `/onboarding` を開くと `/today` へ redirect する。未完了の Member が `/onboarding` を開いた場合は、従来どおり専用ページで同じ設定フォームを表示する。
+- モーダルはブラウザ標準の `<dialog>` の `showModal()` で表示する。背後の画面は操作できず(inert)、フォーカスはダイアログ内に閉じる。必須の設定のため、Esc(`cancel`)でも外側のクリックでも閉じず、閉じる操作を設けない。`role` と名前は `dialog` と見出し「はじめての設定」(`aria-labelledby`)、説明は `aria-describedby` で関連付ける。
 - 判定は server(layout)で毎回、DB のプロフィールから行う。client の記憶に依存しない。
 
 ### PFS-002 オンボーディング画面(`/onboarding`)
 
 - 入力: 表示名(必須)、タイムゾーン。保存で `PATCH /api/v1/me`(`displayName`、`timezone`)を送る。
 - タイムゾーンの初期値は、ブラウザの `Intl.DateTimeFormat().resolvedOptions().timeZone` が選択肢に含まれていればそれ、なければ現在のプロフィール値(既定 `Asia/Tokyo`)。ユーザーが変更済みの場合は上書きしない。
-- 成功したら `/today` へ遷移する(`router.replace`)。`["me"]` の query cache を更新する。
+- 成功したら `["me"]` の query cache を更新する。モーダルでは、`router.refresh()` で server の判定をやり直し、同じ URL の画面を表示する(モーダルは消える)。`/onboarding` ページでは `/today` へ遷移する(`router.replace`)。
 - 画面の説明で、タイムゾーンが「今日」の判定に使われることを伝える。
 
 ### PFS-003 プロフィール画面(`/profile`)
@@ -88,29 +89,41 @@ T-102 の `GET/PATCH /api/v1/me` を画面として提供する。新規 Member 
 
 ## 状態遷移
 
-| 現在の状態 | 操作                     | 次の状態                  | 拒否される条件  |
-| ---------- | ------------------------ | ------------------------- | --------------- |
-| 未完了     | `(onboarded)` 配下を開く | `/onboarding` へ redirect | なし            |
-| 未完了     | onboarding を保存        | 完了、`/today`            | 検証違反(`422`) |
-| 完了       | `/onboarding` を開く     | `/today` へ redirect      | なし            |
-| 完了       | profile を保存           | 完了(更新)                | 検証違反(`422`) |
-| Guest      | `/onboarding`/`/profile` | `/login?next=…`           | なし            |
+| 現在の状態 | 操作                     | 次の状態                                   | 拒否される条件  |
+| ---------- | ------------------------ | ------------------------------------------ | --------------- |
+| 未完了     | `(onboarded)` 配下を開く | 初回設定のモーダルを表示(URL は変わらない) | なし            |
+| 未完了     | モーダルで保存           | 完了、同じ URL の画面を表示                | 検証違反(`422`) |
+| 未完了     | `/onboarding` で保存     | 完了、`/today`                             | 検証違反(`422`) |
+| 完了       | `/onboarding` を開く     | `/today` へ redirect                       | なし            |
+| 完了       | profile を保存           | 完了(更新)                                 | 検証違反(`422`) |
+| Guest      | `/onboarding`/`/profile` | `/login?next=…`                            | なし            |
 
 ## 受け入れ基準
 
 ```gherkin
-Scenario: 新規 Member は初回ログインでオンボーディングへ誘導される
+Scenario: 新規 Member は初回ログインで初回設定のモーダルが表示される
   Given signup・メール確認を終えた Member
   When login する
-  Then /onboarding が表示される
+  Then /today の上に「はじめての設定」のモーダルが表示され、画面の中身は表示されない
   When 表示名とタイムゾーンを保存する
-  Then /today が表示される
+  Then モーダルが消え、/today が使える
   And GET /api/v1/me の displayName と timezone が保存した値である
 
-Scenario: 未完了のまま他の保護画面を開くと戻される
+Scenario: 未完了のまま他の保護画面を開いても、モーダルが表示される
   Given オンボーディング未完了の Member
-  When /today または /profile を開く
-  Then /onboarding へ redirect される
+  When /today・/habits・/profile を開く
+  Then URL は変わらず、閉じられないモーダルだけが表示される
+  And 保存すると、同じ URL の画面が表示される
+
+Scenario: モーダルは閉じられず、背後は操作できない
+  Given オンボーディング未完了の Member がモーダルを表示している
+  When Esc を押す、または背後のナビゲーションを操作しようとする
+  Then モーダルは閉じず、背後の画面は操作できない
+
+Scenario: 専用ページ /onboarding も使える
+  Given オンボーディング未完了の Member
+  When /onboarding を開いて保存する
+  Then /today が表示される
 
 Scenario: 完了済みの Member は /onboarding から戻される
   Given オンボーディング完了済みの Member
@@ -187,14 +200,14 @@ N/A。
 
 ## テスト対応表
 
-| 要件    | Unit                                                                         | Integration | E2E                                             |
-| ------- | ---------------------------------------------------------------------------- | ----------- | ----------------------------------------------- |
-| PFS-001 | `hasCompletedOnboarding`(null/設定済み/空白は不可の入力は server 側)、ガード | N/A         | 未完了の誘導、完了済みの `/onboarding` redirect |
-| PFS-002 | タイムゾーン選択肢の構築(性質テスト)、初期値の決定                           | N/A         | オンボーディング保存 → `/today`                 |
-| PFS-003 | 保存 body の組み立て                                                         | N/A         | 編集 → 再読み込み後も保持、保存メッセージ       |
-| PFS-004 | 表示名の検証(code point 境界)、`fieldErrors` → 固定文言                      | N/A         | 空・51 文字・422 の固定文言、HTML 文字列の表示  |
-| PFS-005 | nav 設定の整合(既存テスト)                                                   | N/A         | ナビゲーションの現在地                          |
-| INV-001 | N/A                                                                          | N/A         | 2 ユーザーの `/profile` 分離                    |
+| 要件    | Unit                                                                                         | Integration | E2E                                                                                          |
+| ------- | -------------------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
+| PFS-001 | `hasCompletedOnboarding`(null/設定済み/空白は不可の入力は server 側)、`isOnboardingRequired` | N/A         | 未完了のモーダル(各画面・URL 不変)、Esc・背後の操作の遮断、完了済みの `/onboarding` redirect |
+| PFS-002 | タイムゾーン選択肢の構築(性質テスト)、初期値の決定                                           | N/A         | モーダルでの保存 → 同じ URL の画面、`/onboarding` での保存 → `/today`                        |
+| PFS-003 | 保存 body の組み立て                                                                         | N/A         | 編集 → 再読み込み後も保持、保存メッセージ                                                    |
+| PFS-004 | 表示名の検証(code point 境界)、`fieldErrors` → 固定文言                                      | N/A         | 空・51 文字・422 の固定文言、HTML 文字列の表示                                               |
+| PFS-005 | nav 設定の整合(既存テスト)                                                                   | N/A         | ナビゲーションの現在地                                                                       |
+| INV-001 | N/A                                                                                          | N/A         | 2 ユーザーの `/profile` 分離                                                                 |
 
 ## 未決事項
 
