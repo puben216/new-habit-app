@@ -27,12 +27,12 @@
 ```text
 pnpm install
 pnpm db:up        # Postgres
-pnpm mail:up      # Mailpit(メール確認用。Web UI: http://localhost:8026)
+pnpm mail:up      # Mailpit(メール確認用。Web UI: http://localhost:19026)
 pnpm db:migrate:deploy
 pnpm --filter web dev
 ```
 
-環境変数は`.env.example`を参考にリポジトリルートへ設定します。E2E(Playwright)は初回に`pnpm --filter web exec playwright install chromium`でブラウザを取得し、`pnpm test:e2e`で実行します。E2E専用database(`habit_app_e2e`)を作り直して実行するため、開発用databaseには影響しません。ローカルの Postgres のホスト側ポートの既定は 5435 です(コンテナ内は 5432)。他のプロジェクトと重なる場合は`POSTGRES_PORT=5436 pnpm db:up`と`E2E_POSTGRES_PORT=5436 pnpm test:e2e`のようにポートを変えられます。既存の`.env`の`DATABASE_URL`が 5432 のままなら、5435 に直してください。方式は[ADR-010](docs/adr/ADR-010-web-ui-stack.md)を参照してください。
+環境変数は`.env.example`を参考にリポジトリルートへ設定します。E2E(Playwright)は初回に`pnpm --filter web exec playwright install chromium`でブラウザを取得し、`pnpm test:e2e`で実行します。E2E専用database(`habit_app_e2e`)を作り直して実行するため、開発用databaseには影響しません。ローカルのポートは他のプロジェクトと重ならないよう、一般的でない番号を既定にしています(Postgres 19435、Mailpit の SMTP 19025・Web UI 19026、E2E のアプリ 19100)。変えたい場合は`POSTGRES_PORT`・`MAILPIT_SMTP_PORT`・`MAILPIT_HTTP_PORT`(E2E は`E2E_POSTGRES_PORT`・`E2E_MAILPIT_SMTP_PORT`・`E2E_MAILPIT_HTTP_PORT`・`E2E_APP_PORT`)で上書きできます(compose と E2E は同じ値にします)。既存の`.env`の`DATABASE_URL`・`SMTP_PORT`が古い値のままなら、`.env.example`の値に直してください。方式は[ADR-010](docs/adr/ADR-010-web-ui-stack.md)を参照してください。
 
 ## 設計原則
 

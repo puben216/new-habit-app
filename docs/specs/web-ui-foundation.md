@@ -92,7 +92,7 @@ Phase 2.5(T-212〜T-217)の各画面が共通の土台の上に作られるよ�
 
 ### WUI-007 ローカルのメール受信(Mailpit)
 
-- Docker Compose に `mailpit` を追加する(SMTP `1025`、Web/API はホスト側 `8026`(コンテナ内は `8025`)、データは永続化しない)。既定の `SMTP_HOST=localhost`/`SMTP_PORT=1025` のままローカルのアプリのメールが Mailpit に届く。
+- Docker Compose に `mailpit` を追加する(SMTP はホスト側 `19025`、Web/API はホスト側 `19026`(コンテナ内はそれぞれ `1025`/`8025`)、データは永続化しない)。既定の `SMTP_HOST=localhost`/`SMTP_PORT=19025` のままローカルのアプリのメールが Mailpit に届く。
 - `pnpm mail:up`/`pnpm mail:down` で起動・停止する。Mailpit はアプリの DB と独立している。
 
 ### WUI-008 Playwright E2E 基盤

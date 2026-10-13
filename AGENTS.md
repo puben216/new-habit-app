@@ -181,7 +181,7 @@ pnpm db:up              # docker composeでローカルPostgresを起動
 pnpm db:down            # ローカルPostgresを停止
 pnpm db:migrate:dev     # ローカルDBへPrisma migrationを対話的に適用(packages/infrastructure)
 pnpm db:migrate:deploy  # 保留中のmigrationを適用(CI/本番相当)
-pnpm mail:up           # docker composeでMailpit(SMTPキャプチャ、Web/API はホスト側 8026)を起動
+pnpm mail:up           # docker composeでMailpit(SMTPキャプチャ、Web/API はホスト側 19026)を起動
 pnpm mail:down         # Mailpitを停止
 pnpm test:e2e          # Playwright E2E(Chromium)。postgresとMailpitが必要(`pnpm db:up`、`pnpm mail:up`)。E2E専用databaseを作り直して実行する
 ```
