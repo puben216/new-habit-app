@@ -21,7 +21,11 @@ describe("formatUtc", () => {
   it("性質: 有効な時刻は常に YYYY-MM-DD HH:mm UTC で、同じ分なら同じ表示になる", () => {
     fc.assert(
       fc.property(
-        fc.date({ min: new Date("2000-01-01T00:00:00Z"), max: new Date("2100-01-01T00:00:00Z") }),
+        fc.date({
+          min: new Date("2000-01-01T00:00:00Z"),
+          max: new Date("2100-01-01T00:00:00Z"),
+          noInvalidDate: true,
+        }),
         (date) => {
           const text = formatUtc(date.toISOString());
           expect(text).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC$/);
