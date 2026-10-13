@@ -74,13 +74,15 @@ test("モーダルは Esc では閉じず、フォーカスはダイアログの
   await page.keyboard.press("Escape");
   await expect(dialog).toBeVisible();
 
-  // Tab を繰り返しても、フォーカスは常にダイアログ内にある(背後のナビゲーションへ移らない)。
+  // Tab を繰り返しても、フォーカスは背後の要素(ナビゲーションなど)へ移らない。ダイアログ内を巡回し、
+  // 最後の要素を越えたときはブラウザ自身の UI へ出る(ページ内では `body` がフォーカスを持つ状態)。
   for (let i = 0; i < 12; i += 1) {
     await page.keyboard.press("Tab");
-    const inside = await page.evaluate(
-      () => document.activeElement?.closest("dialog[open]") !== null,
-    );
-    expect(inside, `Tab ${i + 1} 回目`).toBe(true);
+    const focusStaysInModal = await page.evaluate(() => {
+      const active = document.activeElement;
+      return active === null || active === document.body || active.closest("dialog[open]") !== null;
+    });
+    expect(focusStaysInModal, `Tab ${i + 1} 回目`).toBe(true);
   }
   // 背後のナビゲーションは操作できない(クリックはダイアログに遮られる)。
   await expect(
