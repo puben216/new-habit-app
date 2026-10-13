@@ -36,6 +36,7 @@ model User {
   sessions               Session[]
   passwordResetTokens    PasswordResetToken[]
   adminUser              AdminUser?
+  dataExports            DataExport[]
 
   @@map("users")
 }
@@ -399,3 +400,39 @@ model AuditLog {
 
   @@map("audit_logs")
 }
+
+// データエクスポートのジョブ(T-404 PR-B)。status: queued | running | ready | failed | expired、format: json | csv。
+// CHECK(値域、readyの整合、failureCodeとの対応)、queued/runningを1ユーザー1件にする部分unique index
+// `data_exports_user_active_uidx`、スキャン用の部分indexはPrisma DSLで表現できないためmigrationで追加している。
+// 成果物はdata_export_artifactsに分離している(一覧・状態のqueryが本体を読まないため)。
+model DataExport {
+  id          BigInt    @id @default(autoincrement())
+  publicId    String    @unique @default(dbgenerated("gen_random_uuid()")) @map("public_id") @db.Uuid
+  userId      BigInt    @map("user_id")
+  format      String
+  status      String    @default("queued")
+  failureCode String?   @map("failure_code")
+  byteSize    Int?      @map("byte_size")
+  fileName    String?   @map("file_name")
+  contentType String?   @map("content_type")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz(6)
+
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artifact DataExportArtifact?
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("data_exports")
+}
+
+model DataExportArtifact {
+  exportId BigInt @id @map("export_id")
+  content  Bytes
+
+  dataExport DataExport @relation(fields: [exportId], references: [id], onDelete: Cascade)
+
+  @@map("data_export_artifacts")
+}
+

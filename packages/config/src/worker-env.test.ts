@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isAccountPurgeEnabled, isNotificationDeliveryEnabled, parseWorkerEnv } from "./worker-env";
+import {
+  isAccountPurgeEnabled,
+  isDataExportEnabled,
+  isNotificationDeliveryEnabled,
+  parseWorkerEnv,
+} from "./worker-env";
 
 const base = {
   AWS_REGION: "ap-northeast-1",
@@ -114,5 +119,28 @@ describe("ACCOUNT_PURGE_ENABLED(T-404)", () => {
     expect(isAccountPurgeEnabled({ ACCOUNT_PURGE_ENABLED: "true" })).toBe(true);
     expect(isAccountPurgeEnabled({ NOTIFICATION_DELIVERY_ENABLED: "true" })).toBe(false);
     expect(isNotificationDeliveryEnabled({ ACCOUNT_PURGE_ENABLED: "true" })).toBe(false);
+  });
+});
+
+describe("DATA_EXPORT_ENABLED(T-404 PR-B)", () => {
+  it("既定で無効。'true' のときだけ有効で、曖昧な値は拒否する", () => {
+    expect(parseWorkerEnv(base).DATA_EXPORT_ENABLED).toBe(false);
+    expect(parseWorkerEnv({ ...base, DATA_EXPORT_ENABLED: "true" }).DATA_EXPORT_ENABLED).toBe(true);
+    for (const bad of ["1", "yes", "TRUE", ""]) {
+      expect(() => parseWorkerEnv({ ...base, DATA_EXPORT_ENABLED: bad })).toThrow(
+        "DATA_EXPORT_ENABLED",
+      );
+    }
+  });
+
+  it("isDataExportEnabled は他の設定が無くても Flag だけを読む。他の Flag とは独立", () => {
+    expect(isDataExportEnabled({})).toBe(false);
+    expect(isDataExportEnabled({ DATA_EXPORT_ENABLED: "false" })).toBe(false);
+    expect(isDataExportEnabled({ DATA_EXPORT_ENABLED: "true" })).toBe(true);
+    expect(
+      isDataExportEnabled({ ACCOUNT_PURGE_ENABLED: "true", NOTIFICATION_DELIVERY_ENABLED: "true" }),
+    ).toBe(false);
+    expect(isAccountPurgeEnabled({ DATA_EXPORT_ENABLED: "true" })).toBe(false);
+    expect(isNotificationDeliveryEnabled({ DATA_EXPORT_ENABLED: "true" })).toBe(false);
   });
 });

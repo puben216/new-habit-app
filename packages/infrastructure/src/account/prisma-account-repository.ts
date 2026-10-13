@@ -1,38 +1,11 @@
 import type { AccountRepositoryPort, ExternalDataCleanupPort } from "@habit-app/application";
 import { isAccountStatus, SYSTEM_AUDIT_ACTOR, userAuditActor } from "@habit-app/domain";
-import type { Prisma, PrismaClient } from "../generated/prisma/client";
-
-const MAX_BIGINT = 9_223_372_036_854_775_807n;
-
-/** user ID(session 由来の十進文字列)を bigint へ。形式不正は「何にも到達できない」扱い。 */
-function parseUserId(userId: string): bigint | null {
-  if (!/^[1-9][0-9]*$/.test(userId)) return null;
-  const value = BigInt(userId);
-  return value <= MAX_BIGINT ? value : null;
-}
+import type { PrismaClient } from "../generated/prisma/client";
+import { appendAudit, parseUserId } from "../shared/db-helpers";
 
 /** 保存済みの値が不変条件を満たさない(データ破損)場合の内部エラー。値や識別子を含めない。 */
 function corrupted(): Error {
   return new Error("persisted account violates invariants");
-}
-
-type Tx = Prisma.TransactionClient;
-
-interface AuditEntry {
-  readonly actor: string;
-  readonly action: string;
-  readonly targetPublicId: string;
-  readonly requestId: string;
-  readonly ipHash: string;
-  readonly now: Date;
-}
-
-/** 状態変更と同一 transaction で監査を追記する(ACD-INV-006)。内容・メール・パスワードは記録しない。 */
-async function appendAudit(tx: Tx, entry: AuditEntry): Promise<void> {
-  await tx.$executeRaw`
-    INSERT INTO audit_logs (actor, action, target_type, target_public_id, request_id, ip_hash, created_at)
-    VALUES (${entry.actor}, ${entry.action}, 'user', ${entry.targetPublicId}::uuid,
-            ${entry.requestId}, ${entry.ipHash}, ${entry.now})`;
 }
 
 /**
@@ -75,6 +48,7 @@ export function createPrismaAccountRepository(prisma: PrismaClient): AccountRepo
           // 全 session を失効させる(以後は再ログインで取り消し画面にだけ入れる)。
           await tx.$executeRaw`DELETE FROM sessions WHERE user_id = ${id}`;
           await appendAudit(tx, {
+            targetType: "user",
             actor: userAuditActor(row.public_id),
             action: "user.account.deletion_requested",
             targetPublicId: row.public_id,
@@ -103,6 +77,7 @@ export function createPrismaAccountRepository(prisma: PrismaClient): AccountRepo
         const row = updated[0];
         if (row !== undefined) {
           await appendAudit(tx, {
+            targetType: "user",
             actor: userAuditActor(row.public_id),
             action: "user.account.deletion_cancelled",
             targetPublicId: row.public_id,
@@ -153,6 +128,7 @@ export function createPrismaAccountRepository(prisma: PrismaClient): AccountRepo
         const row = locked[0];
         if (row === undefined) return "skipped";
         await appendAudit(tx, {
+          targetType: "user",
           actor: SYSTEM_AUDIT_ACTOR,
           action: "system.account.purged",
           targetPublicId: row.public_id,

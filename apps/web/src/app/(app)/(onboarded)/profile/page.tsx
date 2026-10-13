@@ -16,8 +16,18 @@ export default function ProfilePage() {
       <ProfileForm mode="profile" supportedTimezones={Intl.supportedValuesOf("timeZone")} />
       <section aria-labelledby="account-heading" className={styles["account"]}>
         <h2 id="account-heading">アカウント</h2>
-        <p>アカウントとデータの削除を要求できます。30 日以内であれば取り消せます。</p>
-        <Link href="/account/delete">アカウントを削除する</Link>
+        <p>
+          自分のデータの取り出し(エクスポート)と、アカウントとデータの削除の要求ができます。削除は
+          30 日以内であれば取り消せます。
+        </p>
+        <ul>
+          <li>
+            <Link href="/account/export">データをエクスポートする</Link>
+          </li>
+          <li>
+            <Link href="/account/delete">アカウントを削除する</Link>
+          </li>
+        </ul>
       </section>
     </>
   );

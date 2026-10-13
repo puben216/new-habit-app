@@ -33,3 +33,5 @@ export type {
   PurgeSummary,
   RequestAccountDeletionDeps,
 } from "./use-cases";
+export { verifyReauthentication } from "./reauth";
+export type { ReauthenticationDeps } from "./reauth";

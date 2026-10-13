@@ -15,14 +15,15 @@
 
 ### Session/Profile
 
-| Method    | Path                  | 用途                                                     |
-| --------- | --------------------- | -------------------------------------------------------- |
-| POST      | `/auth/*`             | IdP Adapter 経由の登録・ログイン等（方式確定後に詳細化） |
-| GET/PATCH | `/me`                 | 自分のプロフィール取得・更新                             |
-| DELETE    | `/me`                 | 再認証を伴う削除要求（30 日の猶予。T-404）               |
-| GET       | `/me/deletion`        | 削除予約の状態の取得（削除予約中の session も可）        |
-| POST      | `/me/deletion/cancel` | 猶予期間内の削除の取り消し（削除予約中の session のみ）  |
-| GET       | `/me/export`          | 非同期 export ジョブ作成または取得                       |
+| Method    | Path                        | 用途                                                     |
+| --------- | --------------------------- | -------------------------------------------------------- |
+| POST      | `/auth/*`                   | IdP Adapter 経由の登録・ログイン等（方式確定後に詳細化） |
+| GET/PATCH | `/me`                       | 自分のプロフィール取得・更新                             |
+| DELETE    | `/me`                       | 再認証を伴う削除要求（30 日の猶予。T-404）               |
+| GET       | `/me/deletion`              | 削除予約の状態の取得（削除予約中の session も可）        |
+| POST      | `/me/deletion/cancel`       | 猶予期間内の削除の取り消し（削除予約中の session のみ）  |
+| POST/GET  | `/me/exports`               | 非同期 export の作成（再認証あり）・直近の一覧（T-404）  |
+| GET       | `/me/exports/{id}/download` | 完成済みの export のダウンロード（本人のみ・24 時間）    |
 
 ### Habits/Tracking
 
@@ -159,7 +160,14 @@
 - `DELETE /me` の body は `{ password }` のみ（再認証）。成功は `200`、`{ status: "deletion_pending", scheduledFor }`。誤りは `403`（`reauthentication_failed`）、直近 15 分に 5 回失敗した後は `429`（`too_many_attempts`。通常のログインの制限とは独立）、二重の要求は `409`（`deletion_already_requested`）、停止中は `409`（`account_not_active`）。成功すると全 session が失効する。
 - 削除予約中の session は、`/me/deletion*` 以外のすべての Member API で actor を持たず `401` になる。再ログイン自体は許可される。
 - `POST /me/deletion/cancel` は猶予期間（要求から 30 日）内だけ成功し、期限後は `409`（`grace_period_expired`）、削除予約中でなければ `409`（`deletion_not_requested`）。
-- `GET /me/export`（非同期 export）は T-404 の PR-B で扱う。
+
+`/me/exports*` の正式な契約は [../specs/data-export.md](specs/data-export.md) の APIとイベント節と `packages/contracts/src/data-export.ts` を正本とし、上記の表からの差分は次のとおり。
+
+- `POST /me/exports` の body は `{ password, format }`（`format` は `json|csv`）。再認証（アカウント削除と同じ `reauth` の制限）に成功すると `202` とエクスポート（`{ id, status, format, requestedAt, expiresAt, byteSize, failureCode }`）を返す。誤りは `403`（`reauthentication_failed`）、制限中は `429`（`too_many_attempts`）、実行中は `409`（`export_in_progress`）、24 時間に 5 件の上限は `429`（`export_rate_limited`）、queue への投入失敗は `503`（`export_unavailable`）。
+- `GET /me/exports` は自分の直近 5 件。状態は `queued → running → ready|failed`、期限（完成から 24 時間）を過ぎたものは `expired`。
+- `GET /me/exports/{id}/download` は自分の `ready` のみ。他人・存在しない・UUID でない ID は `404`（`export_not_found`）、未完成は `409`（`export_not_ready`）、期限切れは `410`（`export_expired`）。`Content-Disposition: attachment`、`X-Content-Type-Options: nosniff`、`Cache-Control: no-store`。
+- 出力は許可リストの項目のみ（パスワード・session・token・MFA の秘密・監査ログ・内部 ID を含まない）。JSON は 1 ファイル、CSV はデータ種別ごとの CSV を ZIP にまとめる（BOM 付き UTF-8、CRLF、数式になりうる値は無害化）。
+- 削除予約中の session は Member API の一括遮断で `401`。実 SQS・Lambda は T-501（ローカル/E2E は `EXPORT_QUEUE_DRIVER=inline`、本番では拒否される）。
 
 ## AI 境界
 

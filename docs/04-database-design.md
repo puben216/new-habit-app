@@ -275,3 +275,16 @@ AI queue pipeline（[../specs/ai-queue-pipeline.md](specs/ai-queue-pipeline.md)�
 - 物理削除は `DELETE FROM users` で行い、子データは既存の `ON DELETE CASCADE` が削除する。`public` スキーマの全 FK が `ON DELETE CASCADE` であること、`user_id` 列を持つ全テーブルが `users` への FK を持つことを Integration Test で検査する（新しいテーブルが削除漏れを起こさないようにするため）。
 - `audit_logs` は FK を持たず、削除後も残る。残るのは公開 ID（`target_public_id`）、`actor`（`user:{公開 ID}` または `system`）、action、request ID、IP の不可逆化表現のみで、メールや内容を含まない。
 - 削除予約中の `deletion_pending` のユーザーのデータは削除しない（取り消しで復元するため）。AI・メールの provider 側のデータとバックアップは本タスクでは削除されない（`docs/10` に未決として記録）。
+
+## 実装時の補足（T-404 PR-B）
+
+データエクスポート（[../specs/data-export.md](specs/data-export.md)、[../plans/data-export.md](plans/data-export.md)）の実装時の追加決定。Migration は `20261013000000_t404_data_export`（expand のみ。新規テーブル）。
+
+- `data_exports`: `public_id`（uuid）、`user_id`（FK、`ON DELETE CASCADE`）、`format`（`json|csv`）、`status`（`queued|running|ready|failed|expired`）、`failure_code`、`byte_size`、`file_name`、`content_type`、`created_at`/`updated_at`/`completed_at`/`expires_at`。CHECK: 値域、`ready` なら完成の項目がすべて設定済み、`(status = 'failed') = (failure_code IS NOT NULL)`、`byte_size >= 0`。
+- 同時作成の制限: 部分 unique index `data_exports_user_active_uidx (user_id) WHERE status IN ('queued','running')` で、1 ユーザーの実行中を 1 件にする。作成は `users` の行をロックして直列化し、頻度（24 時間に 5 件）の数え方も同じ transaction で行う。
+- スキャン用の部分 index: `(expires_at) WHERE status = 'ready'`、`(updated_at) WHERE status IN ('failed','expired')`。一覧と頻度は `(user_id, created_at DESC)`（FK の index を兼ねる）。
+- 成果物は別テーブル `data_export_artifacts`（`export_id` が PK かつ FK、`content bytea`）。S3 が未導入の間の保存先で、一覧・状態の query が本体を読まないよう分離した。S3 に移すときは `data_exports` にオブジェクトキーを持たせる Migration を別途追加する。成果物は完成から 24 時間で削除対象（定期ジョブ）。
+- claim の lease は `updated_at < now() - lease`（`set_updated_at` trigger が更新時に設定。AI job と同じ方式）。`running` を再 claim すると `updated_at` が更新され lease が延びる。
+- 収集は `REPEATABLE READ` の 1 transaction。出力する項目は列挙して SELECT し、`SELECT *` を使わない。記録・チェックインは ID 順の keyset（5000 件）で分割して読む。
+- 状態の変更と監査（`user.export.requested`/`user.export.downloaded`）は同一 transaction。ダウンロードは監査を先に追記してから成果物を読む（fail closed）。
+- アカウント削除では、`users` の削除で `data_exports` と成果物が CASCADE により削除される。

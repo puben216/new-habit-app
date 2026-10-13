@@ -73,3 +73,27 @@ export function runPurgeJob(): { purged: number; failed: number; skipped: number
   if (line === undefined) throw new Error("account:purge の出力を取得できませんでした");
   return JSON.parse(line) as { purged: number; failed: number; skipped: number };
 }
+
+/** そのユーザーの完成済みエクスポートの期限を 1 分前にする(24 時間の期限切れの再現)。 */
+export async function expireReadyExports(email: string): Promise<void> {
+  await withDatabase(async (client) => {
+    await client.query(
+      `UPDATE data_exports SET expires_at = now() - interval '1 minute'
+       WHERE status = 'ready'
+         AND user_id = (SELECT id FROM users WHERE email_normalized = $1)`,
+      [email.toLowerCase()],
+    );
+  });
+}
+
+/** そのユーザーのエクスポートに紐づく監査 action を古い順に返す。 */
+export async function exportAuditActions(publicId: string): Promise<string[]> {
+  return withDatabase(async (client) => {
+    const result = await client.query<{ action: string }>(
+      `SELECT action FROM audit_logs
+       WHERE actor = $1 AND action LIKE 'user.export.%' ORDER BY id`,
+      [`user:${publicId}`],
+    );
+    return result.rows.map((row) => row.action);
+  });
+}

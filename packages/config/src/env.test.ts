@@ -21,6 +21,7 @@ describe("parseEnv", () => {
       EMAIL_FROM: "no-reply@habit-app.local",
       APP_BASE_URL: "http://localhost:3000",
       AI_QUEUE_DRIVER: "inline",
+      EXPORT_QUEUE_DRIVER: "inline",
       AI_PROVIDER: "fake",
       AI_PUBLICATION_ENABLED: false,
     });
@@ -89,6 +90,7 @@ describe("parseEnv", () => {
       AUTH_SECRET,
       AUTH_EMAIL_SENDER: "ses",
       AI_QUEUE_DRIVER: "sqs",
+      EXPORT_QUEUE_DRIVER: "sqs",
     });
 
     expect(env.AUTH_EMAIL_SENDER).toBe("ses");
@@ -178,6 +180,7 @@ describe("parseEnv", () => {
         NODE_ENV: "production",
         AUTH_EMAIL_SENDER: "ses",
         AI_QUEUE_DRIVER: "sqs",
+        EXPORT_QUEUE_DRIVER: "sqs",
       });
       expect(env.AI_QUEUE_DRIVER).toBe("sqs");
     });
@@ -197,6 +200,39 @@ describe("parseEnv", () => {
     it("開発・テスト環境では fake provider で公開を有効にできる", () => {
       const env = parseEnv({ ...base, NODE_ENV: "development", AI_PUBLICATION_ENABLED: "true" });
       expect(env.AI_PUBLICATION_ENABLED).toBe(true);
+    });
+  });
+
+  describe("データエクスポートの設定(T-404 PR-B)", () => {
+    const base = {
+      DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
+      AUTH_SECRET,
+    };
+
+    it("EXPORT_QUEUE_DRIVER の既定は inline。未知の値は拒否する", () => {
+      expect(parseEnv({ ...base, NODE_ENV: "test" }).EXPORT_QUEUE_DRIVER).toBe("inline");
+      expect(
+        parseEnv({ ...base, NODE_ENV: "test", EXPORT_QUEUE_DRIVER: "sqs" }).EXPORT_QUEUE_DRIVER,
+      ).toBe("sqs");
+      expect(() => parseEnv({ ...base, NODE_ENV: "test", EXPORT_QUEUE_DRIVER: "kafka" })).toThrow(
+        /EXPORT_QUEUE_DRIVER/,
+      );
+    });
+
+    it("本番では EXPORT_QUEUE_DRIVER=inline を拒否し、sqs なら許可する", () => {
+      const production = {
+        ...base,
+        NODE_ENV: "production",
+        AUTH_EMAIL_SENDER: "ses",
+        AI_QUEUE_DRIVER: "sqs",
+      };
+      expect(() => parseEnv({ ...production, EXPORT_QUEUE_DRIVER: "inline" })).toThrow(
+        /EXPORT_QUEUE_DRIVER=inline/,
+      );
+      expect(() => parseEnv(production)).toThrow(/EXPORT_QUEUE_DRIVER=inline/);
+      expect(parseEnv({ ...production, EXPORT_QUEUE_DRIVER: "sqs" }).EXPORT_QUEUE_DRIVER).toBe(
+        "sqs",
+      );
     });
   });
 });

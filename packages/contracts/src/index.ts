@@ -205,3 +205,19 @@ export type {
   AccountDeletionStatusResponse,
   RequestAccountDeletionRequest,
 } from "./account-deletion";
+
+export {
+  DATA_EXPORT_FORMAT_VALUES,
+  DATA_EXPORT_REQUEST_MAX_BODY_BYTES,
+  DATA_EXPORT_STATUS_VALUES,
+  createDataExportRequestSchema,
+  dataExportListResponseSchema,
+  dataExportMessageV1Schema,
+  dataExportResponseSchema,
+} from "./data-export";
+export type {
+  CreateDataExportRequest,
+  DataExportListResponse,
+  DataExportMessageV1,
+  DataExportResponse,
+} from "./data-export";
