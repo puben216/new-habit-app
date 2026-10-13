@@ -32,7 +32,7 @@ pnpm db:migrate:deploy
 pnpm --filter web dev
 ```
 
-環境変数は`.env.example`を参考にリポジトリルートへ設定します。E2E(Playwright)は初回に`pnpm --filter web exec playwright install chromium`でブラウザを取得し、`pnpm test:e2e`で実行します。E2E専用database(`habit_app_e2e`)を作り直して実行するため、開発用databaseには影響しません。5432 が他のプロジェクトに使われている場合は`POSTGRES_PORT=5434 pnpm db:up`と`E2E_POSTGRES_PORT=5434 pnpm test:e2e`のようにポートを変えられます。方式は[ADR-010](docs/adr/ADR-010-web-ui-stack.md)を参照してください。
+環境変数は`.env.example`を参考にリポジトリルートへ設定します。E2E(Playwright)は初回に`pnpm --filter web exec playwright install chromium`でブラウザを取得し、`pnpm test:e2e`で実行します。E2E専用database(`habit_app_e2e`)を作り直して実行するため、開発用databaseには影響しません。ローカルの Postgres のホスト側ポートの既定は 5435 です(コンテナ内は 5432)。他のプロジェクトと重なる場合は`POSTGRES_PORT=5436 pnpm db:up`と`E2E_POSTGRES_PORT=5436 pnpm test:e2e`のようにポートを変えられます。既存の`.env`の`DATABASE_URL`が 5432 のままなら、5435 に直してください。方式は[ADR-010](docs/adr/ADR-010-web-ui-stack.md)を参照してください。
 
 ## 設計原則
 
