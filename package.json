@@ -26,7 +26,8 @@
     "admin:grant": "tsx packages/infrastructure/src/admin/admin-cli-main.ts grant",
     "admin:disable": "tsx packages/infrastructure/src/admin/admin-cli-main.ts disable",
     "admin:reset-mfa": "tsx packages/infrastructure/src/admin/admin-cli-main.ts reset-mfa",
-    "account:purge": "tsx apps/workers/src/account/purge-cli.ts"
+    "account:purge": "tsx apps/workers/src/account/purge-cli.ts",
+    "export:cleanup": "tsx apps/workers/src/export/cleanup-cli.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.2",

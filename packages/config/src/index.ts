@@ -1,6 +1,7 @@
 export { parseEnv, type Env } from "./env";
 export {
   isAccountPurgeEnabled,
+  isDataExportEnabled,
   isNotificationDeliveryEnabled,
   parseWorkerEnv,
   type EnvSource,

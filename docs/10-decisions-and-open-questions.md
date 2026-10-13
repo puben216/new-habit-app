@@ -43,6 +43,7 @@ P0-03（AI provider）と P0-05（メールの region/ドメイン確定）は A
 - 未入力を UI で「未実施」と表示する確定タイミング
 - ~~週次レビューを自動作成するか、初回アクセス時に遅延作成するか~~: 明示作成(`POST /weekly-reviews`)に決定(D-15)。自動作成・リマインドは T-402 以降で必要になった時点で扱う
 - AI 結果の保存期間、ユーザーによる削除単位
+  - T-404 PR-B の暫定方針: データエクスポートには AI の結果（`ai_jobs` の構造化出力のみ。入力の指紋・prompt は含めない）を含める。エクスポートの成果物は完成から 24 時間（`DATA_EXPORT_TTL_HOURS`）、作成は 24 時間に 5 件、上限 20 MiB を暫定値とし、定数のみ変更できる（[data-export.md](specs/data-export.md)）
   - T-404 の暫定方針: アカウント削除では `ai_jobs`（`result_json` を含む）を `users` の CASCADE で削除する。provider 側に送信済みのデータの削除は provider 確定時（ADR-003、T-305 完了〜T-505 前）に手順を決める（削除ジョブの差し込み口 `ExternalDataCleanupPort` は用意済み。[account-deletion.md](specs/account-deletion.md)）。バックアップからの削除は T-502 で保持期間を決める
 - beta の対象人数と初期 SLO/cost budget
 - 第三者コンテンツ保護の false positive 率の許容閾値、golden dataset の reviewer、human review queue の要否(T-302 では決めず T-505 の判断へ送る。それまでは AI 公開 feature flag の停止で代替する。[ai-contracts.md](specs/ai-contracts.md))

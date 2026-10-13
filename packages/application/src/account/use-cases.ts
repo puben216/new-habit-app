@@ -1,14 +1,13 @@
 import { ACCOUNT_PURGE_BATCH_SIZE, deletionDeadline, purgeCutoff } from "@habit-app/domain";
 
 import type { Clock, LoginAttemptPort, PasswordHasherPort } from "../auth";
+import { verifyReauthentication } from "./reauth";
 import {
   AccountNotActiveError,
   AccountNotFoundError,
   DeletionAlreadyRequestedError,
   DeletionNotRequestedError,
   GracePeriodExpiredError,
-  ReauthenticationFailedError,
-  TooManyAttemptsError,
 } from "./errors";
 import type {
   AccountRepositoryPort,
@@ -58,12 +57,7 @@ export async function requestAccountDeletionUseCase(
   if (account.status === "deletion_pending") throw new DeletionAlreadyRequestedError();
   if (account.status !== "active") throw new AccountNotActiveError();
 
-  if (await deps.attempts.isBlocked("reauth", account.emailNormalized)) {
-    throw new TooManyAttemptsError();
-  }
-  const matched = await deps.passwordHasher.verify(input.password, account.passwordHash);
-  await deps.attempts.record("reauth", account.emailNormalized, matched);
-  if (!matched) throw new ReauthenticationFailedError();
+  await verifyReauthentication(deps, account, input.password);
 
   const now = deps.now();
   const result = await deps.accounts.requestDeletion({

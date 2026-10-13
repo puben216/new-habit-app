@@ -50,6 +50,7 @@
 - retention: app data、AI result、audit、backup、export を個別定義。削除要求が backup と provider にどう反映されるか明文化
   - アカウント削除（T-404）: 要求から 30 日の猶予（取り消し可）の後、日次ジョブが `users` と全子データを物理削除し、監査ログには公開 ID だけを残す。AI・メール provider 側のデータは provider 確定時（ADR-003）に削除手順を決め、バックアップは基盤（T-502）で保持期間を決める
 - S3 export は短期限 presigned URL、暗号化、lifecycle、自分の object のみ
+  - T-404 PR-B: S3 が未導入の間は成果物を DB（別テーブル）に最長 24 時間保持し、本人の session でのみダウンロードできる（再認証は作成時。作成・ダウンロードは監査に残る）。S3 導入時（T-501/T-502）に、上の方針（短期限 presigned URL・暗号化・lifecycle）へ移行する
 
 ## 管理・監査
 

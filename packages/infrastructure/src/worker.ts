@@ -6,6 +6,7 @@ export { createPrismaClient, type PrismaClient } from "./database/prisma-client"
 export * from "./account";
 export * from "./ai";
 export * from "./email";
+export * from "./export";
 export * from "./habits";
 export * from "./notifications";
 export * from "./queue";
